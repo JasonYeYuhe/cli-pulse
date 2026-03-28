@@ -17,12 +17,14 @@ from system_collector import collect_alerts, collect_device_snapshot, collect_se
 CONFIG_PATH = Path.home() / ".cli-pulse-helper.json"
 SUPPORTED_PROVIDERS = {"Codex", "Gemini", "Claude", "OpenRouter", "Ollama"}
 
+SUPABASE_URL = "https://gkjwsxotmwrgqsvfijzs.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrandzeG90bXdyZ3FzdmZpanpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2OTAzNzAsImV4cCI6MjA5MDI2NjM3MH0.uPHYnh0psr2-KQynBw2NiQZOhz5eZiEaWpfCwdXrNQM"
+
 
 @dataclass
 class HelperConfig:
-    server: str
-    access_token: str
     device_id: str
+    user_id: str
     device_name: str
     helper_version: str
 
@@ -41,38 +43,35 @@ def save_config(config: HelperConfig) -> None:
     CONFIG_PATH.write_text(json.dumps(asdict(config), indent=2))
 
 
-def request_json(method: str, url: str, payload: dict[str, Any] | None = None, token: str | None = None) -> dict[str, Any]:
-    headers = {"Content-Type": "application/json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-
-    body = None
-    if payload is not None:
-        body = json.dumps(payload).encode("utf-8")
-
-    request = urllib.request.Request(url=url, data=body, headers=headers, method=method)
+def supabase_rpc(function_name: str, params: dict[str, Any]) -> Any:
+    url = f"{SUPABASE_URL}/rest/v1/rpc/{function_name}"
+    headers = {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
+    }
+    body = json.dumps(params).encode("utf-8")
+    request = urllib.request.Request(url=url, data=body, headers=headers, method="POST")
     try:
         with urllib.request.urlopen(request) as response:
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8")
-        raise SystemExit(f"{error.code} {detail}") from error
+        raise SystemExit(f"Supabase error {error.code}: {detail}") from error
 
 
 def pair(args: argparse.Namespace) -> None:
     device_name = args.device_name or "CLI Pulse Helper"
-    payload = {
-        "pairing_code": args.pairing_code,
-        "device_name": device_name,
-        "device_type": args.device_type,
-        "system": args.system,
-        "helper_version": args.helper_version,
-    }
-    response = request_json("POST", f"{args.server}/v1/helper/register", payload)
+    response = supabase_rpc("register_helper", {
+        "p_pairing_code": args.pairing_code,
+        "p_device_name": device_name,
+        "p_device_type": args.device_type,
+        "p_system": args.system,
+        "p_helper_version": args.helper_version,
+    })
     config = HelperConfig(
-        server=args.server.rstrip("/"),
-        access_token=response["access_token"],
         device_id=response["device_id"],
+        user_id=response["user_id"],
         device_name=device_name,
         helper_version=args.helper_version,
     )
@@ -84,19 +83,18 @@ def heartbeat(_: argparse.Namespace) -> None:
     config = load_config()
     snapshot = collect_device_snapshot()
     sessions = collect_sessions()
-    payload = {
-        "device_id": config.device_id,
-        "cpu_usage": snapshot.cpu_usage,
-        "memory_usage": snapshot.memory_usage,
-        "active_session_count": len(sessions),
-    }
-    request_json("POST", f"{config.server}/v1/helper/heartbeat", payload, config.access_token)
+    supabase_rpc("helper_heartbeat", {
+        "p_device_id": config.device_id,
+        "p_user_id": config.user_id,
+        "p_cpu_usage": snapshot.cpu_usage,
+        "p_memory_usage": snapshot.memory_usage,
+        "p_active_session_count": len(sessions),
+    })
     print("heartbeat sent")
 
 
 def sync(_: argparse.Namespace) -> None:
     config = load_config()
-    snapshot = collect_device_snapshot()
     collected_sessions = collect_sessions()
     sessions = [
         {
@@ -106,6 +104,7 @@ def sync(_: argparse.Namespace) -> None:
             "project": item.project,
             "status": item.status,
             "total_usage": item.total_usage,
+            "exact_cost": item.exact_cost,
             "requests": item.requests,
             "error_count": item.error_count,
             "started_at": item.started_at,
@@ -122,18 +121,24 @@ def sync(_: argparse.Namespace) -> None:
             "title": item.title,
             "message": item.message,
             "created_at": item.created_at,
+            "related_project_id": item.related_project_id,
+            "related_project_name": item.related_project_name,
+            "related_session_id": item.related_session_id,
+            "related_session_name": item.related_session_name,
+            "related_provider": item.related_provider,
+            "related_device_name": item.related_device_name,
         }
-        for item in collect_alerts(collected_sessions, snapshot)
+        for item in collect_alerts(collected_sessions, collect_device_snapshot())
     ]
 
-    payload = {
-        "device_id": config.device_id,
-        "sessions": sessions,
-        "alerts": alerts,
-        "provider_remaining": estimate_provider_remaining(collected_sessions),
-    }
-    request_json("POST", f"{config.server}/v1/helper/sync", payload, config.access_token)
-    print(f"synced {len(sessions)} sessions")
+    response = supabase_rpc("helper_sync", {
+        "p_device_id": config.device_id,
+        "p_user_id": config.user_id,
+        "p_sessions": sessions,
+        "p_alerts": alerts,
+        "p_provider_remaining": estimate_provider_remaining(collected_sessions),
+    })
+    print(f"synced {response.get('sessions_synced', 0)} sessions")
 
 
 def run_demo(args: argparse.Namespace) -> None:
@@ -165,7 +170,6 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     pair_parser = subparsers.add_parser("pair", help="pair this device with a CLI Pulse account")
-    pair_parser.add_argument("--server", required=True)
     pair_parser.add_argument("--pairing-code", required=True)
     pair_parser.add_argument("--device-name")
     pair_parser.add_argument("--device-type", default="Mac")
