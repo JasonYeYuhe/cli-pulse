@@ -122,6 +122,7 @@ create table public.sessions (
   estimated_cost numeric(10,4),
   requests integer not null default 0,
   error_count integer not null default 0,
+  collection_confidence text not null default 'medium',
   started_at timestamptz not null default now(),
   last_active_at timestamptz not null default now(),
   synced_at timestamptz not null default now(),
@@ -154,6 +155,10 @@ create table public.alerts (
   related_session_name text,
   related_provider text,
   related_device_name text,
+  source_kind text,
+  source_id text,
+  grouping_key text,
+  suppression_key text,
   created_at timestamptz not null default now(),
   primary key (id, user_id)
 );

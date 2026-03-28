@@ -12,11 +12,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from system_collector import collect_alerts, collect_device_snapshot, collect_sessions, estimate_provider_remaining
+from system_collector import CollectedAlert, collect_alerts, collect_device_snapshot, collect_sessions, estimate_provider_remaining
 
 
 CONFIG_PATH = Path.home() / ".cli-pulse-helper.json"
-SUPPORTED_PROVIDERS = {"Codex", "Gemini", "Claude", "OpenRouter", "Ollama"}
+SUPPORTED_PROVIDERS = {
+    "Codex", "Gemini", "Claude", "Cursor", "OpenCode", "Droid", "Antigravity",
+    "Copilot", "z.ai", "MiniMax", "Augment", "JetBrains AI", "Kimi K2",
+    "Amp", "Synthetic", "Warp", "Kilo", "Ollama", "OpenRouter", "Alibaba",
+}
 
 SUPABASE_URL = os.environ.get("CLI_PULSE_SUPABASE_URL", "https://gkjwsxotmwrgqsvfijzs.supabase.co")
 SUPABASE_ANON_KEY = os.environ.get("CLI_PULSE_SUPABASE_ANON_KEY", "")
@@ -67,6 +71,16 @@ def supabase_rpc(function_name: str, params: dict[str, Any]) -> Any:
         raise SystemExit("Request timed out — check your network connection") from error
 
 
+def _infer_source_kind(alert: CollectedAlert) -> str:
+    if alert.related_session_id:
+        return "session"
+    if alert.related_provider:
+        return "provider"
+    if alert.related_project_id:
+        return "project"
+    return "device"
+
+
 def pair(args: argparse.Namespace) -> None:
     device_name = args.device_name or "CLI Pulse Helper"
     response = supabase_rpc("register_helper", {
@@ -114,12 +128,14 @@ def sync(_: argparse.Namespace) -> None:
             "exact_cost": item.exact_cost,
             "requests": item.requests,
             "error_count": item.error_count,
+            "collection_confidence": item.collection_confidence,
             "started_at": item.started_at,
             "last_active_at": item.last_active_at,
         }
         for item in collected_sessions
         if item.provider in SUPPORTED_PROVIDERS
     ]
+    device_snapshot = collect_device_snapshot()
     alerts = [
         {
             "id": item.alert_id,
@@ -133,9 +149,13 @@ def sync(_: argparse.Namespace) -> None:
             "related_session_id": item.related_session_id,
             "related_session_name": item.related_session_name,
             "related_provider": item.related_provider,
-            "related_device_name": item.related_device_name,
+            "related_device_name": item.related_device_name or config.device_name,
+            "source_kind": _infer_source_kind(item),
+            "source_id": item.related_session_id or item.related_project_id,
+            "grouping_key": f"{item.type}:{item.related_provider or 'system'}",
+            "suppression_key": f"{item.type}:{item.related_session_id or 'global'}",
         }
-        for item in collect_alerts(collected_sessions, collect_device_snapshot())
+        for item in collect_alerts(collected_sessions, device_snapshot)
     ]
 
     response = supabase_rpc("helper_sync", {

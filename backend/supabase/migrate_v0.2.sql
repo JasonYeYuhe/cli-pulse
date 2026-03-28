@@ -1,75 +1,20 @@
 -- ============================================================
--- CLI Pulse — Helper RPC Functions
--- Called by the helper daemon via Supabase anon key + PostgREST
--- All functions use security definer to bypass RLS
+-- CLI Pulse v0.2 Migration
+-- Run this against the live Supabase database to add v0.2 columns
 -- ============================================================
 
--- Register a helper device via pairing code
-create or replace function public.register_helper(
-  p_pairing_code text,
-  p_device_name text,
-  p_device_type text default 'macOS',
-  p_system text default '',
-  p_helper_version text default '0.1.0'
-)
-returns jsonb as $$
-declare
-  v_user_id uuid;
-  v_device_id uuid;
-  v_expires_at timestamptz;
-begin
-  select user_id, expires_at into v_user_id, v_expires_at
-  from public.pairing_codes where code = p_pairing_code;
+-- Sessions: add collection_confidence
+alter table public.sessions
+  add column if not exists collection_confidence text not null default 'medium';
 
-  if v_user_id is null then
-    raise exception 'Invalid pairing code';
-  end if;
+-- Alerts: add deep link / grouping fields
+alter table public.alerts
+  add column if not exists source_kind text,
+  add column if not exists source_id text,
+  add column if not exists grouping_key text,
+  add column if not exists suppression_key text;
 
-  if v_expires_at < now() then
-    delete from public.pairing_codes where code = p_pairing_code;
-    raise exception 'Pairing code has expired';
-  end if;
-
-  insert into public.devices (user_id, name, type, system, helper_version, status)
-  values (v_user_id, p_device_name, p_device_type, p_system, p_helper_version, 'Online')
-  returning id into v_device_id;
-
-  update public.profiles set paired = true where id = v_user_id;
-  delete from public.pairing_codes where code = p_pairing_code;
-
-  return jsonb_build_object('device_id', v_device_id, 'user_id', v_user_id);
-end;
-$$ language plpgsql security definer;
-
--- Helper heartbeat
-create or replace function public.helper_heartbeat(
-  p_device_id uuid,
-  p_user_id uuid,
-  p_cpu_usage integer default 0,
-  p_memory_usage integer default 0,
-  p_active_session_count integer default 0
-)
-returns jsonb as $$
-declare
-  v_found boolean;
-begin
-  select true into v_found
-  from public.devices where id = p_device_id and user_id = p_user_id;
-
-  if not v_found then
-    raise exception 'Device not found or unauthorized';
-  end if;
-
-  update public.devices set
-    status = 'Online', cpu_usage = p_cpu_usage,
-    memory_usage = p_memory_usage, last_seen_at = now()
-  where id = p_device_id and user_id = p_user_id;
-
-  return jsonb_build_object('status', 'ok');
-end;
-$$ language plpgsql security definer;
-
--- Helper sync — upsert sessions, alerts, provider quotas
+-- Re-create helper_sync with v0.2 fields (see helper_rpc.sql for full source)
 create or replace function public.helper_sync(
   p_device_id uuid,
   p_user_id uuid,
