@@ -58,6 +58,9 @@ class AlertType(str, Enum):
     session_failed = "Session Failed"
     session_too_long = "Session Too Long"
     project_budget_exceeded = "Project Budget Exceeded"
+    cost_spike = "Cost Spike"
+    error_rate_spike = "Error Rate Spike"
+    quota_critical = "Quota Critical"
 
 
 class AlertSeverity(str, Enum):
@@ -187,6 +190,11 @@ class AlertRecordDTO(BaseModel):
     related_session_name: Optional[str] = None
     related_provider: Optional[ProviderKind] = None
     related_device_name: Optional[str] = None
+    # Deep link fields for navigating to source entity
+    source_kind: Optional[str] = None  # provider, session, project, device
+    source_id: Optional[str] = None  # ID of the source entity
+    grouping_key: Optional[str] = None  # dedup key: same grouping_key = same logical alert
+    suppression_key: Optional[str] = None  # if set, suppress duplicates with same key
 
 
 class AlertTypeSummaryDTO(BaseModel):
@@ -445,6 +453,24 @@ class CostSummaryDTO(BaseModel):
     provider_breakdown: List[ProviderCostBreakdownDTO]
     project_breakdown: List[ProjectCostBreakdownDTO]
     daily_trend: List[UsagePointDTO]  # cost per day as value (cents)
+
+
+class AlertRuleDTO(BaseModel):
+    id: str
+    type: AlertType
+    enabled: bool = True
+    threshold: Optional[float] = None
+    severity: AlertSeverity = AlertSeverity.warning
+    cooldown_minutes: int = 30
+    description: str = ""
+
+
+class AlertRuleUpdateDTO(BaseModel):
+    type: AlertType
+    enabled: bool = True
+    threshold: Optional[float] = None
+    severity: AlertSeverity = AlertSeverity.warning
+    cooldown_minutes: int = Field(default=30, ge=0)
 
 
 class VerifyReceiptRequestDTO(BaseModel):

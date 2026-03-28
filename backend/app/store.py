@@ -15,6 +15,8 @@ from .models import (
     ActivityItemDTO,
     AlertActionResponseDTO,
     AlertRecordDTO,
+    AlertRuleDTO,
+    AlertRuleUpdateDTO,
     AlertSeverity,
     AlertSummaryDTO,
     AlertTypeSummaryDTO,
@@ -181,10 +183,11 @@ MAX_RECENT_DEVICES = 4
 MAX_RECENT_PROJECTS_PER_DEVICE = 6
 MAX_HEARTBEAT_TIMELINE = 24
 
-FREE_ALERT_TYPES = ["quota_low", "usage_spike", "helper_offline"]
+FREE_ALERT_TYPES = ["quota_low", "usage_spike", "helper_offline", "quota_critical"]
 ALL_ALERT_TYPES = [
     "quota_low", "usage_spike", "helper_offline", "sync_failed",
     "auth_expired", "session_failed", "session_too_long", "project_budget_exceeded",
+    "cost_spike", "error_rate_spike", "quota_critical",
 ]
 
 TIER_LIMITS: dict[SubscriptionTier, TierLimitsDTO] = {
@@ -383,6 +386,9 @@ class SQLiteStore:
         self._apply_session_failure_rules(state.user.id)
         self._apply_session_duration_rules(state.user.id)
         self._apply_project_budget_rules(state.user.id)
+        self._apply_cost_spike_rules(state.user.id)
+        self._apply_error_rate_spike_rules(state.user.id)
+        self._apply_quota_critical_rules(state.user.id)
         providers = self.providers(token)
         sessions = self.sessions(token)
         devices = self.devices(token)
@@ -504,6 +510,9 @@ class SQLiteStore:
         self._apply_session_failure_rules(state.user.id)
         self._apply_session_duration_rules(state.user.id)
         self._apply_project_budget_rules(state.user.id)
+        self._apply_cost_spike_rules(state.user.id)
+        self._apply_error_rate_spike_rules(state.user.id)
+        self._apply_quota_critical_rules(state.user.id)
         items = self._load_models(state.user.id, "alerts_json", AlertRecordDTO)
         # Filter alerts by allowed alert rule types for the user's tier
         limits = self._get_user_tier_limits(state.user.id)
@@ -782,6 +791,9 @@ class SQLiteStore:
         self._apply_session_failure_rules(state.user.id)
         self._apply_session_duration_rules(state.user.id)
         self._apply_project_budget_rules(state.user.id)
+        self._apply_cost_spike_rules(state.user.id)
+        self._apply_error_rate_spike_rules(state.user.id)
+        self._apply_quota_critical_rules(state.user.id)
 
         return SuccessDTO()
 
@@ -925,6 +937,18 @@ class SQLiteStore:
                     role TEXT NOT NULL DEFAULT 'member',
                     created_at TEXT NOT NULL,
                     expires_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS alert_rules (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    type TEXT NOT NULL,
+                    enabled INTEGER NOT NULL DEFAULT 1,
+                    threshold REAL,
+                    severity TEXT NOT NULL DEFAULT 'Warning',
+                    cooldown_minutes INTEGER NOT NULL DEFAULT 30,
+                    description TEXT NOT NULL DEFAULT '',
+                    updated_at TEXT NOT NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS cost_rules (
@@ -2589,6 +2613,288 @@ class SQLiteStore:
 
         if changed:
             self._save_models(user_id, "alerts_json", alerts)
+
+    def _apply_cost_spike_rules(self, user_id: str) -> None:
+        """Alert when a provider's estimated daily cost exceeds a threshold."""
+        settings = self._settings_for_user(user_id)
+        # Cost spike threshold = 2x the project budget threshold (reasonable default)
+        threshold = settings.project_budget_threshold_usd * 2
+        if threshold <= 0:
+            return
+
+        alerts = self._load_models(user_id, "alerts_json", AlertRecordDTO)
+        providers = self._load_models(user_id, "providers_json", ProviderUsageDTO)
+        unresolved = {
+            alert.related_provider: alert
+            for alert in alerts
+            if alert.type == AlertType.cost_spike and not alert.is_resolved and alert.related_provider
+        }
+
+        active: set[ProviderKind] = set()
+        changed = False
+
+        for provider in providers:
+            cost, _ = self._resolve_cost_with_rules(user_id, provider.provider, provider.today_usage)
+            if cost is None or cost <= threshold:
+                continue
+
+            active.add(provider.provider)
+            if provider.provider in unresolved:
+                continue
+
+            suppression_key = f"cost-spike-{provider.provider.value}"
+            if self._is_suppressed(alerts, suppression_key, settings.alert_cooldown_minutes):
+                continue
+
+            severity = AlertSeverity.critical if cost >= threshold * 2 else AlertSeverity.warning
+            alerts.insert(0, AlertRecordDTO(
+                id=str(uuid4()),
+                type=AlertType.cost_spike,
+                severity=severity,
+                title=f"{provider.provider.value} cost spike",
+                message=Msg.COST_SPIKE.format(
+                    provider=provider.provider.value, cost=cost, threshold=threshold,
+                ),
+                created_at=now_utc(),
+                is_read=False,
+                is_resolved=False,
+                related_provider=provider.provider,
+                source_kind="provider",
+                source_id=provider.provider.value,
+                grouping_key=f"cost-spike:{provider.provider.value}",
+                suppression_key=suppression_key,
+            ))
+            changed = True
+
+        for provider, alert in unresolved.items():
+            if provider not in active:
+                alert.is_resolved = True
+                changed = True
+
+        if changed:
+            self._save_models(user_id, "alerts_json", alerts)
+
+    def _apply_error_rate_spike_rules(self, user_id: str) -> None:
+        """Alert when a provider has high error rate across sessions."""
+        settings = self._settings_for_user(user_id)
+        error_threshold = settings.repeated_failure_threshold
+        alerts = self._load_models(user_id, "alerts_json", AlertRecordDTO)
+        sessions = self._load_models(user_id, "sessions_json", SessionRecordDTO)
+
+        # Group errors by provider
+        provider_errors: dict[ProviderKind, int] = {}
+        provider_sessions: dict[ProviderKind, int] = {}
+        for session in sessions:
+            provider_sessions[session.provider] = provider_sessions.get(session.provider, 0) + 1
+            if session.error_count > 0:
+                provider_errors[session.provider] = provider_errors.get(session.provider, 0) + session.error_count
+
+        unresolved = {
+            alert.related_provider: alert
+            for alert in alerts
+            if alert.type == AlertType.error_rate_spike and not alert.is_resolved and alert.related_provider
+        }
+
+        active: set[ProviderKind] = set()
+        changed = False
+
+        for provider, errors in provider_errors.items():
+            if errors < error_threshold:
+                continue
+
+            active.add(provider)
+            if provider in unresolved:
+                continue
+
+            suppression_key = f"error-spike-{provider.value}"
+            if self._is_suppressed(alerts, suppression_key, settings.alert_cooldown_minutes):
+                continue
+
+            session_count = provider_sessions.get(provider, 0)
+            severity = AlertSeverity.critical if errors >= error_threshold * 3 else AlertSeverity.warning
+            alerts.insert(0, AlertRecordDTO(
+                id=str(uuid4()),
+                type=AlertType.error_rate_spike,
+                severity=severity,
+                title=f"{provider.value} error rate elevated",
+                message=Msg.ERROR_RATE_SPIKE.format(
+                    provider=provider.value, errors=errors, sessions=session_count,
+                ),
+                created_at=now_utc(),
+                is_read=False,
+                is_resolved=False,
+                related_provider=provider,
+                source_kind="provider",
+                source_id=provider.value,
+                grouping_key=f"error-spike:{provider.value}",
+                suppression_key=suppression_key,
+            ))
+            changed = True
+
+        for provider, alert in unresolved.items():
+            if provider not in active:
+                alert.is_resolved = True
+                changed = True
+
+        if changed:
+            self._save_models(user_id, "alerts_json", alerts)
+
+    def _apply_quota_critical_rules(self, user_id: str) -> None:
+        """Alert when provider quota drops below 10%."""
+        alerts = self._load_models(user_id, "alerts_json", AlertRecordDTO)
+        providers = self._load_models(user_id, "providers_json", ProviderUsageDTO)
+        settings = self._settings_for_user(user_id)
+
+        unresolved = {
+            alert.related_provider: alert
+            for alert in alerts
+            if alert.type == AlertType.quota_critical and not alert.is_resolved and alert.related_provider
+        }
+
+        active: set[ProviderKind] = set()
+        changed = False
+
+        for provider in providers:
+            if provider.quota <= 0:
+                continue
+            percent = provider.remaining / provider.quota * 100
+            if percent >= 10:
+                continue
+
+            active.add(provider.provider)
+            if provider.provider in unresolved:
+                continue
+
+            suppression_key = f"quota-critical-{provider.provider.value}"
+            if self._is_suppressed(alerts, suppression_key, settings.alert_cooldown_minutes):
+                continue
+
+            severity = AlertSeverity.critical if percent < 5 else AlertSeverity.warning
+            alerts.insert(0, AlertRecordDTO(
+                id=str(uuid4()),
+                type=AlertType.quota_critical,
+                severity=severity,
+                title=f"{provider.provider.value} quota critically low",
+                message=Msg.QUOTA_CRITICAL.format(
+                    provider=provider.provider.value,
+                    remaining=provider.remaining,
+                    percent=percent,
+                ),
+                created_at=now_utc(),
+                is_read=False,
+                is_resolved=False,
+                related_provider=provider.provider,
+                source_kind="provider",
+                source_id=provider.provider.value,
+                grouping_key=f"quota-critical:{provider.provider.value}",
+                suppression_key=suppression_key,
+            ))
+            changed = True
+
+        for provider, alert in unresolved.items():
+            if provider not in active:
+                alert.is_resolved = True
+                changed = True
+
+        if changed:
+            self._save_models(user_id, "alerts_json", alerts)
+
+    def _is_suppressed(self, alerts: list[AlertRecordDTO], suppression_key: str, cooldown_minutes: int) -> bool:
+        """Check if an alert with the same suppression_key was created recently or is snoozed."""
+        if cooldown_minutes <= 0:
+            return False
+        now = now_utc()
+        cutoff = now - timedelta(minutes=cooldown_minutes)
+        for alert in alerts:
+            if alert.suppression_key != suppression_key:
+                continue
+            # Snoozed and still active
+            if alert.snoozed_until and alert.snoozed_until > now:
+                return True
+            # Within cooldown window
+            if alert.created_at >= cutoff:
+                return True
+        return False
+
+    # ── Alert rules configuration ──
+
+    DEFAULT_ALERT_RULES: list[dict] = [
+        {"type": "Quota Low", "threshold": 20.0, "severity": "Warning", "cooldown": 30, "desc": "Provider quota below threshold %"},
+        {"type": "Usage Spike", "threshold": None, "severity": "Warning", "cooldown": 30, "desc": "Provider usage exceeds configured threshold"},
+        {"type": "Helper Offline", "threshold": None, "severity": "Critical", "cooldown": 30, "desc": "Device helper stops sending heartbeats"},
+        {"type": "Session Failed", "threshold": None, "severity": "Warning", "cooldown": 30, "desc": "Session enters failed state with repeated errors"},
+        {"type": "Session Too Long", "threshold": None, "severity": "Warning", "cooldown": 30, "desc": "Session running beyond duration threshold"},
+        {"type": "Project Budget Exceeded", "threshold": None, "severity": "Warning", "cooldown": 30, "desc": "Project cost exceeds budget threshold"},
+        {"type": "Cost Spike", "threshold": None, "severity": "Warning", "cooldown": 60, "desc": "Provider daily cost exceeds 2x project budget threshold"},
+        {"type": "Error Rate Spike", "threshold": None, "severity": "Warning", "cooldown": 60, "desc": "Provider error count exceeds failure threshold"},
+        {"type": "Quota Critical", "threshold": 10.0, "severity": "Critical", "cooldown": 30, "desc": "Provider quota below 10%"},
+    ]
+
+    def _seed_alert_rules(self, user_id: str) -> None:
+        existing = self.connection.execute(
+            "SELECT COUNT(*) as cnt FROM alert_rules WHERE user_id = ?", (user_id,)
+        ).fetchone()
+        if existing and existing["cnt"] > 0:
+            return
+
+        now_iso = now_utc().isoformat()
+        for rule in self.DEFAULT_ALERT_RULES:
+            rule_id = f"default-{rule['type'].lower().replace(' ', '-')}"
+            self.connection.execute(
+                """
+                INSERT OR IGNORE INTO alert_rules
+                    (id, user_id, type, enabled, threshold, severity, cooldown_minutes, description, updated_at)
+                VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?)
+                """,
+                (rule_id, user_id, rule["type"], rule["threshold"],
+                 rule["severity"], rule["cooldown"], rule["desc"], now_iso),
+            )
+        self.connection.commit()
+
+    def get_alert_rules(self, token: str) -> list[AlertRuleDTO]:
+        state = self._require_session(token)
+        self._seed_alert_rules(state.user.id)
+        rows = self.connection.execute(
+            "SELECT * FROM alert_rules WHERE user_id = ? ORDER BY type",
+            (state.user.id,),
+        ).fetchall()
+        return [
+            AlertRuleDTO(
+                id=row["id"],
+                type=AlertType(row["type"]),
+                enabled=bool(row["enabled"]),
+                threshold=row["threshold"],
+                severity=AlertSeverity(row["severity"]),
+                cooldown_minutes=row["cooldown_minutes"],
+                description=row["description"],
+            )
+            for row in rows
+        ]
+
+    def update_alert_rule(self, token: str, payload: AlertRuleUpdateDTO) -> AlertRuleDTO:
+        state = self._require_session(token)
+        self._seed_alert_rules(state.user.id)
+        rule_id = f"default-{payload.type.value.lower().replace(' ', '-')}"
+        now_iso = now_utc().isoformat()
+        with self.lock:
+            self.connection.execute(
+                """
+                UPDATE alert_rules
+                SET enabled = ?, threshold = ?, severity = ?, cooldown_minutes = ?, updated_at = ?
+                WHERE id = ? AND user_id = ?
+                """,
+                (int(payload.enabled), payload.threshold, payload.severity.value,
+                 payload.cooldown_minutes, now_iso, rule_id, state.user.id),
+            )
+            self.connection.commit()
+        return AlertRuleDTO(
+            id=rule_id,
+            type=payload.type,
+            enabled=payload.enabled,
+            threshold=payload.threshold,
+            severity=payload.severity,
+            cooldown_minutes=payload.cooldown_minutes,
+        )
 
     def _is_alert_on_cooldown(
         self,

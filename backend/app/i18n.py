@@ -19,6 +19,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "seed_quota_warning": "Weekly cumulative usage approaching limit — consider reducing background tasks.",
         "seed_session_failed": "Last task failed due to provider auth expired, retried 3 times.",
         "seed_budget_exceeded": "Project provider-layer today cost reached $0.28, exceeding budget threshold $0.25.",
+        "cost_spike": "{provider} estimated cost today reached ${cost:.2f}, exceeding threshold ${threshold:.2f}.",
+        "error_rate_spike": "{provider} error rate spiked: {errors} errors across {sessions} sessions.",
+        "quota_critical": "{provider} quota critically low — only {remaining:,} remaining ({percent:.0f}%).",
     },
     # ── 简体中文 ──
     "zh": {
@@ -34,6 +37,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "seed_quota_warning": "每周累计用量接近上限 — 建议减少后台任务。",
         "seed_session_failed": "上次任务因服务商认证过期失败，已重试 3 次。",
         "seed_budget_exceeded": "项目 provider-layer 今日费用达 $0.28，超过预算阈值 $0.25。",
+        "cost_spike": "{provider} 今日预估费用达 ${cost:.2f}，超过阈值 ${threshold:.2f}。",
+        "error_rate_spike": "{provider} 错误率飙升：{sessions} 个会话中出现 {errors} 个错误。",
+        "quota_critical": "{provider} 配额严重不足 — 仅剩 {remaining:,}（{percent:.0f}%）。",
     },
     # ── 日本語 ──
     "ja": {
@@ -49,6 +55,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "seed_quota_warning": "週間累計使用量が上限に近づいています — バックグラウンドタスクの削減を検討してください。",
         "seed_session_failed": "プロバイダー認証切れにより前回タスクが失敗、3回リトライしました。",
         "seed_budget_exceeded": "プロジェクト provider-layer の本日コストが $0.28 に達し、予算閾値 $0.25 を超過しました。",
+        "cost_spike": "{provider} の本日推定コストが ${cost:.2f} に達し、閾値 ${threshold:.2f} を超過しました。",
+        "error_rate_spike": "{provider} エラー率が急上昇：{sessions} セッションで {errors} エラー。",
+        "quota_critical": "{provider} のクォータが危機的です — 残り {remaining:,}（{percent:.0f}%）。",
     },
     # ── 한국어 ──
     "ko": {
@@ -64,6 +73,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "seed_quota_warning": "주간 누적 사용량이 한도에 근접합니다 — 백그라운드 작업을 줄이세요.",
         "seed_session_failed": "공급자 인증 만료로 마지막 작업이 실패했으며 3회 재시도했습니다.",
         "seed_budget_exceeded": "프로젝트 provider-layer 오늘 비용이 $0.28에 도달하여 예산 임계값 $0.25을 초과했습니다.",
+        "cost_spike": "{provider} 오늘 예상 비용이 ${cost:.2f}에 도달하여 임계값 ${threshold:.2f}을 초과했습니다.",
+        "error_rate_spike": "{provider} 오류율 급증: {sessions}개 세션에서 {errors}개 오류.",
+        "quota_critical": "{provider} 할당량이 심각한 수준입니다 — {remaining:,}만 남음 ({percent:.0f}%).",
     },
     # ── Español ──
     "es": {
@@ -79,6 +91,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "seed_quota_warning": "El uso acumulado semanal se acerca al límite — considere reducir tareas en segundo plano.",
         "seed_session_failed": "Última tarea falló por autenticación de proveedor expirada, reintentó 3 veces.",
         "seed_budget_exceeded": "Costo del proyecto provider-layer hoy alcanzó $0.28, superando el umbral de presupuesto $0.25.",
+        "cost_spike": "El costo estimado de {provider} hoy alcanzó ${cost:.2f}, superando el umbral ${threshold:.2f}.",
+        "error_rate_spike": "Pico de tasa de errores en {provider}: {errors} errores en {sessions} sesiones.",
+        "quota_critical": "Cuota de {provider} críticamente baja — solo quedan {remaining:,} ({percent:.0f}%).",
     },
 }
 
@@ -118,6 +133,9 @@ class Msg:
     SEED_QUOTA_WARNING: ClassVar[str] = _TRANSLATIONS["en"]["seed_quota_warning"]
     SEED_SESSION_FAILED: ClassVar[str] = _TRANSLATIONS["en"]["seed_session_failed"]
     SEED_BUDGET_EXCEEDED: ClassVar[str] = _TRANSLATIONS["en"]["seed_budget_exceeded"]
+    COST_SPIKE: ClassVar[str] = _TRANSLATIONS["en"]["cost_spike"]
+    ERROR_RATE_SPIKE: ClassVar[str] = _TRANSLATIONS["en"]["error_rate_spike"]
+    QUOTA_CRITICAL: ClassVar[str] = _TRANSLATIONS["en"]["quota_critical"]
 
     @classmethod
     def get(cls, key: str, locale: str | None = None) -> str:

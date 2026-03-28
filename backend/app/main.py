@@ -8,6 +8,8 @@ from fastapi.responses import HTMLResponse
 from .models import (
     AlertActionResponseDTO,
     AlertRecordDTO,
+    AlertRuleDTO,
+    AlertRuleUpdateDTO,
     AlertSnoozeRequestDTO,
     AuthRequestDTO,
     AuthResponseDTO,
@@ -183,6 +185,18 @@ def create_app(store: SQLiteStore) -> FastAPI:
     @app.get("/v1/subscription/limits", response_model=TierLimitsDTO)
     def subscription_limits(token: str = Depends(current_token)) -> TierLimitsDTO:
         return store.get_tier_limits(token)
+
+    # ── Alert rules endpoints ──
+
+    @app.get("/v1/alerts/rules", response_model=list[AlertRuleDTO])
+    def alert_rules(token: str = Depends(current_token)) -> list[AlertRuleDTO]:
+        return store.get_alert_rules(token)
+
+    @app.put("/v1/alerts/rules", response_model=AlertRuleDTO)
+    def update_alert_rule(
+        payload: AlertRuleUpdateDTO, token: str = Depends(current_token)
+    ) -> AlertRuleDTO:
+        return store.update_alert_rule(token, payload)
 
     # ── Cost estimation endpoints ──
 

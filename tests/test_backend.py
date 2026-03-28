@@ -397,13 +397,13 @@ def test_subscription_upgrade_to_pro(client: TestClient) -> None:
 
 
 def test_free_tier_alert_filtering(client: TestClient) -> None:
-    """Free tier should only see quota_low, usage_spike, helper_offline alerts."""
+    """Free tier should only see quota_low, usage_spike, helper_offline, quota_critical alerts."""
     headers = auth_headers(client)
 
     alerts = client.get("/v1/alerts", headers=headers)
     assert alerts.status_code == 200
     for item in alerts.json():
-        assert item["type"] in {"Quota Low", "Usage Spike", "Helper Offline"}
+        assert item["type"] in {"Quota Low", "Usage Spike", "Helper Offline", "Quota Critical"}
 
 
 def test_apple_receipt_verify_rejects_invalid(client: TestClient) -> None:
@@ -637,6 +637,70 @@ def test_cost_rules_crud(client: TestClient) -> None:
     # Verify it's gone
     rules_final = client.get("/v1/costs/rules", headers=headers)
     assert not any(r["model"] == "opus-custom" for r in rules_final.json())
+
+
+def test_alert_rules_crud(client: TestClient) -> None:
+    """Alert rules should be listable and updatable."""
+    headers = auth_headers(client)
+
+    # List default rules
+    rules = client.get("/v1/alerts/rules", headers=headers)
+    assert rules.status_code == 200
+    rule_list = rules.json()
+    assert len(rule_list) >= 9  # all default rule types
+
+    # All rules enabled by default
+    for rule in rule_list:
+        assert rule["enabled"] is True
+        assert "type" in rule
+        assert "severity" in rule
+
+    # Disable a rule
+    update = client.put(
+        "/v1/alerts/rules",
+        headers=headers,
+        json={
+            "type": "Cost Spike",
+            "enabled": False,
+            "severity": "Warning",
+            "cooldown_minutes": 120,
+        },
+    )
+    assert update.status_code == 200
+    assert update.json()["enabled"] is False
+    assert update.json()["cooldown_minutes"] == 120
+
+
+def test_quota_critical_alert_fires(client: TestClient) -> None:
+    """Quota critical alert should fire when provider quota < 10%."""
+    headers = auth_headers(client)
+    _upgrade_to_pro(client, headers)
+
+    # Codex is seeded with remaining=38_000, quota=500_000 = 7.6% → should trigger
+    alerts = client.get("/v1/alerts", headers=headers)
+    assert alerts.status_code == 200
+    quota_critical = [
+        a for a in alerts.json()
+        if a["type"] == "Quota Critical" and a["related_provider"] == "Codex"
+    ]
+    assert len(quota_critical) >= 1
+    assert quota_critical[0]["source_kind"] == "provider"
+    assert quota_critical[0]["grouping_key"] == "quota-critical:Codex"
+
+
+def test_alert_deep_link_fields(client: TestClient) -> None:
+    """Alerts should include source_kind, source_id, grouping_key, suppression_key."""
+    headers = auth_headers(client)
+    _upgrade_to_pro(client, headers)
+
+    alerts = client.get("/v1/alerts", headers=headers)
+    assert alerts.status_code == 200
+    # At least some alerts should have deep link fields
+    alerts_with_source = [a for a in alerts.json() if a.get("source_kind")]
+    assert len(alerts_with_source) >= 1
+    for a in alerts_with_source:
+        assert a["source_id"] is not None
+        assert a["grouping_key"] is not None
 
 
 def test_cost_summary_free_tier_limited(client: TestClient) -> None:
