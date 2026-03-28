@@ -390,10 +390,10 @@ def test_subscription_upgrade_to_pro(client: TestClient) -> None:
     assert lim["has_project_budgets"] is True
     assert "csv" in lim["export_formats"]
 
-    # Pro tier returns all providers
+    # Pro tier returns all providers (8 seeded: Codex, Gemini, Claude, OpenRouter, Ollama, Cursor, Copilot, Kimi K2)
     providers_pro = client.get("/v1/providers", headers=headers)
     assert providers_pro.status_code == 200
-    assert len(providers_pro.json()) == 5
+    assert len(providers_pro.json()) == 8
 
 
 def test_free_tier_alert_filtering(client: TestClient) -> None:
@@ -542,6 +542,28 @@ def test_team_dashboard(client: TestClient) -> None:
     assert body["total_usage"] > 0
     assert "provider_breakdown" in body
     assert "alert_summary" in body
+
+
+def test_provider_metadata_included(client: TestClient) -> None:
+    """Provider metadata should be attached to seeded providers."""
+    headers = auth_headers(client)
+    _upgrade_to_pro(client, headers)
+    providers = client.get("/v1/providers", headers=headers)
+    assert providers.status_code == 200
+    for item in providers.json():
+        meta = item.get("metadata")
+        assert meta is not None, f"Provider {item['provider']} missing metadata"
+        assert "display_name" in meta
+        assert meta["category"] in {"cloud", "local", "aggregator", "ide"}
+
+
+def test_collection_confidence_in_sessions(client: TestClient) -> None:
+    """Sessions should include collection_confidence field."""
+    headers = auth_headers(client)
+    sessions = client.get("/v1/sessions", headers=headers)
+    assert sessions.status_code == 200
+    for item in sessions.json():
+        assert item.get("collection_confidence") in {"high", "medium", "low"}
 
 
 def test_cannot_create_duplicate_team(client: TestClient) -> None:

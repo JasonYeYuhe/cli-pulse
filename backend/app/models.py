@@ -17,8 +17,23 @@ class ProviderKind(str, Enum):
     codex = "Codex"
     gemini = "Gemini"
     claude = "Claude"
-    openrouter = "OpenRouter"
+    cursor = "Cursor"
+    opencode = "OpenCode"
+    droid = "Droid"
+    antigravity = "Antigravity"
+    copilot = "Copilot"
+    zai = "z.ai"
+    minimax = "MiniMax"
+    augment = "Augment"
+    jetbrains_ai = "JetBrains AI"
+    kimi_k2 = "Kimi K2"
+    amp = "Amp"
+    synthetic = "Synthetic"
+    warp = "Warp"
+    kilo = "Kilo"
     ollama = "Ollama"
+    openrouter = "OpenRouter"
+    alibaba = "Alibaba"
 
 
 class SessionStatus(str, Enum):
@@ -57,6 +72,12 @@ class PushPolicy(str, Enum):
     critical_only = "Critical Only"
 
 
+class CollectionConfidence(str, Enum):
+    high = "high"
+    medium = "medium"
+    low = "low"
+
+
 class CostStatus(str, Enum):
     exact = "Exact"
     estimated = "Estimated"
@@ -86,6 +107,15 @@ class ActivityItemDTO(BaseModel):
     timestamp: datetime
 
 
+class ProviderMetadataDTO(BaseModel):
+    display_name: str
+    category: str = "cloud"  # cloud, local, aggregator, ide
+    supports_exact_cost: bool = False
+    supports_quota: bool = True
+    default_quota: Optional[int] = None
+    api_base_url: Optional[str] = None
+
+
 class ProviderUsageDTO(BaseModel):
     provider: ProviderKind
     today_usage: int
@@ -100,6 +130,7 @@ class ProviderUsageDTO(BaseModel):
     trend: List[UsagePointDTO]
     recent_session_names: List[str]
     recent_errors: List[str]
+    metadata: Optional[ProviderMetadataDTO] = None
 
 
 class SessionRecordDTO(BaseModel):
@@ -116,6 +147,7 @@ class SessionRecordDTO(BaseModel):
     cost_status: CostStatus = CostStatus.estimated
     requests: int
     error_count: int
+    collection_confidence: CollectionConfidence = CollectionConfidence.medium
     usage_timeline: List[UsagePointDTO]
     activity_timeline: List[ActivityItemDTO]
     error_summary: List[str]
@@ -286,6 +318,7 @@ class HelperSessionSyncDTO(BaseModel):
     exact_cost: Optional[float] = Field(default=None, ge=0)
     requests: int
     error_count: int
+    collection_confidence: CollectionConfidence = CollectionConfidence.medium
     started_at: datetime
     last_active_at: datetime
 

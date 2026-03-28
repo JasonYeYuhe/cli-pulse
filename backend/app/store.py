@@ -19,6 +19,7 @@ from .models import (
     AlertSummaryDTO,
     AlertTypeSummaryDTO,
     AlertType,
+    CollectionConfidence,
     CostStatus,
     DashboardSummaryDTO,
     DeviceRecordDTO,
@@ -30,6 +31,7 @@ from .models import (
     PairingInfoDTO,
     ProjectRecordDTO,
     ProviderKind,
+    ProviderMetadataDTO,
     PushPolicy,
     ProviderUsageDTO,
     SessionRecordDTO,
@@ -62,8 +64,47 @@ DEFAULT_PROVIDER_COST_CONFIG: dict[ProviderKind, ProviderCostConfig] = {
     ProviderKind.codex: ProviderCostConfig(rate_per_1k_usage=0.012, status=CostStatus.estimated),
     ProviderKind.gemini: ProviderCostConfig(rate_per_1k_usage=0.008, status=CostStatus.estimated),
     ProviderKind.claude: ProviderCostConfig(rate_per_1k_usage=0.015, status=CostStatus.estimated),
-    ProviderKind.openrouter: ProviderCostConfig(rate_per_1k_usage=0.010, status=CostStatus.estimated),
+    ProviderKind.cursor: ProviderCostConfig(rate_per_1k_usage=0.013, status=CostStatus.estimated),
+    ProviderKind.opencode: ProviderCostConfig(rate_per_1k_usage=0.011, status=CostStatus.estimated),
+    ProviderKind.droid: ProviderCostConfig(rate_per_1k_usage=0.010, status=CostStatus.estimated),
+    ProviderKind.antigravity: ProviderCostConfig(rate_per_1k_usage=0.014, status=CostStatus.estimated),
+    ProviderKind.copilot: ProviderCostConfig(rate_per_1k_usage=0.012, status=CostStatus.estimated),
+    ProviderKind.zai: ProviderCostConfig(rate_per_1k_usage=0.009, status=CostStatus.estimated),
+    ProviderKind.minimax: ProviderCostConfig(rate_per_1k_usage=0.006, status=CostStatus.estimated),
+    ProviderKind.augment: ProviderCostConfig(rate_per_1k_usage=0.011, status=CostStatus.estimated),
+    ProviderKind.jetbrains_ai: ProviderCostConfig(rate_per_1k_usage=0.010, status=CostStatus.estimated),
+    ProviderKind.kimi_k2: ProviderCostConfig(rate_per_1k_usage=0.005, status=CostStatus.estimated),
+    ProviderKind.amp: ProviderCostConfig(rate_per_1k_usage=0.012, status=CostStatus.estimated),
+    ProviderKind.synthetic: ProviderCostConfig(rate_per_1k_usage=0.008, status=CostStatus.estimated),
+    ProviderKind.warp: ProviderCostConfig(rate_per_1k_usage=0.007, status=CostStatus.estimated),
+    ProviderKind.kilo: ProviderCostConfig(rate_per_1k_usage=0.009, status=CostStatus.estimated),
     ProviderKind.ollama: ProviderCostConfig(rate_per_1k_usage=None, status=CostStatus.unavailable),
+    ProviderKind.openrouter: ProviderCostConfig(rate_per_1k_usage=0.010, status=CostStatus.estimated),
+    ProviderKind.alibaba: ProviderCostConfig(rate_per_1k_usage=0.004, status=CostStatus.estimated),
+}
+
+# Provider metadata registry — describes each provider's capabilities
+PROVIDER_METADATA: dict[ProviderKind, ProviderMetadataDTO] = {
+    ProviderKind.codex: ProviderMetadataDTO(display_name="Codex", category="cloud", supports_exact_cost=False, supports_quota=True, default_quota=500_000),
+    ProviderKind.gemini: ProviderMetadataDTO(display_name="Gemini", category="cloud", supports_exact_cost=False, supports_quota=True, default_quota=300_000),
+    ProviderKind.claude: ProviderMetadataDTO(display_name="Claude", category="cloud", supports_exact_cost=True, supports_quota=True, default_quota=250_000),
+    ProviderKind.cursor: ProviderMetadataDTO(display_name="Cursor", category="ide", supports_exact_cost=False, supports_quota=True, default_quota=500_000),
+    ProviderKind.opencode: ProviderMetadataDTO(display_name="OpenCode", category="cloud", supports_exact_cost=False, supports_quota=True, default_quota=300_000),
+    ProviderKind.droid: ProviderMetadataDTO(display_name="Droid", category="cloud", supports_exact_cost=False, supports_quota=True, default_quota=200_000),
+    ProviderKind.antigravity: ProviderMetadataDTO(display_name="Antigravity", category="cloud", supports_exact_cost=False, supports_quota=True, default_quota=200_000),
+    ProviderKind.copilot: ProviderMetadataDTO(display_name="Copilot", category="ide", supports_exact_cost=False, supports_quota=True, default_quota=500_000),
+    ProviderKind.zai: ProviderMetadataDTO(display_name="z.ai", category="cloud", supports_exact_cost=False, supports_quota=True, default_quota=200_000),
+    ProviderKind.minimax: ProviderMetadataDTO(display_name="MiniMax", category="cloud", supports_exact_cost=False, supports_quota=True, default_quota=300_000),
+    ProviderKind.augment: ProviderMetadataDTO(display_name="Augment", category="ide", supports_exact_cost=False, supports_quota=True, default_quota=300_000),
+    ProviderKind.jetbrains_ai: ProviderMetadataDTO(display_name="JetBrains AI", category="ide", supports_exact_cost=False, supports_quota=True, default_quota=300_000),
+    ProviderKind.kimi_k2: ProviderMetadataDTO(display_name="Kimi K2", category="cloud", supports_exact_cost=False, supports_quota=True, default_quota=500_000),
+    ProviderKind.amp: ProviderMetadataDTO(display_name="Amp", category="cloud", supports_exact_cost=False, supports_quota=True, default_quota=300_000),
+    ProviderKind.synthetic: ProviderMetadataDTO(display_name="Synthetic", category="cloud", supports_exact_cost=False, supports_quota=True, default_quota=200_000),
+    ProviderKind.warp: ProviderMetadataDTO(display_name="Warp", category="ide", supports_exact_cost=False, supports_quota=True, default_quota=300_000),
+    ProviderKind.kilo: ProviderMetadataDTO(display_name="Kilo", category="cloud", supports_exact_cost=False, supports_quota=True, default_quota=200_000),
+    ProviderKind.ollama: ProviderMetadataDTO(display_name="Ollama", category="local", supports_exact_cost=False, supports_quota=False, default_quota=999_999),
+    ProviderKind.openrouter: ProviderMetadataDTO(display_name="OpenRouter", category="aggregator", supports_exact_cost=True, supports_quota=True, default_quota=200_000),
+    ProviderKind.alibaba: ProviderMetadataDTO(display_name="Alibaba", category="cloud", supports_exact_cost=False, supports_quota=True, default_quota=400_000),
 }
 
 
@@ -673,6 +714,7 @@ class SQLiteStore:
                     cost_status=session_cost_status,
                     requests=item.requests,
                     error_count=item.error_count,
+                    collection_confidence=item.collection_confidence,
                     usage_timeline=[],
                     activity_timeline=[],
                     error_summary=[],
@@ -694,6 +736,7 @@ class SQLiteStore:
             provider.estimated_cost_today, provider.cost_status_today = self._resolve_cost(provider.provider, provider.today_usage)
             provider.estimated_cost_week, provider.cost_status_week = self._resolve_cost(provider.provider, provider.week_usage)
             provider.recent_session_names = [item.name for item in synced_sessions if item.provider == provider.provider][:MAX_RECENT_SESSION_NAMES]
+            provider.metadata = PROVIDER_METADATA.get(provider.provider)
         self._save_models(state.user.id, "providers_json", providers)
 
         alerts = self._load_models(state.user.id, "alerts_json", AlertRecordDTO)
@@ -1436,6 +1479,18 @@ class SQLiteStore:
             UsagePointDTO(timestamp=now - timedelta(hours=21 - index * 3), value=value)
             for index, value in enumerate([900, 1300, 1700, 2100, 1900, 1600, 1800, 1500])
         ]
+        cursor_trend = [
+            UsagePointDTO(timestamp=now - timedelta(hours=21 - index * 3), value=value)
+            for index, value in enumerate([3200, 5100, 7400, 8200, 6800, 5900, 7100, 6600])
+        ]
+        copilot_trend = [
+            UsagePointDTO(timestamp=now - timedelta(hours=21 - index * 3), value=value)
+            for index, value in enumerate([2100, 3400, 4800, 5100, 4200, 3800, 4600, 4100])
+        ]
+        kimi_trend = [
+            UsagePointDTO(timestamp=now - timedelta(hours=21 - index * 3), value=value)
+            for index, value in enumerate([1500, 2200, 3100, 3600, 3000, 2700, 3300, 2900])
+        ]
 
         providers = [
             ProviderUsageDTO(
@@ -1452,6 +1507,7 @@ class SQLiteStore:
                 trend=codex_trend,
                 recent_session_names=["Refactor dashboard filters", "Fix session sync retry", "Investigate helper heartbeat"],
                 recent_errors=["2 sync retries on Tokyo-Mac", "1 session timeout on lab-server"],
+                metadata=PROVIDER_METADATA.get(ProviderKind.codex),
             ),
             ProviderUsageDTO(
                 provider=ProviderKind.gemini,
@@ -1467,6 +1523,7 @@ class SQLiteStore:
                 trend=gemini_trend,
                 recent_session_names=["Draft device pairing UX", "Summarize CI failures"],
                 recent_errors=["No new provider errors"],
+                metadata=PROVIDER_METADATA.get(ProviderKind.gemini),
             ),
             ProviderUsageDTO(
                 provider=ProviderKind.claude,
@@ -1482,6 +1539,7 @@ class SQLiteStore:
                 trend=claude_trend,
                 recent_session_names=["Summarize incident notes", "Review provider adapter contract"],
                 recent_errors=["1 auth refresh last night"],
+                metadata=PROVIDER_METADATA.get(ProviderKind.claude),
             ),
             ProviderUsageDTO(
                 provider=ProviderKind.openrouter,
@@ -1497,6 +1555,7 @@ class SQLiteStore:
                 trend=openrouter_trend,
                 recent_session_names=["Compare model outputs", "Run prompt regression batch"],
                 recent_errors=["No new provider errors"],
+                metadata=PROVIDER_METADATA.get(ProviderKind.openrouter),
             ),
             ProviderUsageDTO(
                 provider=ProviderKind.ollama,
@@ -1512,6 +1571,55 @@ class SQLiteStore:
                 trend=ollama_trend,
                 recent_session_names=["Local llama smoke test", "Embedding batch on workstation"],
                 recent_errors=["One slow local inference spike"],
+                metadata=PROVIDER_METADATA.get(ProviderKind.ollama),
+            ),
+            ProviderUsageDTO(
+                provider=ProviderKind.cursor,
+                today_usage=52_300,
+                week_usage=278_000,
+                estimated_cost_today=self._resolve_cost(ProviderKind.cursor, 52_300)[0],
+                estimated_cost_week=self._resolve_cost(ProviderKind.cursor, 278_000)[0],
+                cost_status_today=self._resolve_cost(ProviderKind.cursor, 52_300)[1],
+                cost_status_week=self._resolve_cost(ProviderKind.cursor, 278_000)[1],
+                quota=500_000,
+                remaining=222_000,
+                status_text="Active",
+                trend=cursor_trend,
+                recent_session_names=["Refactor auth module", "Widget layout fix"],
+                recent_errors=["No new provider errors"],
+                metadata=PROVIDER_METADATA.get(ProviderKind.cursor),
+            ),
+            ProviderUsageDTO(
+                provider=ProviderKind.copilot,
+                today_usage=31_200,
+                week_usage=156_000,
+                estimated_cost_today=self._resolve_cost(ProviderKind.copilot, 31_200)[0],
+                estimated_cost_week=self._resolve_cost(ProviderKind.copilot, 156_000)[0],
+                cost_status_today=self._resolve_cost(ProviderKind.copilot, 31_200)[1],
+                cost_status_week=self._resolve_cost(ProviderKind.copilot, 156_000)[1],
+                quota=500_000,
+                remaining=344_000,
+                status_text="Healthy",
+                trend=copilot_trend,
+                recent_session_names=["Autocomplete audit", "PR review assist"],
+                recent_errors=["No new provider errors"],
+                metadata=PROVIDER_METADATA.get(ProviderKind.copilot),
+            ),
+            ProviderUsageDTO(
+                provider=ProviderKind.kimi_k2,
+                today_usage=22_100,
+                week_usage=98_000,
+                estimated_cost_today=self._resolve_cost(ProviderKind.kimi_k2, 22_100)[0],
+                estimated_cost_week=self._resolve_cost(ProviderKind.kimi_k2, 98_000)[0],
+                cost_status_today=self._resolve_cost(ProviderKind.kimi_k2, 22_100)[1],
+                cost_status_week=self._resolve_cost(ProviderKind.kimi_k2, 98_000)[1],
+                quota=500_000,
+                remaining=402_000,
+                status_text="Healthy",
+                trend=kimi_trend,
+                recent_session_names=["Long-context analysis", "Code translation batch"],
+                recent_errors=["No new provider errors"],
+                metadata=PROVIDER_METADATA.get(ProviderKind.kimi_k2),
             ),
         ]
 
@@ -1520,6 +1628,9 @@ class SQLiteStore:
         session_error_triage_id = str(uuid4())
         provider_adapter_review_id = str(uuid4())
         local_model_benchmark_id = str(uuid4())
+        cursor_refactor_id = str(uuid4())
+        copilot_review_id = str(uuid4())
+        kimi_analysis_id = str(uuid4())
 
         sessions = [
             SessionRecordDTO(
@@ -1626,6 +1737,63 @@ class SQLiteStore:
                     ActivityItemDTO(id=str(uuid4()), title="Benchmark still active", subtitle="One transient local timeout", timestamp=now - timedelta(minutes=28)),
                 ],
                 error_summary=["One transient local inference timeout."],
+            ),
+            SessionRecordDTO(
+                id=cursor_refactor_id,
+                name="Auth module refactor",
+                provider=ProviderKind.cursor,
+                project="cli-pulse-ios",
+                device_name="Jason's MacBook Pro",
+                started_at=now - timedelta(hours=3),
+                last_active_at=now - timedelta(minutes=8),
+                status=SessionStatus.running,
+                total_usage=28_400,
+                estimated_cost=self._resolve_cost(ProviderKind.cursor, 28_400)[0],
+                cost_status=self._resolve_cost(ProviderKind.cursor, 28_400)[1],
+                requests=95,
+                error_count=0,
+                collection_confidence=CollectionConfidence.high,
+                usage_timeline=cursor_trend,
+                activity_timeline=[],
+                error_summary=[],
+            ),
+            SessionRecordDTO(
+                id=copilot_review_id,
+                name="PR review assist",
+                provider=ProviderKind.copilot,
+                project="backend-api",
+                device_name="Jason's MacBook Pro",
+                started_at=now - timedelta(hours=2),
+                last_active_at=now - timedelta(minutes=15),
+                status=SessionStatus.idle,
+                total_usage=14_800,
+                estimated_cost=self._resolve_cost(ProviderKind.copilot, 14_800)[0],
+                cost_status=self._resolve_cost(ProviderKind.copilot, 14_800)[1],
+                requests=62,
+                error_count=0,
+                collection_confidence=CollectionConfidence.high,
+                usage_timeline=copilot_trend,
+                activity_timeline=[],
+                error_summary=[],
+            ),
+            SessionRecordDTO(
+                id=kimi_analysis_id,
+                name="Long-context code analysis",
+                provider=ProviderKind.kimi_k2,
+                project="provider-layer",
+                device_name="lab-server-01",
+                started_at=now - timedelta(hours=1),
+                last_active_at=now - timedelta(minutes=5),
+                status=SessionStatus.running,
+                total_usage=11_200,
+                estimated_cost=self._resolve_cost(ProviderKind.kimi_k2, 11_200)[0],
+                cost_status=self._resolve_cost(ProviderKind.kimi_k2, 11_200)[1],
+                requests=28,
+                error_count=0,
+                collection_confidence=CollectionConfidence.high,
+                usage_timeline=kimi_trend,
+                activity_timeline=[],
+                error_summary=[],
             ),
         ]
 

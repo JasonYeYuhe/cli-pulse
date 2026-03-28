@@ -9,12 +9,30 @@ from pathlib import Path
 from typing import Optional
 
 
-PROCESS_PATTERNS: list[tuple[str, str]] = [
-    ("Codex", r"\bcodex\b|\bopenai\b"),
-    ("Gemini", r"\bgemini\b|\bgoogle-generativeai\b"),
-    ("Claude", r"\bclaude\b"),
-    ("OpenRouter", r"\bopenrouter\b"),
-    ("Ollama", r"\bollama\b"),
+PROCESS_PATTERNS: list[tuple[str, str, str]] = [
+    # (provider_name, regex_pattern, confidence: high|medium|low)
+    ("Codex", r"\bcodex\b", "high"),
+    ("Codex", r"\bopenai\b", "medium"),
+    ("Gemini", r"\bgemini\b", "high"),
+    ("Gemini", r"\bgoogle-generativeai\b", "medium"),
+    ("Claude", r"\bclaude\b", "high"),
+    ("Cursor", r"\bcursor\b", "high"),
+    ("OpenCode", r"\bopencode\b", "high"),
+    ("Droid", r"\bdroid\b", "low"),
+    ("Antigravity", r"\bantigravity\b", "high"),
+    ("Copilot", r"\bcopilot\b|\bgithub.copilot\b", "high"),
+    ("z.ai", r"\bz\.ai\b|\bzai\b", "high"),
+    ("MiniMax", r"\bminimax\b", "high"),
+    ("Augment", r"\baugment\b", "medium"),
+    ("JetBrains AI", r"\bjetbrains[\s-]?ai\b|\bjbai\b", "high"),
+    ("Kimi K2", r"\bkimi\b|\bkimi[_-]?k2\b", "high"),
+    ("Amp", r"\bamp\b", "low"),
+    ("Synthetic", r"\bsynthetic\b", "medium"),
+    ("Warp", r"\bwarp\b", "medium"),
+    ("Kilo", r"\bkilo\b|\bkilo[_-]?code\b", "high"),
+    ("Ollama", r"\bollama\b", "high"),
+    ("OpenRouter", r"\bopenrouter\b", "high"),
+    ("Alibaba", r"\balibaba\b|\bqwen\b|\btongyi\b", "high"),
 ]
 
 IGNORED_COMMAND_PATTERNS: list[str] = [
@@ -48,6 +66,7 @@ class CollectedSession:
     exact_cost: Optional[float]
     cpu_usage: float
     command: str
+    collection_confidence: str = "medium"  # high, medium, low
 
 
 @dataclass
@@ -78,9 +97,10 @@ def collect_sessions() -> list[CollectedSession]:
         if _should_ignore_command(row["command"]):
             continue
 
-        provider = _detect_provider(row["command"])
-        if provider is None:
+        match = _detect_provider(row["command"])
+        if match is None:
             continue
+        provider, confidence = match
 
         elapsed_seconds = max(1, _elapsed_to_seconds(row["etime"]))
         started_at = datetime.now(timezone.utc) - timedelta(seconds=elapsed_seconds)
@@ -103,6 +123,7 @@ def collect_sessions() -> list[CollectedSession]:
                 exact_cost=None,
                 cpu_usage=cpu,
                 command=command,
+                collection_confidence=confidence,
             )
         )
 
@@ -168,8 +189,23 @@ def estimate_provider_remaining(sessions: list[CollectedSession]) -> dict[str, i
         "Codex": 500_000,
         "Gemini": 300_000,
         "Claude": 250_000,
+        "Cursor": 500_000,
+        "OpenCode": 300_000,
+        "Droid": 200_000,
+        "Antigravity": 200_000,
+        "Copilot": 500_000,
+        "z.ai": 200_000,
+        "MiniMax": 300_000,
+        "Augment": 300_000,
+        "JetBrains AI": 300_000,
+        "Kimi K2": 500_000,
+        "Amp": 300_000,
+        "Synthetic": 200_000,
+        "Warp": 300_000,
+        "Kilo": 200_000,
         "OpenRouter": 200_000,
         "Ollama": 999_999,
+        "Alibaba": 400_000,
     }
     usage: dict[str, int] = {}
     for session in sessions:
@@ -218,11 +254,12 @@ def _elapsed_to_seconds(raw: str) -> int:
     return days * 86_400 + hours * 3_600 + minutes * 60 + seconds
 
 
-def _detect_provider(command: str) -> str | None:
+def _detect_provider(command: str) -> tuple[str, str] | None:
+    """Return (provider_name, confidence) or None."""
     lowered = command.lower()
-    for provider, pattern in PROCESS_PATTERNS:
+    for provider, pattern, confidence in PROCESS_PATTERNS:
         if re.search(pattern, lowered):
-            return provider
+            return provider, confidence
     return None
 
 
