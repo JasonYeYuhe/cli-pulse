@@ -566,6 +566,89 @@ def test_collection_confidence_in_sessions(client: TestClient) -> None:
         assert item.get("collection_confidence") in {"high", "medium", "low"}
 
 
+def test_cost_summary_returns_breakdown(client: TestClient) -> None:
+    """Cost summary should return provider and project breakdowns."""
+    headers = auth_headers(client)
+    _upgrade_to_pro(client, headers)
+
+    response = client.get("/v1/costs/summary", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["currency"] == "USD"
+    assert body["total_cost_today"] is not None
+    assert body["total_cost_today"] > 0
+    assert body["total_cost_week"] is not None
+    assert body["cost_status"] in {"Exact", "Estimated", "Unavailable"}
+    assert body["cost_tracking_range"] == "30d"  # pro tier
+    assert len(body["provider_breakdown"]) >= 3
+    assert len(body["project_breakdown"]) >= 1
+    assert len(body["daily_trend"]) == 7
+
+    # Each provider breakdown has required fields
+    for pb in body["provider_breakdown"]:
+        assert "provider" in pb
+        assert "today_usage" in pb
+        assert "today_cost" in pb
+
+    # Each project breakdown has budget info
+    for proj in body["project_breakdown"]:
+        assert "project_id" in proj
+        assert "project_name" in proj
+        assert "today_cost" in proj
+
+
+def test_cost_rules_crud(client: TestClient) -> None:
+    """Cost rules CRUD: list, create, delete."""
+    headers = auth_headers(client)
+
+    # List default rules
+    rules = client.get("/v1/costs/rules", headers=headers)
+    assert rules.status_code == 200
+    default_rules = rules.json()
+    assert len(default_rules) >= 5  # at least one per seeded provider
+
+    # Create a user rule
+    create = client.put(
+        "/v1/costs/rules",
+        headers=headers,
+        json={
+            "provider": "Claude",
+            "model": "opus-custom",
+            "input_rate_per_1k": 0.020,
+            "output_rate_per_1k": 0.080,
+        },
+    )
+    assert create.status_code == 200
+    rule = create.json()
+    assert rule["provider"] == "Claude"
+    assert rule["model"] == "opus-custom"
+    assert rule["source"] == "user"
+    assert rule["input_rate_per_1k"] == 0.020
+
+    # Verify it appears in list
+    rules_after = client.get("/v1/costs/rules", headers=headers)
+    assert any(r["model"] == "opus-custom" for r in rules_after.json())
+
+    # Delete the user rule
+    delete = client.delete(f"/v1/costs/rules/{rule['id']}", headers=headers)
+    assert delete.status_code == 200
+
+    # Verify it's gone
+    rules_final = client.get("/v1/costs/rules", headers=headers)
+    assert not any(r["model"] == "opus-custom" for r in rules_final.json())
+
+
+def test_cost_summary_free_tier_limited(client: TestClient) -> None:
+    """Free tier cost tracking range should be 'today'."""
+    headers = auth_headers(client)
+
+    response = client.get("/v1/costs/summary", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["cost_tracking_range"] == "today"
+
+
 def test_cannot_create_duplicate_team(client: TestClient) -> None:
     headers = auth_headers(client)
     _upgrade_to_team(client, headers)

@@ -394,6 +394,59 @@ class TierLimitsDTO(BaseModel):
     export_formats: List[str]
 
 
+class CostRuleDTO(BaseModel):
+    id: str
+    provider: ProviderKind
+    model: str = "*"  # "*" = default for provider, or specific model name
+    input_rate_per_1k: Optional[float] = None  # $/1K input tokens
+    output_rate_per_1k: Optional[float] = None  # $/1K output tokens
+    blended_rate_per_1k: Optional[float] = None  # $/1K usage (when input/output split unknown)
+    currency: str = "USD"
+    source: str = "default"  # default, user, provider_api
+    updated_at: Optional[datetime] = None
+
+
+class CostRuleCreateDTO(BaseModel):
+    provider: ProviderKind
+    model: str = "*"
+    input_rate_per_1k: Optional[float] = Field(default=None, ge=0)
+    output_rate_per_1k: Optional[float] = Field(default=None, ge=0)
+    blended_rate_per_1k: Optional[float] = Field(default=None, ge=0)
+
+
+class ProviderCostBreakdownDTO(BaseModel):
+    provider: ProviderKind
+    today_usage: int
+    week_usage: int
+    today_cost: Optional[float] = None
+    week_cost: Optional[float] = None
+    cost_status: CostStatus = CostStatus.estimated
+    model_breakdown: Dict[str, float] = {}  # model_name → cost
+
+
+class ProjectCostBreakdownDTO(BaseModel):
+    project_id: str
+    project_name: str
+    today_cost: Optional[float] = None
+    week_cost: Optional[float] = None
+    cost_status: CostStatus = CostStatus.estimated
+    budget_threshold: Optional[float] = None
+    budget_percent: Optional[float] = None  # cost / threshold * 100
+    provider_breakdown: Dict[str, float] = {}  # provider_name → cost
+
+
+class CostSummaryDTO(BaseModel):
+    total_cost_today: Optional[float] = None
+    total_cost_week: Optional[float] = None
+    total_cost_month: Optional[float] = None
+    cost_status: CostStatus = CostStatus.estimated
+    currency: str = "USD"
+    cost_tracking_range: str = "today"  # today, 30d, full (per tier)
+    provider_breakdown: List[ProviderCostBreakdownDTO]
+    project_breakdown: List[ProjectCostBreakdownDTO]
+    daily_trend: List[UsagePointDTO]  # cost per day as value (cents)
+
+
 class VerifyReceiptRequestDTO(BaseModel):
     receipt_data: str
 

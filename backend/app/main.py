@@ -12,6 +12,9 @@ from .models import (
     AuthRequestDTO,
     AuthResponseDTO,
     CollectionConfidence,
+    CostRuleCreateDTO,
+    CostRuleDTO,
+    CostSummaryDTO,
     CreateTeamRequestDTO,
     DashboardSummaryDTO,
     DeviceRecordDTO,
@@ -180,6 +183,28 @@ def create_app(store: SQLiteStore) -> FastAPI:
     @app.get("/v1/subscription/limits", response_model=TierLimitsDTO)
     def subscription_limits(token: str = Depends(current_token)) -> TierLimitsDTO:
         return store.get_tier_limits(token)
+
+    # ── Cost estimation endpoints ──
+
+    @app.get("/v1/costs/summary", response_model=CostSummaryDTO)
+    def cost_summary(token: str = Depends(current_token)) -> CostSummaryDTO:
+        return store.cost_summary(token)
+
+    @app.get("/v1/costs/rules", response_model=list[CostRuleDTO])
+    def cost_rules(token: str = Depends(current_token)) -> list[CostRuleDTO]:
+        return store.get_cost_rules(token)
+
+    @app.put("/v1/costs/rules", response_model=CostRuleDTO)
+    def upsert_cost_rule(
+        payload: CostRuleCreateDTO, token: str = Depends(current_token)
+    ) -> CostRuleDTO:
+        return store.upsert_cost_rule(token, payload)
+
+    @app.delete("/v1/costs/rules/{rule_id}", response_model=SuccessDTO)
+    def delete_cost_rule(
+        rule_id: str, token: str = Depends(current_token)
+    ) -> SuccessDTO:
+        return store.delete_cost_rule(token, rule_id)
 
     # ── Team management endpoints ──
 

@@ -20,7 +20,10 @@ from .models import (
     AlertTypeSummaryDTO,
     AlertType,
     CollectionConfidence,
+    CostRuleCreateDTO,
+    CostRuleDTO,
     CostStatus,
+    CostSummaryDTO,
     DashboardSummaryDTO,
     DeviceRecordDTO,
     DeviceStatus,
@@ -29,7 +32,9 @@ from .models import (
     HelperRegisterResponseDTO,
     HelperSyncRequestDTO,
     PairingInfoDTO,
+    ProjectCostBreakdownDTO,
     ProjectRecordDTO,
+    ProviderCostBreakdownDTO,
     ProviderKind,
     ProviderMetadataDTO,
     PushPolicy,
@@ -921,6 +926,19 @@ class SQLiteStore:
                     created_at TEXT NOT NULL,
                     expires_at TEXT NOT NULL
                 );
+
+                CREATE TABLE IF NOT EXISTS cost_rules (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    provider TEXT NOT NULL,
+                    model TEXT NOT NULL DEFAULT '*',
+                    input_rate_per_1k REAL,
+                    output_rate_per_1k REAL,
+                    blended_rate_per_1k REAL,
+                    currency TEXT NOT NULL DEFAULT 'USD',
+                    source TEXT NOT NULL DEFAULT 'default',
+                    updated_at TEXT NOT NULL
+                );
                 """
             )
             self.connection.commit()
@@ -1130,6 +1148,262 @@ class SQLiteStore:
             rule_name = feature_lower[len("alert_"):]
             return rule_name in limits.alert_rule_types
         return True
+
+    # ── Cost rules ──
+
+    def _seed_default_cost_rules(self, user_id: str) -> None:
+        """Insert default cost rules for a user based on DEFAULT_PROVIDER_COST_CONFIG."""
+        existing = self.connection.execute(
+            "SELECT COUNT(*) as cnt FROM cost_rules WHERE user_id = ?", (user_id,)
+        ).fetchone()
+        if existing and existing["cnt"] > 0:
+            return
+
+        now_iso = now_utc().isoformat()
+        for provider, config in DEFAULT_PROVIDER_COST_CONFIG.items():
+            rule_id = f"default-{provider.value.lower().replace(' ', '-').replace('.', '-')}"
+            self.connection.execute(
+                """
+                INSERT OR IGNORE INTO cost_rules
+                    (id, user_id, provider, model, input_rate_per_1k, output_rate_per_1k,
+                     blended_rate_per_1k, currency, source, updated_at)
+                VALUES (?, ?, ?, '*', NULL, NULL, ?, 'USD', 'default', ?)
+                """,
+                (rule_id, user_id, provider.value, config.rate_per_1k_usage, now_iso),
+            )
+        self.connection.commit()
+
+    # Per-model cost rules for popular providers (pre-seeded)
+    PROVIDER_MODEL_RULES: list[dict] = [
+        # Claude models
+        {"provider": "Claude", "model": "opus-4", "input": 0.015, "output": 0.075},
+        {"provider": "Claude", "model": "sonnet-4", "input": 0.003, "output": 0.015},
+        {"provider": "Claude", "model": "haiku-3.5", "input": 0.0008, "output": 0.004},
+        # Codex / OpenAI models
+        {"provider": "Codex", "model": "gpt-4o", "input": 0.0025, "output": 0.010},
+        {"provider": "Codex", "model": "gpt-4.1", "input": 0.002, "output": 0.008},
+        {"provider": "Codex", "model": "o3", "input": 0.010, "output": 0.040},
+        {"provider": "Codex", "model": "codex-mini", "input": 0.0015, "output": 0.006},
+        # Gemini models
+        {"provider": "Gemini", "model": "gemini-2.5-pro", "input": 0.00125, "output": 0.010},
+        {"provider": "Gemini", "model": "gemini-2.5-flash", "input": 0.00015, "output": 0.0035},
+        # Kimi K2
+        {"provider": "Kimi K2", "model": "kimi-k2", "input": 0.0006, "output": 0.002},
+        # Alibaba / Qwen
+        {"provider": "Alibaba", "model": "qwen-3", "input": 0.0003, "output": 0.0012},
+    ]
+
+    def _seed_model_cost_rules(self, user_id: str) -> None:
+        """Insert per-model cost rules for popular provider models."""
+        now_iso = now_utc().isoformat()
+        for rule in self.PROVIDER_MODEL_RULES:
+            rule_id = f"model-{rule['provider'].lower().replace(' ', '-')}-{rule['model']}"
+            self.connection.execute(
+                """
+                INSERT OR IGNORE INTO cost_rules
+                    (id, user_id, provider, model, input_rate_per_1k, output_rate_per_1k,
+                     blended_rate_per_1k, currency, source, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, NULL, 'USD', 'default', ?)
+                """,
+                (rule_id, user_id, rule["provider"], rule["model"],
+                 rule["input"], rule["output"], now_iso),
+            )
+        self.connection.commit()
+
+    def get_cost_rules(self, token: str) -> list[CostRuleDTO]:
+        state = self._require_session(token)
+        self._seed_default_cost_rules(state.user.id)
+        rows = self.connection.execute(
+            "SELECT * FROM cost_rules WHERE user_id = ? ORDER BY provider, model",
+            (state.user.id,),
+        ).fetchall()
+        return [
+            CostRuleDTO(
+                id=row["id"],
+                provider=_provider_kind_from_key(row["provider"]) or ProviderKind.codex,
+                model=row["model"],
+                input_rate_per_1k=row["input_rate_per_1k"],
+                output_rate_per_1k=row["output_rate_per_1k"],
+                blended_rate_per_1k=row["blended_rate_per_1k"],
+                currency=row["currency"],
+                source=row["source"],
+                updated_at=datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None,
+            )
+            for row in rows
+        ]
+
+    def upsert_cost_rule(self, token: str, payload: CostRuleCreateDTO) -> CostRuleDTO:
+        state = self._require_session(token)
+        rule_id = f"user-{payload.provider.value.lower().replace(' ', '-').replace('.', '-')}-{payload.model}"
+        now_iso = now_utc().isoformat()
+        with self.lock:
+            self.connection.execute(
+                """
+                INSERT INTO cost_rules
+                    (id, user_id, provider, model, input_rate_per_1k, output_rate_per_1k,
+                     blended_rate_per_1k, currency, source, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'USD', 'user', ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    input_rate_per_1k = excluded.input_rate_per_1k,
+                    output_rate_per_1k = excluded.output_rate_per_1k,
+                    blended_rate_per_1k = excluded.blended_rate_per_1k,
+                    source = 'user',
+                    updated_at = excluded.updated_at
+                """,
+                (rule_id, state.user.id, payload.provider.value, payload.model,
+                 payload.input_rate_per_1k, payload.output_rate_per_1k,
+                 payload.blended_rate_per_1k, now_iso),
+            )
+            self.connection.commit()
+        return CostRuleDTO(
+            id=rule_id,
+            provider=payload.provider,
+            model=payload.model,
+            input_rate_per_1k=payload.input_rate_per_1k,
+            output_rate_per_1k=payload.output_rate_per_1k,
+            blended_rate_per_1k=payload.blended_rate_per_1k,
+            currency="USD",
+            source="user",
+            updated_at=datetime.fromisoformat(now_iso),
+        )
+
+    def delete_cost_rule(self, token: str, rule_id: str) -> SuccessDTO:
+        state = self._require_session(token)
+        with self.lock:
+            self.connection.execute(
+                "DELETE FROM cost_rules WHERE id = ? AND user_id = ? AND source = 'user'",
+                (rule_id, state.user.id),
+            )
+            self.connection.commit()
+        return SuccessDTO()
+
+    def _resolve_cost_with_rules(
+        self, user_id: str, provider: ProviderKind, usage: int, exact_cost: Optional[float] = None
+    ) -> tuple[Optional[float], CostStatus]:
+        """Resolve cost using user's cost_rules table, falling back to DEFAULT_PROVIDER_COST_CONFIG."""
+        if exact_cost is not None:
+            return round(exact_cost, 4), CostStatus.exact
+
+        # Try user's rules (prefer model='*' default rule)
+        row = self.connection.execute(
+            """
+            SELECT blended_rate_per_1k, input_rate_per_1k, output_rate_per_1k
+            FROM cost_rules
+            WHERE user_id = ? AND provider = ? AND model = '*'
+            LIMIT 1
+            """,
+            (user_id, provider.value),
+        ).fetchone()
+
+        if row:
+            rate = row["blended_rate_per_1k"]
+            if rate is None and row["input_rate_per_1k"] is not None:
+                # Approximate blended rate as weighted avg (assume 30% output, 70% input)
+                rate = row["input_rate_per_1k"] * 0.7 + (row["output_rate_per_1k"] or 0) * 0.3
+            if rate is not None:
+                return round((usage / 1_000.0) * rate, 4), CostStatus.estimated
+
+        # Fall back to default config
+        return self._resolve_cost(provider, usage)
+
+    def cost_summary(self, token: str) -> CostSummaryDTO:
+        state = self._require_session(token)
+        limits = self._get_user_tier_limits(state.user.id)
+        self._seed_default_cost_rules(state.user.id)
+        self._seed_model_cost_rules(state.user.id)
+
+        sessions = self._load_models(state.user.id, "sessions_json", SessionRecordDTO)
+        providers_data = self._load_models(state.user.id, "providers_json", ProviderUsageDTO)
+        settings = self._settings_for_user(state.user.id)
+
+        now = now_utc()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start = today_start - timedelta(days=today_start.weekday())
+        month_start = today_start.replace(day=1)
+
+        # Build provider cost breakdown
+        provider_costs: dict[str, ProviderCostBreakdownDTO] = {}
+        for p in providers_data:
+            cost_today, status_today = self._resolve_cost_with_rules(
+                state.user.id, p.provider, p.today_usage
+            )
+            cost_week, _ = self._resolve_cost_with_rules(
+                state.user.id, p.provider, p.week_usage
+            )
+            provider_costs[p.provider.value] = ProviderCostBreakdownDTO(
+                provider=p.provider,
+                today_usage=p.today_usage,
+                week_usage=p.week_usage,
+                today_cost=cost_today,
+                week_cost=cost_week,
+                cost_status=status_today,
+            )
+
+        # Build project cost breakdown
+        projects = self._build_projects(state.user.id)
+        project_costs: list[ProjectCostBreakdownDTO] = []
+        for proj in projects:
+            prov_breakdown = {}
+            for prov_kind, usage in proj.provider_breakdown.items():
+                cost, _ = self._resolve_cost_with_rules(state.user.id, prov_kind, usage)
+                if cost is not None:
+                    prov_breakdown[prov_kind.value] = cost
+
+            today_cost = proj.estimated_cost_today
+            if today_cost is None:
+                today_cost = self._sum_available_costs(prov_breakdown.values()) if prov_breakdown else None
+
+            budget_pct = None
+            if today_cost is not None and settings.project_budget_threshold_usd > 0:
+                budget_pct = round(today_cost / settings.project_budget_threshold_usd * 100, 1)
+
+            project_costs.append(ProjectCostBreakdownDTO(
+                project_id=proj.id,
+                project_name=proj.name,
+                today_cost=today_cost,
+                week_cost=proj.estimated_cost_week,
+                cost_status=proj.cost_status_today,
+                budget_threshold=settings.project_budget_threshold_usd if settings.project_budget_threshold_usd > 0 else None,
+                budget_percent=budget_pct,
+                provider_breakdown=prov_breakdown,
+            ))
+
+        # Totals
+        total_today = self._sum_available_costs(
+            p.today_cost for p in provider_costs.values()
+        )
+        total_week = self._sum_available_costs(
+            p.week_cost for p in provider_costs.values()
+        )
+        total_month = round(total_week * 4.3, 4) if total_week is not None else None
+
+        # Daily trend (last 7 days, cost in cents)
+        daily_trend: list[UsagePointDTO] = []
+        for day_offset in range(6, -1, -1):
+            day = today_start - timedelta(days=day_offset)
+            day_cost = total_today if day_offset == 0 and total_today else None
+            if day_cost is None and total_week is not None:
+                day_cost = round(total_week / 7, 4)
+            daily_trend.append(UsagePointDTO(
+                timestamp=day,
+                value=int((day_cost or 0) * 100),  # cents
+            ))
+
+        overall_status = aggregate_cost_status(
+            p.cost_status for p in provider_costs.values()
+        )
+
+        return CostSummaryDTO(
+            total_cost_today=total_today,
+            total_cost_week=total_week,
+            total_cost_month=total_month,
+            cost_status=overall_status,
+            currency="USD",
+            cost_tracking_range=limits.cost_tracking_range,
+            provider_breakdown=list(provider_costs.values()),
+            project_breakdown=sorted(project_costs, key=lambda p: p.today_cost or 0, reverse=True),
+            daily_trend=daily_trend,
+        )
 
     # ── Team management ──
 
