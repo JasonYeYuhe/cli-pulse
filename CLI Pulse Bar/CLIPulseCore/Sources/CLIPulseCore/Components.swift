@@ -283,6 +283,120 @@ public struct SubscriptionBadge: View {
     }
 }
 
+// MARK: - Cost Status Badge
+
+public struct CostStatusBadge: View {
+    public let status: String
+
+    public init(status: String) {
+        self.status = status
+    }
+
+    private var label: String {
+        switch status {
+        case "Exact": return "EXACT"
+        case "Estimated": return "EST"
+        case "Unavailable": return "N/A"
+        default: return status.uppercased()
+        }
+    }
+
+    private var color: Color {
+        switch status {
+        case "Exact": return .green
+        case "Estimated": return .orange
+        case "Unavailable": return .gray
+        default: return .gray
+        }
+    }
+
+    public var body: some View {
+        Text(label)
+            .font(.system(size: 7, weight: .bold, design: .rounded))
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1)
+            .background(color.opacity(0.15))
+            .foregroundStyle(color)
+            .clipShape(Capsule())
+    }
+}
+
+// MARK: - Collection Confidence Badge
+
+public struct ConfidenceBadge: View {
+    public let confidence: String
+
+    public init(confidence: String) {
+        self.confidence = confidence
+    }
+
+    private var icon: String {
+        switch confidence {
+        case "high": return "checkmark.shield.fill"
+        case "medium": return "shield.lefthalf.filled"
+        case "low": return "questionmark.diamond"
+        default: return "questionmark.diamond"
+        }
+    }
+
+    private var color: Color {
+        switch confidence {
+        case "high": return .green
+        case "medium": return .orange
+        case "low": return .red
+        default: return .gray
+        }
+    }
+
+    public var body: some View {
+        HStack(spacing: 2) {
+            Image(systemName: icon)
+                .font(.system(size: 8))
+            Text(confidence.capitalized)
+                .font(.system(size: 8, weight: .medium))
+        }
+        .foregroundStyle(color)
+    }
+}
+
+// MARK: - Category Badge
+
+public struct CategoryBadge: View {
+    public let category: String
+
+    public init(category: String) {
+        self.category = category
+    }
+
+    private var icon: String {
+        switch category {
+        case "cloud": return "cloud"
+        case "local": return "desktopcomputer"
+        case "aggregator": return "arrow.triangle.branch"
+        case "ide": return "hammer"
+        default: return "questionmark"
+        }
+    }
+
+    private var label: String {
+        category.uppercased()
+    }
+
+    public var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.system(size: 8))
+            Text(label)
+                .font(.system(size: 7, weight: .semibold))
+        }
+        .padding(.horizontal, 5)
+        .padding(.vertical, 2)
+        .background(PulseTheme.dimText.opacity(0.1))
+        .foregroundStyle(.secondary)
+        .clipShape(Capsule())
+    }
+}
+
 // MARK: - Cost Formatter
 
 public enum CostFormatter {

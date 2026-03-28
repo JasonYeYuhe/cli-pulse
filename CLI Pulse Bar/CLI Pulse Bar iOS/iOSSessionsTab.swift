@@ -140,10 +140,16 @@ struct SessionDetailView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(session.name)
                             .font(.title3.weight(.bold))
-                        StatusBadge(
-                            text: session.status,
-                            color: PulseTheme.statusColor(session.status)
-                        )
+                        HStack(spacing: 6) {
+                            StatusBadge(
+                                text: session.status,
+                                color: PulseTheme.statusColor(session.status)
+                            )
+                            if let conf = session.collection_confidence {
+                                ConfidenceBadge(confidence: conf)
+                            }
+                            CostStatusBadge(status: session.cost_status)
+                        }
                     }
                     Spacer()
                 }
@@ -243,6 +249,9 @@ struct iOSSessionRow: View {
             HStack(spacing: 14) {
                 Label(session.provider, systemImage: "cpu")
                 Label(session.project, systemImage: "folder")
+                if let conf = session.collection_confidence {
+                    ConfidenceBadge(confidence: conf)
+                }
             }
             .font(.caption)
             .foregroundStyle(.secondary)

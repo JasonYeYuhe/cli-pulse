@@ -252,7 +252,8 @@ public actor APIClient {
                 estimated_cost: (r["estimated_cost"] as? NSNumber)?.doubleValue ?? 0,
                 cost_status: "Estimated",
                 requests: r["requests"] as? Int ?? 0,
-                error_count: r["error_count"] as? Int ?? 0
+                error_count: r["error_count"] as? Int ?? 0,
+                collection_confidence: r["collection_confidence"] as? String
             )
         }
     }
@@ -302,7 +303,11 @@ public actor APIClient {
                 related_session_id: r["related_session_id"] as? String,
                 related_session_name: r["related_session_name"] as? String,
                 related_provider: r["related_provider"] as? String,
-                related_device_name: r["related_device_name"] as? String
+                related_device_name: r["related_device_name"] as? String,
+                source_kind: r["source_kind"] as? String,
+                source_id: r["source_id"] as? String,
+                grouping_key: r["grouping_key"] as? String,
+                suppression_key: r["suppression_key"] as? String
             )
         }
     }

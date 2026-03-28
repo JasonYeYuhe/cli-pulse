@@ -133,10 +133,18 @@ struct iOSEnhancedProviderCard: View {
                         Circle()
                             .fill(statusColor)
                             .frame(width: 6, height: 6)
+                        if let meta = provider.metadata {
+                            CategoryBadge(category: meta.category)
+                        }
                     }
-                    Text(provider.status_text)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Text(provider.status_text)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if showCost {
+                            CostStatusBadge(status: provider.cost_status_today)
+                        }
+                    }
                 }
                 Spacer()
 

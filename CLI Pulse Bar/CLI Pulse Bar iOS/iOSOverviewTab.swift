@@ -90,7 +90,7 @@ struct iOSOverviewTab: View {
 
         return LazyVGrid(columns: columns, spacing: 10) {
             iOSMetricCard(title: L10n.dashboard.usageToday, value: CostFormatter.formatUsage(dash.total_usage_today), icon: "chart.bar.fill", color: PulseTheme.accent)
-            iOSMetricCard(title: L10n.dashboard.estCost, value: CostFormatter.format(dash.total_estimated_cost_today), icon: "dollarsign.circle", color: .green)
+            iOSMetricCard(title: L10n.dashboard.estCost, value: CostFormatter.format(dash.total_estimated_cost_today), icon: "dollarsign.circle", color: .green, badge: dash.cost_status)
             iOSMetricCard(title: L10n.dashboard.requests, value: "\(dash.total_requests_today)", icon: "arrow.up.arrow.down", color: .purple)
             iOSMetricCard(title: L10n.tab.sessions, value: "\(dash.active_sessions)", icon: "terminal", color: .cyan)
             iOSMetricCard(title: L10n.dashboard.onlineDevices, value: "\(dash.online_devices)", icon: "desktopcomputer", color: .blue)
@@ -348,6 +348,7 @@ struct iOSMetricCard: View {
     let value: String
     let icon: String
     let color: Color
+    var badge: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -358,6 +359,9 @@ struct iOSMetricCard: View {
                 Text(title)
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(.secondary)
+                if let badge {
+                    CostStatusBadge(status: badge)
+                }
             }
             Text(value)
                 .font(.title2.weight(.bold).monospacedDigit())

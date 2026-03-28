@@ -63,6 +63,8 @@ struct iOSAlertsTab: View {
                                 await state.resolveAlert(alert)
                             } onSnooze: { minutes in
                                 await state.snoozeAlert(alert, minutes: minutes)
+                            } onNavigate: { tab in
+                                state.selectedTab = tab
                             }
                         }
                         .padding(.horizontal)
@@ -102,6 +104,7 @@ struct iOSAlertRow: View {
     let onAcknowledge: () async -> Void
     let onResolve: () async -> Void
     let onSnooze: (Int) async -> Void
+    var onNavigate: ((AppState.Tab) -> Void)? = nil
 
     @State private var showSnooze = false
 
@@ -125,19 +128,30 @@ struct iOSAlertRow: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(3)
 
-            // Related entity chips
+            // Related entity chips (tappable for deep link navigation)
             FlowLayout(spacing: 4) {
                 if let provider = alert.related_provider {
-                    chipView(icon: "cpu", text: provider)
+                    Button { onNavigate?(.providers) } label: {
+                        chipView(icon: "cpu", text: provider, tappable: onNavigate != nil)
+                    }
+                    .buttonStyle(.plain)
                 }
                 if let project = alert.related_project_name {
                     chipView(icon: "folder", text: project)
                 }
                 if let session = alert.related_session_name {
-                    chipView(icon: "terminal", text: session)
+                    Button { onNavigate?(.sessions) } label: {
+                        chipView(icon: "terminal", text: session, tappable: onNavigate != nil)
+                    }
+                    .buttonStyle(.plain)
                 }
                 if let device = alert.related_device_name {
                     chipView(icon: "desktopcomputer", text: device)
+                }
+
+                // Source kind chip from deep link metadata
+                if let sourceKind = alert.source_kind {
+                    chipView(icon: sourceKindIcon(sourceKind), text: sourceKind)
                 }
             }
 
@@ -216,7 +230,7 @@ struct iOSAlertRow: View {
         )
     }
 
-    private func chipView(icon: String, text: String) -> some View {
+    private func chipView(icon: String, text: String, tappable: Bool = false) -> some View {
         HStack(spacing: 3) {
             Image(systemName: icon)
                 .font(.system(size: 8))
@@ -224,11 +238,21 @@ struct iOSAlertRow: View {
                 .lineLimit(1)
         }
         .font(.caption2)
-        .foregroundStyle(.tertiary)
+        .foregroundStyle(tappable ? .blue : .tertiary)
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
-        .background(Color.gray.opacity(0.08))
+        .background((tappable ? Color.blue : Color.gray).opacity(0.08))
         .clipShape(Capsule())
+    }
+
+    private func sourceKindIcon(_ kind: String) -> String {
+        switch kind {
+        case "provider": return "cpu"
+        case "session": return "terminal"
+        case "project": return "folder"
+        case "device": return "desktopcomputer"
+        default: return "link"
+        }
     }
 }
 

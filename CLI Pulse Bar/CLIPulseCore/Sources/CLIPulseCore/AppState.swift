@@ -322,22 +322,26 @@ public final class AppState: ObservableObject {
                           project: "cli-pulse-ios", device_name: "MacBook Pro",
                           started_at: twoHoursAgo, last_active_at: now,
                           status: "running", total_usage: 24500, estimated_cost: 0.29,
-                          cost_status: "Estimated", requests: 142, error_count: 0),
+                          cost_status: "Estimated", requests: 142, error_count: 0,
+                          collection_confidence: "high"),
             SessionRecord(id: "s2", name: "Helper heartbeat monitor", provider: "Gemini",
                           project: "cli-pulse-helper", device_name: "lab-server-01",
                           started_at: hourAgo, last_active_at: now,
                           status: "syncing", total_usage: 12800, estimated_cost: 0.10,
-                          cost_status: "Estimated", requests: 87, error_count: 0),
+                          cost_status: "Estimated", requests: 87, error_count: 0,
+                          collection_confidence: "medium"),
             SessionRecord(id: "s3", name: "Session error triage", provider: "Codex",
                           project: "backend-api", device_name: "build-box",
                           started_at: twoHoursAgo, last_active_at: hourAgo,
                           status: "failed", total_usage: 8400, estimated_cost: 0.10,
-                          cost_status: "Estimated", requests: 56, error_count: 3),
+                          cost_status: "Estimated", requests: 56, error_count: 3,
+                          collection_confidence: "high"),
             SessionRecord(id: "s4", name: "Provider adapter review", provider: "Claude",
                           project: "provider-layer", device_name: "MacBook Pro",
                           started_at: hourAgo, last_active_at: now,
                           status: "running", total_usage: 6200, estimated_cost: 0.09,
-                          cost_status: "Estimated", requests: 38, error_count: 0),
+                          cost_status: "Estimated", requests: 38, error_count: 0,
+                          collection_confidence: "low"),
         ]
 
         devices = [
@@ -353,34 +357,51 @@ public final class AppState: ObservableObject {
         ]
 
         alerts = [
-            AlertRecord(id: "a1", type: "quota_low", severity: "critical",
+            AlertRecord(id: "a1", type: "Quota Critical", severity: "Critical",
                         title: "Codex quota critically low", message: "Only 7.6% remaining (38,000 of 500,000 tokens)",
                         created_at: now, is_read: false, is_resolved: false,
                         acknowledged_at: nil, snoozed_until: nil,
                         related_project_id: nil, related_project_name: nil,
                         related_session_id: nil, related_session_name: nil,
-                        related_provider: "Codex", related_device_name: nil),
-            AlertRecord(id: "a2", type: "session_failed", severity: "warning",
+                        related_provider: "Codex", related_device_name: nil,
+                        source_kind: "provider", source_id: "Codex",
+                        grouping_key: "quota-critical:Codex", suppression_key: "quota-critical:Codex"),
+            AlertRecord(id: "a2", type: "Session Failed", severity: "Warning",
                         title: "Session failed: error triage", message: "Session 'Session error triage' encountered 3 errors on build-box",
                         created_at: hourAgo, is_read: false, is_resolved: false,
                         acknowledged_at: nil, snoozed_until: nil,
-                        related_project_id: nil, related_project_name: "backend-api",
+                        related_project_id: "p3", related_project_name: "backend-api",
                         related_session_id: "s3", related_session_name: "Session error triage",
-                        related_provider: "Codex", related_device_name: "build-box"),
-            AlertRecord(id: "a3", type: "helper_offline", severity: "warning",
+                        related_provider: "Codex", related_device_name: "build-box",
+                        source_kind: "session", source_id: "s3",
+                        grouping_key: "session-failed:s3"),
+            AlertRecord(id: "a3", type: "Helper Offline", severity: "Warning",
                         title: "Device offline: build-box", message: "build-box has not synced for over 60 minutes",
                         created_at: hourAgo, is_read: true, is_resolved: false,
                         acknowledged_at: nil, snoozed_until: nil,
                         related_project_id: nil, related_project_name: nil,
                         related_session_id: nil, related_session_name: nil,
-                        related_provider: nil, related_device_name: "build-box"),
-            AlertRecord(id: "a4", type: "usage_spike", severity: "info",
-                        title: "Usage spike detected", message: "Codex usage increased 40% compared to yesterday's average",
+                        related_provider: nil, related_device_name: "build-box",
+                        source_kind: "device", source_id: "d3",
+                        grouping_key: "device-offline:build-box"),
+            AlertRecord(id: "a4", type: "Cost Spike", severity: "Warning",
+                        title: "Cost spike: Codex", message: "Codex estimated cost today reached $1.03, exceeding threshold $0.80",
                         created_at: twoHoursAgo, is_read: true, is_resolved: false,
                         acknowledged_at: nil, snoozed_until: nil,
                         related_project_id: nil, related_project_name: nil,
                         related_session_id: nil, related_session_name: nil,
-                        related_provider: "Codex", related_device_name: nil),
+                        related_provider: "Codex", related_device_name: nil,
+                        source_kind: "provider", source_id: "Codex",
+                        grouping_key: "cost-spike:Codex"),
+            AlertRecord(id: "a5", type: "Error Rate Spike", severity: "Info",
+                        title: "Error rate spike: Codex", message: "Codex error rate spiked: 3 errors across 4 sessions",
+                        created_at: twoHoursAgo, is_read: true, is_resolved: false,
+                        acknowledged_at: nil, snoozed_until: nil,
+                        related_project_id: nil, related_project_name: nil,
+                        related_session_id: nil, related_session_name: nil,
+                        related_provider: "Codex", related_device_name: nil,
+                        source_kind: "provider", source_id: "Codex",
+                        grouping_key: "error-rate:Codex"),
         ]
 
         let breakdowns = providers.map { p in
@@ -413,7 +434,7 @@ public final class AppState: ObservableObject {
                 ActivityItem(id: "act3", title: "Session failed", subtitle: "Session error triage on build-box", timestamp: hourAgo),
             ],
             risk_signals: ["Codex quota below 10%", "build-box offline"],
-            alert_summary: AlertSummaryDTO(critical: 1, warning: 2, info: 1)
+            alert_summary: AlertSummaryDTO(critical: 1, warning: 3, info: 1)
         )
 
         buildProviderDetails()
@@ -578,11 +599,14 @@ public final class AppState: ObservableObject {
 
     // MARK: - Alert Actions
 
+    private func demoUpdateAlert(_ a: AlertRecord, isRead: Bool? = nil, isResolved: Bool? = nil, acknowledgedAt: String? = nil, snoozedUntil: String? = nil) -> AlertRecord {
+        AlertRecord(id: a.id, type: a.type, severity: a.severity, title: a.title, message: a.message, created_at: a.created_at, is_read: isRead ?? a.is_read, is_resolved: isResolved ?? a.is_resolved, acknowledged_at: acknowledgedAt ?? a.acknowledged_at, snoozed_until: snoozedUntil ?? a.snoozed_until, related_project_id: a.related_project_id, related_project_name: a.related_project_name, related_session_id: a.related_session_id, related_session_name: a.related_session_name, related_provider: a.related_provider, related_device_name: a.related_device_name, source_kind: a.source_kind, source_id: a.source_id, grouping_key: a.grouping_key, suppression_key: a.suppression_key)
+    }
+
     public func acknowledgeAlert(_ alert: AlertRecord) async {
         if isDemoMode {
             if let idx = alerts.firstIndex(where: { $0.id == alert.id }) {
-                let a = alerts[idx]
-                alerts[idx] = AlertRecord(id: a.id, type: a.type, severity: a.severity, title: a.title, message: a.message, created_at: a.created_at, is_read: true, is_resolved: a.is_resolved, acknowledged_at: ISO8601DateFormatter().string(from: Date()), snoozed_until: a.snoozed_until, related_project_id: a.related_project_id, related_project_name: a.related_project_name, related_session_id: a.related_session_id, related_session_name: a.related_session_name, related_provider: a.related_provider, related_device_name: a.related_device_name)
+                alerts[idx] = demoUpdateAlert(alerts[idx], isRead: true, acknowledgedAt: ISO8601DateFormatter().string(from: Date()))
             }
             return
         }
@@ -597,8 +621,7 @@ public final class AppState: ObservableObject {
     public func resolveAlert(_ alert: AlertRecord) async {
         if isDemoMode {
             if let idx = alerts.firstIndex(where: { $0.id == alert.id }) {
-                let a = alerts[idx]
-                alerts[idx] = AlertRecord(id: a.id, type: a.type, severity: a.severity, title: a.title, message: a.message, created_at: a.created_at, is_read: true, is_resolved: true, acknowledged_at: a.acknowledged_at, snoozed_until: a.snoozed_until, related_project_id: a.related_project_id, related_project_name: a.related_project_name, related_session_id: a.related_session_id, related_session_name: a.related_session_name, related_provider: a.related_provider, related_device_name: a.related_device_name)
+                alerts[idx] = demoUpdateAlert(alerts[idx], isRead: true, isResolved: true)
             }
             return
         }
@@ -613,9 +636,8 @@ public final class AppState: ObservableObject {
     public func snoozeAlert(_ alert: AlertRecord, minutes: Int) async {
         if isDemoMode {
             if let idx = alerts.firstIndex(where: { $0.id == alert.id }) {
-                let a = alerts[idx]
                 let until = ISO8601DateFormatter().string(from: Date().addingTimeInterval(Double(minutes) * 60))
-                alerts[idx] = AlertRecord(id: a.id, type: a.type, severity: a.severity, title: a.title, message: a.message, created_at: a.created_at, is_read: true, is_resolved: a.is_resolved, acknowledged_at: a.acknowledged_at, snoozed_until: until, related_project_id: a.related_project_id, related_project_name: a.related_project_name, related_session_id: a.related_session_id, related_session_name: a.related_session_name, related_provider: a.related_provider, related_device_name: a.related_device_name)
+                alerts[idx] = demoUpdateAlert(alerts[idx], isRead: true, snoozedUntil: until)
             }
             return
         }

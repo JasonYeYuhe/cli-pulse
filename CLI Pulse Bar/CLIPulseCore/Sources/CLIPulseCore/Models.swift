@@ -74,6 +74,22 @@ public enum AlertType: String, Codable, Sendable {
     case sessionFailed = "Session Failed"
     case sessionTooLong = "Session Too Long"
     case projectBudgetExceeded = "Project Budget Exceeded"
+    case costSpike = "Cost Spike"
+    case errorRateSpike = "Error Rate Spike"
+    case quotaCritical = "Quota Critical"
+}
+
+public enum CollectionConfidence: String, Codable, Sendable {
+    case high
+    case medium
+    case low
+}
+
+public enum ProviderCategory: String, Codable, Sendable {
+    case cloud
+    case local
+    case aggregator
+    case ide
 }
 
 public enum AlertSeverity: String, Codable, Sendable {
@@ -255,6 +271,26 @@ public struct AlertSummaryDTO: Codable, Sendable {
 
 // MARK: - Provider
 
+public struct ProviderMetadata: Codable, Sendable {
+    public let display_name: String
+    public let category: String
+    public let supports_exact_cost: Bool
+    public let supports_quota: Bool
+    public let default_quota: Int?
+
+    public var providerCategory: ProviderCategory? {
+        ProviderCategory(rawValue: category)
+    }
+
+    public init(display_name: String, category: String, supports_exact_cost: Bool = false, supports_quota: Bool = true, default_quota: Int? = nil) {
+        self.display_name = display_name
+        self.category = category
+        self.supports_exact_cost = supports_exact_cost
+        self.supports_quota = supports_quota
+        self.default_quota = default_quota
+    }
+}
+
 public struct ProviderUsage: Codable, Identifiable, Sendable {
     public let provider: String
     public let today_usage: Int
@@ -269,6 +305,7 @@ public struct ProviderUsage: Codable, Identifiable, Sendable {
     public let trend: [UsagePoint]
     public let recent_sessions: [String]
     public let recent_errors: [String]
+    public let metadata: ProviderMetadata?
 
     public var id: String { provider }
 
@@ -287,7 +324,8 @@ public struct ProviderUsage: Codable, Identifiable, Sendable {
         estimated_cost_today: Double, estimated_cost_week: Double,
         cost_status_today: String, cost_status_week: String,
         quota: Int?, remaining: Int?, status_text: String,
-        trend: [UsagePoint], recent_sessions: [String], recent_errors: [String]
+        trend: [UsagePoint], recent_sessions: [String], recent_errors: [String],
+        metadata: ProviderMetadata? = nil
     ) {
         self.provider = provider
         self.today_usage = today_usage
@@ -302,6 +340,7 @@ public struct ProviderUsage: Codable, Identifiable, Sendable {
         self.trend = trend
         self.recent_sessions = recent_sessions
         self.recent_errors = recent_errors
+        self.metadata = metadata
     }
 }
 
@@ -321,6 +360,7 @@ public struct SessionRecord: Codable, Identifiable, Sendable, Hashable {
     public let cost_status: String
     public let requests: Int
     public let error_count: Int
+    public let collection_confidence: String?
 
     public var providerKind: ProviderKind? {
         ProviderKind(rawValue: provider)
@@ -328,6 +368,11 @@ public struct SessionRecord: Codable, Identifiable, Sendable, Hashable {
 
     public var sessionStatus: SessionStatus? {
         SessionStatus(rawValue: status)
+    }
+
+    public var confidence: CollectionConfidence? {
+        guard let collection_confidence else { return nil }
+        return CollectionConfidence(rawValue: collection_confidence)
     }
 
     public var startedDate: Date? {
@@ -342,7 +387,8 @@ public struct SessionRecord: Codable, Identifiable, Sendable, Hashable {
         id: String, name: String, provider: String, project: String,
         device_name: String, started_at: String, last_active_at: String,
         status: String, total_usage: Int, estimated_cost: Double,
-        cost_status: String, requests: Int, error_count: Int
+        cost_status: String, requests: Int, error_count: Int,
+        collection_confidence: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -357,6 +403,7 @@ public struct SessionRecord: Codable, Identifiable, Sendable, Hashable {
         self.cost_status = cost_status
         self.requests = requests
         self.error_count = error_count
+        self.collection_confidence = collection_confidence
     }
 }
 
@@ -415,6 +462,10 @@ public struct AlertRecord: Codable, Identifiable, Sendable {
     public let related_session_name: String?
     public let related_provider: String?
     public let related_device_name: String?
+    public let source_kind: String?
+    public let source_id: String?
+    public let grouping_key: String?
+    public let suppression_key: String?
 
     public var alertSeverity: AlertSeverity? {
         AlertSeverity(rawValue: severity)
@@ -434,7 +485,9 @@ public struct AlertRecord: Codable, Identifiable, Sendable {
         acknowledged_at: String?, snoozed_until: String?,
         related_project_id: String?, related_project_name: String?,
         related_session_id: String?, related_session_name: String?,
-        related_provider: String?, related_device_name: String?
+        related_provider: String?, related_device_name: String?,
+        source_kind: String? = nil, source_id: String? = nil,
+        grouping_key: String? = nil, suppression_key: String? = nil
     ) {
         self.id = id
         self.type = type
@@ -452,6 +505,10 @@ public struct AlertRecord: Codable, Identifiable, Sendable {
         self.related_session_name = related_session_name
         self.related_provider = related_provider
         self.related_device_name = related_device_name
+        self.source_kind = source_kind
+        self.source_id = source_id
+        self.grouping_key = grouping_key
+        self.suppression_key = suppression_key
     }
 }
 
