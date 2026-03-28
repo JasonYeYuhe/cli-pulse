@@ -23,3 +23,12 @@ DerivedData/
 # Environment
 .env
 .env.local
+
+# Claude Code
+.claude/
+
+# Swift Package Manager build
+.build/
+
+# Legacy submodule (removed)
+CLI Pulse/
