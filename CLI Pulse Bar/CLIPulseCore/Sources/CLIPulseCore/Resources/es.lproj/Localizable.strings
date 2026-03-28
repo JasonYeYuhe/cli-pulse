@@ -1,0 +1,201 @@
+/* CLI Pulse — Español */
+
+/* ── Pestañas ── */
+"tab.overview" = "Resumen";
+"tab.providers" = "Proveedores";
+"tab.sessions" = "Sesiones";
+"tab.alerts" = "Alertas";
+"tab.settings" = "Ajustes";
+
+/* ── Resumen / Panel ── */
+"dashboard.title" = "Panel";
+"dashboard.updated" = "Actualizado %@";
+"dashboard.server_online" = "Servidor en línea";
+"dashboard.server_offline" = "Servidor fuera de línea";
+"dashboard.no_data" = "Sin datos";
+"dashboard.connect_helper" = "Conecte un dispositivo auxiliar para comenzar a monitorear";
+"dashboard.usage_today" = "Uso hoy";
+"dashboard.cost_today" = "Costo hoy";
+"dashboard.est_cost" = "Costo est.";
+"dashboard.requests" = "Solicitudes";
+"dashboard.active_sessions" = "Sesiones activas";
+"dashboard.online_devices" = "Dispositivos";
+"dashboard.unresolved_alerts" = "Alertas";
+"dashboard.cost_summary" = "Resumen de costos";
+"dashboard.today" = "Hoy";
+"dashboard.30day_est" = "Est. 30 días";
+"dashboard.provider_usage" = "Uso por proveedor";
+"dashboard.top_projects" = "Proyectos principales";
+"dashboard.no_projects" = "Aún no hay proyectos rastreados";
+"dashboard.risk_signals" = "Señales de riesgo";
+"dashboard.activity" = "Actividad";
+"dashboard.quick_stats" = "Estadísticas rápidas";
+"dashboard.monitor" = "Monitorear";
+"dashboard.manage" = "Gestionar";
+"dashboard.no_unresolved_alerts" = "Sin alertas sin resolver";
+
+/* ── Proveedores ── */
+"providers.title" = "Proveedores";
+"providers.show_all" = "Mostrar todo";
+"providers.hide_disabled" = "Ocultar deshabilitados";
+"providers.tracked" = "rastreados";
+"providers.no_providers" = "Sin proveedores";
+"providers.no_data" = "Sin datos de proveedores";
+"providers.empty_hint" = "Los datos aparecen después de sincronizar el auxiliar";
+"providers.all_hidden" = "Todos los proveedores ocultos";
+"providers.show_all_hint" = "Toque \"Mostrar todo\" para ver proveedores deshabilitados";
+"providers.this_week" = "Esta semana";
+"providers.quota" = "Cuota";
+"providers.status" = "Estado";
+
+/* ── Sesiones ── */
+"sessions.title" = "Sesiones";
+"sessions.select" = "Seleccionar sesión";
+"sessions.select_hint" = "Elija una sesión de la lista para ver detalles";
+"sessions.no_sessions" = "Sin sesiones";
+"sessions.empty_hint" = "Las sesiones aparecen cuando se detectan herramientas de IA en ejecución";
+"sessions.running" = "en ejecución";
+"sessions.details" = "Detalles de sesión";
+"sessions.count_running" = "%d en ejecución";
+
+/* ── Alertas ── */
+"alerts.title" = "Alertas";
+"alerts.all_clear" = "Todo bien";
+"alerts.no_alerts" = "Sin alertas";
+"alerts.no_unresolved" = "Sin alertas sin resolver";
+"alerts.no_matching" = "Sin alertas coincidentes";
+"alerts.open" = "Abiertas";
+"alerts.resolved" = "Resueltas";
+"alerts.all" = "Todas";
+"alerts.filter" = "Filtrar";
+"alerts.ack" = "Ack";
+"alerts.acknowledge" = "Confirmar";
+"alerts.resolve" = "Resolver";
+"alerts.snooze" = "Posponer";
+"alerts.snooze_minutes" = "%d minutos";
+"alerts.created" = "Creada";
+"alerts.related" = "Relacionado";
+"alerts.actions" = "Acciones";
+"alerts.severity_critical" = "crítico";
+"alerts.severity_warning" = "advertencia";
+"alerts.unresolved_count" = "%d sin resolver";
+
+/* ── Ajustes ── */
+"settings.title" = "Ajustes";
+"settings.account" = "Cuenta";
+"settings.general" = "General";
+"settings.server" = "Servidor";
+"settings.server_name" = "Supabase (Tokio)";
+"settings.status" = "Estado";
+"settings.connected" = "Conectado";
+"settings.disconnected" = "Desconectado";
+"settings.paired" = "Emparejado";
+"settings.not_paired" = "No emparejado";
+"settings.connection" = "Conexión";
+"settings.refresh_cadence" = "Frecuencia de actualización";
+"settings.refresh_interval" = "Intervalo de actualización";
+"settings.subscription" = "Suscripción";
+"settings.current_plan" = "Plan actual";
+"settings.manage_subscription" = "Gestionar suscripción";
+"settings.upgrade_pro" = "Actualizar a Pro";
+"settings.providers" = "Proveedores";
+"settings.devices" = "Dispositivos";
+"settings.data_retention" = "Retención de datos";
+"settings.days" = "días";
+"settings.notifications" = "Notificaciones";
+"settings.desktop_notifications" = "Notificaciones de escritorio";
+"settings.desktop_notifications_hint" = "Alertar cuando la cuota es baja o hay errores";
+"settings.session_quota_notifications" = "Notificaciones de cuota de sesión";
+"settings.session_quota_hint" = "Notificar cuando se agote la cuota de 5 horas";
+"settings.alert_notifications" = "Notificaciones de alertas";
+"settings.session_quota_alerts" = "Alertas de cuota de sesión";
+"settings.check_provider_status" = "Verificar estado del proveedor";
+"settings.cost_tracking" = "Seguimiento de costos";
+"settings.display" = "Pantalla";
+"settings.show_cost_estimates" = "Mostrar estimaciones de costo";
+"settings.compact_mode" = "Modo compacto";
+"settings.menu_bar_mode" = "Modo barra de menú";
+"settings.reorder_providers" = "Reordenar proveedores";
+"settings.reorder_hint" = "Arrastre para reordenar, toque para habilitar/deshabilitar";
+"settings.manage_providers" = "Gestionar proveedores";
+"settings.advanced" = "Avanzado";
+"settings.hide_personal_info" = "Ocultar información personal";
+"settings.force_refresh" = "Forzar actualización de datos";
+"settings.about" = "Acerca de";
+"settings.version" = "Versión";
+"settings.build" = "Compilación";
+"settings.privacy_policy" = "Política de privacidad";
+"settings.terms_of_use" = "Términos de uso";
+"settings.github" = "Repositorio GitHub";
+"settings.sign_out" = "Cerrar sesión";
+"settings.sign_in" = "Iniciar sesión";
+"settings.sign_in_email" = "Iniciar sesión con correo";
+"settings.sign_in_hint" = "Inicie sesión para comenzar";
+"settings.email" = "Correo";
+"settings.name" = "Nombre";
+
+/* ── Autenticación / Inicio de sesión ── */
+"auth.title" = "CLI Pulse";
+"auth.subtitle" = "Monitorea tus herramientas de codificación con IA";
+"auth.or" = "o";
+"auth.try_demo" = "Probar demo";
+"auth.welcome" = "Bienvenido";
+"auth.watch_hint" = "Inicie sesión en iPhone o ingrese credenciales abajo";
+
+/* ── Suscripción ── */
+"subscription.title" = "Suscripción";
+"subscription.pro_title" = "CLI Pulse Pro";
+"subscription.unlock" = "Desbloquea todo el poder de CLI Pulse";
+"subscription.monthly" = "Mensual";
+"subscription.yearly_save" = "Anual (Ahorra 17%)";
+"subscription.popular" = "POPULAR";
+"subscription.not_available" = "No disponible";
+"subscription.restore" = "Restaurar compras";
+"subscription.pro" = "Pro";
+"subscription.team" = "Equipo";
+"subscription.everything_in_pro" = "Todo lo de Pro";
+"subscription.unlimited_devices" = "Dispositivos ilimitados";
+"subscription.data_retention_365" = "365 días de retención";
+"subscription.team_dashboards" = "Paneles de equipo";
+"subscription.shared_alerts" = "Alertas y reglas compartidas";
+"subscription.admin_controls" = "Controles de administrador";
+"subscription.unlimited_providers" = "Proveedores ilimitados";
+"subscription.up_to_5_devices" = "Hasta 5 dispositivos";
+"subscription.data_retention_90" = "90 días de retención";
+"subscription.priority_alerts" = "Alertas prioritarias";
+"subscription.cost_analytics" = "Análisis de costos";
+"subscription.per_year" = "/año";
+"subscription.per_month" = "/mes";
+"subscription.upgrade_pro" = "Actualizar a Pro";
+"subscription.switch_pro" = "Cambiar a Pro";
+"subscription.switch_team" = "Cambiar a Equipo";
+
+/* ── Acerca de ── */
+"about.title" = "Acerca de CLI Pulse Bar";
+"about.description" = "Monitorea herramientas de codificación con IA desde la barra de menú. Rastrea uso, costos y alertas de más de 20 proveedores incluyendo Claude, Codex y Gemini.";
+"about.copyright" = "© 2025 Contribuidores de CLI Pulse";
+"about.report_issue" = "Reportar un problema";
+
+/* ── Widgets ── */
+"widget.usage_title" = "Uso";
+"widget.usage_description" = "Porcentaje de uso rápido en la pantalla de bloqueo.";
+"widget.overview_title" = "Resumen de uso";
+"widget.overview_description" = "Monitorea el uso de herramientas de codificación con IA de un vistazo.";
+"widget.app_name" = "CLI Pulse";
+"widget.no_data" = "Sin datos";
+"widget.no_provider_data" = "Sin datos de proveedores";
+"widget.used" = "usado";
+
+/* ── Tiempo ── */
+"time.just_now" = "ahora";
+"time.ago" = "atrás";
+
+/* ── Común ── */
+"common.online" = "En línea";
+"common.offline" = "Fuera de línea";
+"common.refresh_all" = "Actualizar todo";
+"common.cancel" = "Cancelar";
+"common.done" = "Hecho";
+"common.save" = "Guardar";
+"common.delete" = "Eliminar";
+"common.enabled" = "habilitado";

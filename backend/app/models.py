@@ -7,6 +7,12 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
+class SubscriptionTier(str, Enum):
+    free = "free"
+    pro = "pro"
+    team = "team"
+
+
 class ProviderKind(str, Enum):
     codex = "Codex"
     gemini = "Gemini"
@@ -45,6 +51,18 @@ class AlertSeverity(str, Enum):
     info = "Info"
 
 
+class PushPolicy(str, Enum):
+    all = "All Alerts"
+    warnings_and_critical = "Warnings + Critical"
+    critical_only = "Critical Only"
+
+
+class CostStatus(str, Enum):
+    exact = "Exact"
+    estimated = "Estimated"
+    unavailable = "Unavailable"
+
+
 class UserDTO(BaseModel):
     id: str
     name: str
@@ -72,6 +90,10 @@ class ProviderUsageDTO(BaseModel):
     provider: ProviderKind
     today_usage: int
     week_usage: int
+    estimated_cost_today: Optional[float] = None
+    estimated_cost_week: Optional[float] = None
+    cost_status_today: CostStatus = CostStatus.estimated
+    cost_status_week: CostStatus = CostStatus.estimated
     quota: int
     remaining: int
     status_text: str
@@ -90,6 +112,8 @@ class SessionRecordDTO(BaseModel):
     last_active_at: datetime
     status: SessionStatus
     total_usage: int
+    estimated_cost: Optional[float] = None
+    cost_status: CostStatus = CostStatus.estimated
     requests: int
     error_count: int
     usage_timeline: List[UsagePointDTO]
@@ -123,25 +147,79 @@ class AlertRecordDTO(BaseModel):
     created_at: datetime
     is_read: bool
     is_resolved: bool
+    acknowledged_at: Optional[datetime] = None
+    snoozed_until: Optional[datetime] = None
+    related_project_id: Optional[str] = None
+    related_project_name: Optional[str] = None
+    related_session_id: Optional[str] = None
+    related_session_name: Optional[str] = None
+    related_provider: Optional[ProviderKind] = None
+    related_device_name: Optional[str] = None
+
+
+class AlertTypeSummaryDTO(BaseModel):
+    type: AlertType
+    count: int
+
+
+class AlertSummaryDTO(BaseModel):
+    unread_count: int
+    open_count: int
+    resolved_count: int
+    critical_open_count: int
+    warning_open_count: int
+    info_open_count: int
+    type_breakdown: List[AlertTypeSummaryDTO]
 
 
 class SettingsSnapshotDTO(BaseModel):
     notifications_enabled: bool
+    push_policy: PushPolicy = PushPolicy.warnings_and_critical
+    digest_notifications_enabled: bool = True
+    digest_interval_minutes: int = Field(default=15, ge=5, le=180)
     usage_spike_threshold: int
+    project_budget_threshold_usd: float = Field(default=0.25, ge=0)
+    session_too_long_threshold_minutes: int = Field(default=180, ge=30)
+    offline_grace_period_minutes: int = Field(default=5, ge=1)
+    repeated_failure_threshold: int = Field(default=3, ge=1)
+    alert_cooldown_minutes: int = Field(default=30, ge=0)
     data_retention_days: int
     login_method: str
 
 
 class DashboardSummaryDTO(BaseModel):
     total_usage: int
+    total_estimated_cost: Optional[float] = None
+    cost_status: CostStatus = CostStatus.estimated
     total_requests: int
     active_sessions: int
     online_devices: int
     unresolved_alerts: int
     provider_breakdown: List[ProviderUsageDTO]
+    top_projects: List["ProjectRecordDTO"]
     trend: List[UsagePointDTO]
     recent_activity: List[ActivityItemDTO]
     risk_signals: List[str]
+    alert_summary: AlertSummaryDTO
+
+
+class ProjectRecordDTO(BaseModel):
+    id: str
+    name: str
+    today_usage: int
+    week_usage: int
+    estimated_cost_today: Optional[float] = None
+    estimated_cost_week: Optional[float] = None
+    cost_status_today: CostStatus = CostStatus.estimated
+    cost_status_week: CostStatus = CostStatus.estimated
+    active_session_count: int
+    device_count: int
+    alert_count: int
+    primary_provider: ProviderKind
+    trend: List[UsagePointDTO]
+    recent_devices: List[str]
+    recent_session_names: List[str]
+    provider_breakdown: Dict[ProviderKind, int]
 
 
 class AuthRequestDTO(BaseModel):
@@ -160,9 +238,21 @@ class AlertActionResponseDTO(BaseModel):
     alerts: List[AlertRecordDTO]
 
 
+class AlertSnoozeRequestDTO(BaseModel):
+    minutes: int = Field(ge=5, le=1440)
+
+
 class SettingsUpdateDTO(BaseModel):
     notifications_enabled: bool
+    push_policy: PushPolicy
+    digest_notifications_enabled: bool
+    digest_interval_minutes: int = Field(ge=5, le=180)
     usage_spike_threshold: int
+    project_budget_threshold_usd: float = Field(ge=0)
+    session_too_long_threshold_minutes: int = Field(ge=30)
+    offline_grace_period_minutes: int = Field(ge=1)
+    repeated_failure_threshold: int = Field(ge=1)
+    alert_cooldown_minutes: int = Field(ge=0)
     data_retention_days: int
 
 
@@ -193,6 +283,7 @@ class HelperSessionSyncDTO(BaseModel):
     project: str
     status: SessionStatus
     total_usage: int
+    exact_cost: Optional[float] = Field(default=None, ge=0)
     requests: int
     error_count: int
     started_at: datetime
@@ -206,6 +297,12 @@ class HelperAlertSyncDTO(BaseModel):
     title: str
     message: str
     created_at: datetime
+    related_project_id: Optional[str] = None
+    related_project_name: Optional[str] = None
+    related_session_id: Optional[str] = None
+    related_session_name: Optional[str] = None
+    related_provider: Optional[ProviderKind] = None
+    related_device_name: Optional[str] = None
 
 
 class HelperSyncRequestDTO(BaseModel):
@@ -213,6 +310,68 @@ class HelperSyncRequestDTO(BaseModel):
     sessions: List[HelperSessionSyncDTO]
     alerts: List[HelperAlertSyncDTO] = []
     provider_remaining: Dict[ProviderKind, int] = {}
+
+
+class SubscriptionDTO(BaseModel):
+    tier: SubscriptionTier
+    status: str  # active, trialing, past_due, canceled
+    current_period_start: Optional[datetime] = None
+    current_period_end: Optional[datetime] = None
+    trial_end: Optional[datetime] = None
+    cancel_at_period_end: bool = False
+    apple_transaction_id: Optional[str] = None
+    apple_original_transaction_id: Optional[str] = None
+    apple_product_id: Optional[str] = None
+
+
+class TeamDTO(BaseModel):
+    id: str
+    name: str
+    owner_id: str
+    member_count: int
+    max_members: int
+    created_at: datetime
+
+
+class TeamMemberDTO(BaseModel):
+    user_id: str
+    name: str
+    email: str
+    role: str  # owner, admin, member
+    joined_at: datetime
+
+
+class TeamInviteDTO(BaseModel):
+    id: str
+    email: str
+    role: str
+    created_at: datetime
+    expires_at: datetime
+
+
+class TierLimitsDTO(BaseModel):
+    max_providers: int  # -1 = unlimited
+    max_devices: int
+    data_retention_days: int
+    alert_rule_types: List[str]
+    cost_tracking_range: str  # "today", "30d", "full"
+    has_project_budgets: bool
+    has_api_access: bool
+    max_team_members: int
+    export_formats: List[str]
+
+
+class VerifyReceiptRequestDTO(BaseModel):
+    receipt_data: str
+
+
+class CreateTeamRequestDTO(BaseModel):
+    name: str
+
+
+class InviteTeamMemberRequestDTO(BaseModel):
+    email: str
+    role: str = "member"
 
 
 class SuccessDTO(BaseModel):

@@ -6,6 +6,7 @@ import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Optional
 
 
 PROCESS_PATTERNS: list[tuple[str, str]] = [
@@ -44,6 +45,7 @@ class CollectedSession:
     error_count: int
     started_at: str
     last_active_at: str
+    exact_cost: Optional[float]
     cpu_usage: float
     command: str
 
@@ -56,6 +58,12 @@ class CollectedAlert:
     title: str
     message: str
     created_at: str
+    related_project_id: Optional[str] = None
+    related_project_name: Optional[str] = None
+    related_session_id: Optional[str] = None
+    related_session_name: Optional[str] = None
+    related_provider: Optional[str] = None
+    related_device_name: Optional[str] = None
 
 
 def collect_device_snapshot() -> DeviceSnapshot:
@@ -92,6 +100,7 @@ def collect_sessions() -> list[CollectedSession]:
                 error_count=0,
                 started_at=started_at.isoformat(),
                 last_active_at=datetime.now(timezone.utc).isoformat(),
+                exact_cost=None,
                 cpu_usage=cpu,
                 command=command,
             )
@@ -123,10 +132,15 @@ def collect_alerts(sessions: list[CollectedSession], device_snapshot: DeviceSnap
                 CollectedAlert(
                     alert_id=f"session-spike-{session.session_id}",
                     type="Usage Spike",
-                    severity="Warning",
-                    title=f"{session.name} is consuming high CPU",
+                severity="Warning",
+                title=f"{session.name} is consuming high CPU",
                     message=f"Process CPU is {session.cpu_usage:.1f}% for {session.provider}.",
                     created_at=now,
+                    related_project_id=_project_id(session.project),
+                    related_project_name=session.project,
+                    related_session_id=session.session_id,
+                    related_session_name=session.name,
+                    related_provider=session.provider,
                 )
             )
         if session.requests >= 400:
@@ -138,6 +152,11 @@ def collect_alerts(sessions: list[CollectedSession], device_snapshot: DeviceSnap
                     title=f"{session.name} has been running for a long time",
                     message="Long-running local agent session detected by helper.",
                     created_at=now,
+                    related_project_id=_project_id(session.project),
+                    related_project_name=session.project,
+                    related_session_id=session.session_id,
+                    related_session_name=session.name,
+                    related_provider=session.provider,
                 )
             )
 
@@ -226,6 +245,11 @@ def _guess_project(command: str) -> str:
         if parts:
             return parts[-1]
     return Path(os.getcwd()).name or "local-workspace"
+
+
+def _project_id(value: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return normalized or "local-workspace"
 
 
 def _collect_cpu_usage() -> int:

@@ -37,7 +37,20 @@ public final class AppState: ObservableObject {
     @Published public var costSummary: CostSummary = CostSummary()
 
     // MARK: - Settings — General
-    @AppStorage("cli_pulse_token") public var storedToken = ""
+    private static let tokenKeychainKey = "cli_pulse_token"
+
+    public var storedToken: String {
+        get { KeychainHelper.load(key: Self.tokenKeychainKey) ?? "" }
+        set {
+            if newValue.isEmpty {
+                KeychainHelper.delete(key: Self.tokenKeychainKey)
+            } else {
+                KeychainHelper.save(key: Self.tokenKeychainKey, value: newValue)
+            }
+            // Also clear legacy UserDefaults value if present
+            UserDefaults.standard.removeObject(forKey: "cli_pulse_token")
+        }
+    }
     @AppStorage("cli_pulse_refresh_interval") public var refreshInterval: Int = 30
     @AppStorage("cli_pulse_show_cost") public var showCost = true
     @AppStorage("cli_pulse_notifications") public var notificationsEnabled = true
@@ -75,6 +88,16 @@ public final class AppState: ObservableObject {
             case .sessions: return "terminal"
             case .alerts: return "bell.badge"
             case .settings: return "gear"
+            }
+        }
+
+        public var label: String {
+            switch self {
+            case .overview: return L10n.tab.overview
+            case .providers: return L10n.tab.providers
+            case .sessions: return L10n.tab.sessions
+            case .alerts: return L10n.tab.alerts
+            case .settings: return L10n.tab.settings
             }
         }
     }
@@ -196,6 +219,11 @@ public final class AppState: ObservableObject {
     public init() {
         self.api = APIClient()
         loadProviderConfigs()
+        // Migrate legacy token from UserDefaults to Keychain
+        if let legacyToken = UserDefaults.standard.string(forKey: "cli_pulse_token"), !legacyToken.isEmpty {
+            KeychainHelper.save(key: Self.tokenKeychainKey, value: legacyToken)
+            UserDefaults.standard.removeObject(forKey: "cli_pulse_token")
+        }
         Task {
             if isDemoMode {
                 enterDemoMode()

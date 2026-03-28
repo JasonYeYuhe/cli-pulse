@@ -1,0 +1,201 @@
+/* CLI Pulse — 한국어 */
+
+/* ── 탭 ── */
+"tab.overview" = "개요";
+"tab.providers" = "공급자";
+"tab.sessions" = "세션";
+"tab.alerts" = "알림";
+"tab.settings" = "설정";
+
+/* ── 개요 / 대시보드 ── */
+"dashboard.title" = "대시보드";
+"dashboard.updated" = "%@ 업데이트됨";
+"dashboard.server_online" = "서버 온라인";
+"dashboard.server_offline" = "서버 오프라인";
+"dashboard.no_data" = "데이터 없음";
+"dashboard.connect_helper" = "모니터링을 시작하려면 도우미 기기를 연결하세요";
+"dashboard.usage_today" = "오늘 사용량";
+"dashboard.cost_today" = "오늘 비용";
+"dashboard.est_cost" = "예상 비용";
+"dashboard.requests" = "요청";
+"dashboard.active_sessions" = "활성 세션";
+"dashboard.online_devices" = "기기";
+"dashboard.unresolved_alerts" = "알림";
+"dashboard.cost_summary" = "비용 요약";
+"dashboard.today" = "오늘";
+"dashboard.30day_est" = "30일 예상";
+"dashboard.provider_usage" = "공급자 사용량";
+"dashboard.top_projects" = "인기 프로젝트";
+"dashboard.no_projects" = "추적 중인 프로젝트 없음";
+"dashboard.risk_signals" = "위험 신호";
+"dashboard.activity" = "활동";
+"dashboard.quick_stats" = "빠른 통계";
+"dashboard.monitor" = "모니터";
+"dashboard.manage" = "관리";
+"dashboard.no_unresolved_alerts" = "미해결 알림 없음";
+
+/* ── 공급자 ── */
+"providers.title" = "공급자";
+"providers.show_all" = "모두 보기";
+"providers.hide_disabled" = "비활성 숨기기";
+"providers.tracked" = "추적 중";
+"providers.no_providers" = "공급자 없음";
+"providers.no_data" = "공급자 데이터 없음";
+"providers.empty_hint" = "도우미 동기화 후 공급자 데이터가 표시됩니다";
+"providers.all_hidden" = "모든 공급자가 숨겨짐";
+"providers.show_all_hint" = "\"모두 보기\"를 탭하여 비활성 공급자 표시";
+"providers.this_week" = "이번 주";
+"providers.quota" = "할당량";
+"providers.status" = "상태";
+
+/* ── 세션 ── */
+"sessions.title" = "세션";
+"sessions.select" = "세션 선택";
+"sessions.select_hint" = "목록에서 세션을 선택하여 상세 정보를 확인하세요";
+"sessions.no_sessions" = "세션 없음";
+"sessions.empty_hint" = "AI 도구 실행이 감지되면 세션이 표시됩니다";
+"sessions.running" = "실행 중";
+"sessions.details" = "세션 상세";
+"sessions.count_running" = "%d 실행 중";
+
+/* ── 알림 ── */
+"alerts.title" = "알림";
+"alerts.all_clear" = "모두 정상";
+"alerts.no_alerts" = "알림 없음";
+"alerts.no_unresolved" = "미해결 알림 없음";
+"alerts.no_matching" = "일치하는 알림 없음";
+"alerts.open" = "미처리";
+"alerts.resolved" = "해결됨";
+"alerts.all" = "전체";
+"alerts.filter" = "필터";
+"alerts.ack" = "확인";
+"alerts.acknowledge" = "확인";
+"alerts.resolve" = "해결";
+"alerts.snooze" = "알림 끄기";
+"alerts.snooze_minutes" = "%d분";
+"alerts.created" = "생성 시간";
+"alerts.related" = "관련";
+"alerts.actions" = "작업";
+"alerts.severity_critical" = "심각";
+"alerts.severity_warning" = "경고";
+"alerts.unresolved_count" = "%d 미해결";
+
+/* ── 설정 ── */
+"settings.title" = "설정";
+"settings.account" = "계정";
+"settings.general" = "일반";
+"settings.server" = "서버";
+"settings.server_name" = "Supabase (도쿄)";
+"settings.status" = "상태";
+"settings.connected" = "연결됨";
+"settings.disconnected" = "연결 안 됨";
+"settings.paired" = "페어링됨";
+"settings.not_paired" = "미페어링";
+"settings.connection" = "연결";
+"settings.refresh_cadence" = "새로고침 주기";
+"settings.refresh_interval" = "새로고침 간격";
+"settings.subscription" = "구독";
+"settings.current_plan" = "현재 플랜";
+"settings.manage_subscription" = "구독 관리";
+"settings.upgrade_pro" = "Pro로 업그레이드";
+"settings.providers" = "공급자";
+"settings.devices" = "기기";
+"settings.data_retention" = "데이터 보존";
+"settings.days" = "일";
+"settings.notifications" = "알림";
+"settings.desktop_notifications" = "데스크톱 알림";
+"settings.desktop_notifications_hint" = "할당량 부족 또는 오류 발생 시 알림";
+"settings.session_quota_notifications" = "세션 할당량 알림";
+"settings.session_quota_hint" = "5시간 세션 할당량 소진 시 알림";
+"settings.alert_notifications" = "알림 설정";
+"settings.session_quota_alerts" = "세션 할당량 알림";
+"settings.check_provider_status" = "공급자 상태 확인";
+"settings.cost_tracking" = "비용 추적";
+"settings.display" = "표시";
+"settings.show_cost_estimates" = "비용 추정 표시";
+"settings.compact_mode" = "컴팩트 모드";
+"settings.menu_bar_mode" = "메뉴 바 모드";
+"settings.reorder_providers" = "공급자 순서 변경";
+"settings.reorder_hint" = "드래그하여 순서 변경, 탭하여 활성/비활성";
+"settings.manage_providers" = "공급자 관리";
+"settings.advanced" = "고급";
+"settings.hide_personal_info" = "개인 정보 숨기기";
+"settings.force_refresh" = "모든 데이터 강제 새로고침";
+"settings.about" = "정보";
+"settings.version" = "버전";
+"settings.build" = "빌드";
+"settings.privacy_policy" = "개인정보 처리방침";
+"settings.terms_of_use" = "이용약관";
+"settings.github" = "GitHub 저장소";
+"settings.sign_out" = "로그아웃";
+"settings.sign_in" = "로그인";
+"settings.sign_in_email" = "이메일로 로그인";
+"settings.sign_in_hint" = "시작하려면 로그인하세요";
+"settings.email" = "이메일";
+"settings.name" = "이름";
+
+/* ── 인증 / 로그인 ── */
+"auth.title" = "CLI Pulse";
+"auth.subtitle" = "AI 코딩 도구 모니터링";
+"auth.or" = "또는";
+"auth.try_demo" = "데모 체험";
+"auth.welcome" = "환영합니다";
+"auth.watch_hint" = "iPhone에서 로그인하거나 아래에 자격 증명을 입력하세요";
+
+/* ── 구독 ── */
+"subscription.title" = "구독";
+"subscription.pro_title" = "CLI Pulse Pro";
+"subscription.unlock" = "CLI Pulse의 모든 기능 잠금 해제";
+"subscription.monthly" = "월간";
+"subscription.yearly_save" = "연간 (17% 할인)";
+"subscription.popular" = "인기";
+"subscription.not_available" = "이용 불가";
+"subscription.restore" = "구매 복원";
+"subscription.pro" = "Pro";
+"subscription.team" = "팀";
+"subscription.everything_in_pro" = "Pro의 모든 기능 포함";
+"subscription.unlimited_devices" = "무제한 기기";
+"subscription.data_retention_365" = "365일 데이터 보존";
+"subscription.team_dashboards" = "팀 대시보드";
+"subscription.shared_alerts" = "공유 알림 및 규칙";
+"subscription.admin_controls" = "관리자 제어";
+"subscription.unlimited_providers" = "무제한 공급자";
+"subscription.up_to_5_devices" = "최대 5대 기기";
+"subscription.data_retention_90" = "90일 데이터 보존";
+"subscription.priority_alerts" = "우선 알림";
+"subscription.cost_analytics" = "비용 분석";
+"subscription.per_year" = "/년";
+"subscription.per_month" = "/월";
+"subscription.upgrade_pro" = "Pro로 업그레이드";
+"subscription.switch_pro" = "Pro로 전환";
+"subscription.switch_team" = "팀으로 전환";
+
+/* ── 정보 ── */
+"about.title" = "CLI Pulse Bar 정보";
+"about.description" = "메뉴 바에서 AI 코딩 도구를 모니터링합니다. Claude, Codex, Gemini 등 20+ 공급자의 사용량, 비용, 알림을 추적합니다.";
+"about.copyright" = "© 2025 CLI Pulse 기여자";
+"about.report_issue" = "문제 보고";
+
+/* ── 위젯 ── */
+"widget.usage_title" = "사용량";
+"widget.usage_description" = "잠금 화면에서 사용률을 빠르게 확인합니다.";
+"widget.overview_title" = "사용 개요";
+"widget.overview_description" = "AI 코딩 도구 사용 현황을 한눈에 확인합니다.";
+"widget.app_name" = "CLI Pulse";
+"widget.no_data" = "데이터 없음";
+"widget.no_provider_data" = "공급자 데이터 없음";
+"widget.used" = "사용됨";
+
+/* ── 시간 ── */
+"time.just_now" = "방금";
+"time.ago" = "전";
+
+/* ── 공통 ── */
+"common.online" = "온라인";
+"common.offline" = "오프라인";
+"common.refresh_all" = "모두 새로고침";
+"common.cancel" = "취소";
+"common.done" = "완료";
+"common.save" = "저장";
+"common.delete" = "삭제";
+"common.enabled" = "활성";

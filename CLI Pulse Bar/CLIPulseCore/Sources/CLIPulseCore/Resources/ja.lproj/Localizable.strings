@@ -1,0 +1,201 @@
+/* CLI Pulse — 日本語 */
+
+/* ── タブ ── */
+"tab.overview" = "概要";
+"tab.providers" = "プロバイダー";
+"tab.sessions" = "セッション";
+"tab.alerts" = "アラート";
+"tab.settings" = "設定";
+
+/* ── 概要 / ダッシュボード ── */
+"dashboard.title" = "ダッシュボード";
+"dashboard.updated" = "%@ に更新";
+"dashboard.server_online" = "サーバーオンライン";
+"dashboard.server_offline" = "サーバーオフライン";
+"dashboard.no_data" = "データなし";
+"dashboard.connect_helper" = "ヘルパーデバイスを接続して監視を開始";
+"dashboard.usage_today" = "本日の使用量";
+"dashboard.cost_today" = "本日のコスト";
+"dashboard.est_cost" = "推定コスト";
+"dashboard.requests" = "リクエスト";
+"dashboard.active_sessions" = "アクティブセッション";
+"dashboard.online_devices" = "デバイス";
+"dashboard.unresolved_alerts" = "アラート";
+"dashboard.cost_summary" = "コスト概要";
+"dashboard.today" = "本日";
+"dashboard.30day_est" = "30日推定";
+"dashboard.provider_usage" = "プロバイダー使用量";
+"dashboard.top_projects" = "トッププロジェクト";
+"dashboard.no_projects" = "追跡中のプロジェクトはありません";
+"dashboard.risk_signals" = "リスクシグナル";
+"dashboard.activity" = "アクティビティ";
+"dashboard.quick_stats" = "クイック統計";
+"dashboard.monitor" = "モニター";
+"dashboard.manage" = "管理";
+"dashboard.no_unresolved_alerts" = "未解決のアラートなし";
+
+/* ── プロバイダー ── */
+"providers.title" = "プロバイダー";
+"providers.show_all" = "すべて表示";
+"providers.hide_disabled" = "無効を非表示";
+"providers.tracked" = "追跡中";
+"providers.no_providers" = "プロバイダーなし";
+"providers.no_data" = "プロバイダーデータなし";
+"providers.empty_hint" = "ヘルパー同期後にプロバイダーデータが表示されます";
+"providers.all_hidden" = "すべてのプロバイダーが非表示";
+"providers.show_all_hint" = "「すべて表示」をタップして無効なプロバイダーを表示";
+"providers.this_week" = "今週";
+"providers.quota" = "クォータ";
+"providers.status" = "ステータス";
+
+/* ── セッション ── */
+"sessions.title" = "セッション";
+"sessions.select" = "セッションを選択";
+"sessions.select_hint" = "リストからセッションを選択して詳細を表示";
+"sessions.no_sessions" = "セッションなし";
+"sessions.empty_hint" = "AIツールの実行検出時にセッションが表示されます";
+"sessions.running" = "実行中";
+"sessions.details" = "セッション詳細";
+"sessions.count_running" = "%d 実行中";
+
+/* ── アラート ── */
+"alerts.title" = "アラート";
+"alerts.all_clear" = "問題なし";
+"alerts.no_alerts" = "アラートなし";
+"alerts.no_unresolved" = "未解決のアラートなし";
+"alerts.no_matching" = "一致するアラートなし";
+"alerts.open" = "未処理";
+"alerts.resolved" = "解決済み";
+"alerts.all" = "すべて";
+"alerts.filter" = "フィルター";
+"alerts.ack" = "確認";
+"alerts.acknowledge" = "確認";
+"alerts.resolve" = "解決";
+"alerts.snooze" = "スヌーズ";
+"alerts.snooze_minutes" = "%d分";
+"alerts.created" = "作成日時";
+"alerts.related" = "関連";
+"alerts.actions" = "アクション";
+"alerts.severity_critical" = "重大";
+"alerts.severity_warning" = "警告";
+"alerts.unresolved_count" = "%d 未解決";
+
+/* ── 設定 ── */
+"settings.title" = "設定";
+"settings.account" = "アカウント";
+"settings.general" = "一般";
+"settings.server" = "サーバー";
+"settings.server_name" = "Supabase（東京）";
+"settings.status" = "ステータス";
+"settings.connected" = "接続済み";
+"settings.disconnected" = "未接続";
+"settings.paired" = "ペアリング済み";
+"settings.not_paired" = "未ペアリング";
+"settings.connection" = "接続";
+"settings.refresh_cadence" = "更新頻度";
+"settings.refresh_interval" = "更新間隔";
+"settings.subscription" = "サブスクリプション";
+"settings.current_plan" = "現在のプラン";
+"settings.manage_subscription" = "サブスクリプション管理";
+"settings.upgrade_pro" = "Proにアップグレード";
+"settings.providers" = "プロバイダー";
+"settings.devices" = "デバイス";
+"settings.data_retention" = "データ保持";
+"settings.days" = "日";
+"settings.notifications" = "通知";
+"settings.desktop_notifications" = "デスクトップ通知";
+"settings.desktop_notifications_hint" = "クォータ不足やエラー発生時に通知";
+"settings.session_quota_notifications" = "セッションクォータ通知";
+"settings.session_quota_hint" = "5時間のセッションクォータ消費時に通知";
+"settings.alert_notifications" = "アラート通知";
+"settings.session_quota_alerts" = "セッションクォータアラート";
+"settings.check_provider_status" = "プロバイダーステータスを確認";
+"settings.cost_tracking" = "コスト追跡";
+"settings.display" = "表示";
+"settings.show_cost_estimates" = "コスト見積もりを表示";
+"settings.compact_mode" = "コンパクトモード";
+"settings.menu_bar_mode" = "メニューバーモード";
+"settings.reorder_providers" = "プロバイダーの並べ替え";
+"settings.reorder_hint" = "ドラッグで並べ替え、タップで有効/無効";
+"settings.manage_providers" = "プロバイダー管理";
+"settings.advanced" = "詳細";
+"settings.hide_personal_info" = "個人情報を隠す";
+"settings.force_refresh" = "すべてのデータを強制更新";
+"settings.about" = "について";
+"settings.version" = "バージョン";
+"settings.build" = "ビルド";
+"settings.privacy_policy" = "プライバシーポリシー";
+"settings.terms_of_use" = "利用規約";
+"settings.github" = "GitHubリポジトリ";
+"settings.sign_out" = "サインアウト";
+"settings.sign_in" = "サインイン";
+"settings.sign_in_email" = "メールでサインイン";
+"settings.sign_in_hint" = "サインインして始めましょう";
+"settings.email" = "メール";
+"settings.name" = "名前";
+
+/* ── 認証 / ログイン ── */
+"auth.title" = "CLI Pulse";
+"auth.subtitle" = "AIコーディングツールを監視";
+"auth.or" = "または";
+"auth.try_demo" = "デモを試す";
+"auth.welcome" = "ようこそ";
+"auth.watch_hint" = "iPhoneでサインインするか、下に認証情報を入力";
+
+/* ── サブスクリプション ── */
+"subscription.title" = "サブスクリプション";
+"subscription.pro_title" = "CLI Pulse Pro";
+"subscription.unlock" = "CLI Pulseのフルパワーを解放";
+"subscription.monthly" = "月額";
+"subscription.yearly_save" = "年額（17%お得）";
+"subscription.popular" = "人気";
+"subscription.not_available" = "利用不可";
+"subscription.restore" = "購入を復元";
+"subscription.pro" = "Pro";
+"subscription.team" = "チーム";
+"subscription.everything_in_pro" = "Proのすべての機能を含む";
+"subscription.unlimited_devices" = "無制限のデバイス";
+"subscription.data_retention_365" = "365日間データ保持";
+"subscription.team_dashboards" = "チームダッシュボード";
+"subscription.shared_alerts" = "共有アラートとルール";
+"subscription.admin_controls" = "管理者コントロール";
+"subscription.unlimited_providers" = "無制限のプロバイダー";
+"subscription.up_to_5_devices" = "最大5台のデバイス";
+"subscription.data_retention_90" = "90日間データ保持";
+"subscription.priority_alerts" = "優先アラート";
+"subscription.cost_analytics" = "コスト分析";
+"subscription.per_year" = "/年";
+"subscription.per_month" = "/月";
+"subscription.upgrade_pro" = "Proにアップグレード";
+"subscription.switch_pro" = "Proに切り替え";
+"subscription.switch_team" = "チームに切り替え";
+
+/* ── について ── */
+"about.title" = "CLI Pulse Barについて";
+"about.description" = "メニューバーからAIコーディングツールを監視。Claude、Codex、Geminiなど20+プロバイダーの使用量、コスト、アラートを追跡。";
+"about.copyright" = "© 2025 CLI Pulse コントリビューター";
+"about.report_issue" = "問題を報告";
+
+/* ── ウィジェット ── */
+"widget.usage_title" = "使用量";
+"widget.usage_description" = "ロック画面で使用率をすばやく確認。";
+"widget.overview_title" = "使用概要";
+"widget.overview_description" = "AIコーディングツールの使用状況を一目で確認。";
+"widget.app_name" = "CLI Pulse";
+"widget.no_data" = "データなし";
+"widget.no_provider_data" = "プロバイダーデータなし";
+"widget.used" = "使用済み";
+
+/* ── 時間 ── */
+"time.just_now" = "たった今";
+"time.ago" = "前";
+
+/* ── 共通 ── */
+"common.online" = "オンライン";
+"common.offline" = "オフライン";
+"common.refresh_all" = "すべて更新";
+"common.cancel" = "キャンセル";
+"common.done" = "完了";
+"common.save" = "保存";
+"common.delete" = "削除";
+"common.enabled" = "有効";

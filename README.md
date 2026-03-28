@@ -6,6 +6,13 @@ CLI Pulse is an MVP workspace with three integrated parts:
 - `backend/`: FastAPI backend with SQLite persistence
 - `helper/`: device helper CLI for Macs or servers
 
+## Product Docs
+
+- `docs/CLI_Pulse_v0.2_PRD.md`: planned post-MVP scope for provider expansion, projects, cost estimation, alert upgrades, and helper improvements
+- `docs/CLI_Pulse_v0.2_Technical_Design.md`: system design for v0.2
+- `docs/CLI_Pulse_v0.2_Execution_Plan.md`: phased implementation plan
+- `docs/CLI_Pulse_v0.2_Roadmap.md`: weekly roadmap
+
 ## Backend
 
 Create a local environment and start the API:
@@ -27,7 +34,7 @@ Main backend capabilities:
 
 - account sign-in and account creation
 - pairing code generation and helper registration
-- dashboard, providers, sessions, devices, alerts, settings
+- dashboard, providers, projects, sessions, devices, alerts, settings
 - helper heartbeat and sync ingestion
 - account deletion
 
@@ -71,7 +78,7 @@ python3 helper/cli_pulse_helper.py run-demo --cycles 3 --interval 2
 The helper currently collects:
 
 - local CPU and memory summary
-- detected Codex and Gemini CLI processes
+- detected Codex, Gemini, Claude, OpenRouter, and Ollama processes when recognizable
 - synthetic usage estimates from process lifetime and CPU
 - basic local alerts for high CPU and long-running sessions
 
@@ -87,7 +94,7 @@ CLI_PULSE_API_BASE_URL=http://127.0.0.1:8000
 Current app integration includes:
 
 - remote auth and onboarding
-- dashboard, providers, sessions, devices, alerts, settings
+- dashboard, providers, projects, sessions, devices, alerts, settings
 - inline error states for failed remote requests
 - alert polling every 30 seconds after pairing
 - local notification scheduling for warning and critical alerts

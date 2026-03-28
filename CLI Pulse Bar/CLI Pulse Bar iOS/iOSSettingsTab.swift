@@ -12,7 +12,7 @@ struct iOSSettingsTab: View {
             Form {
                 if state.isAuthenticated {
                     // Account
-                    Section("Account") {
+                    Section(L10n.settings.account) {
                         HStack(spacing: 12) {
                             Image(systemName: "person.circle.fill")
                                 .font(.title)
@@ -36,31 +36,31 @@ struct iOSSettingsTab: View {
                     }
 
                     // Subscription
-                    Section("Subscription") {
+                    Section(L10n.settings.subscription) {
                         HStack {
-                            Text("Current Plan")
+                            Text(L10n.settings.currentPlan)
                             Spacer()
                             SubscriptionBadge(tier: state.subscriptionManager.currentTier)
                         }
 
                         HStack {
-                            Text("Providers")
+                            Text(L10n.settings.providers)
                             Spacer()
                             Text(state.subscriptionManager.maxProviders < 0 ? "Unlimited" : "\(state.subscriptionManager.maxProviders)")
                                 .foregroundStyle(.secondary)
                         }
 
                         HStack {
-                            Text("Devices")
+                            Text(L10n.settings.devices)
                             Spacer()
                             Text(state.subscriptionManager.maxDevices < 0 ? "Unlimited" : "\(state.subscriptionManager.maxDevices)")
                                 .foregroundStyle(.secondary)
                         }
 
                         HStack {
-                            Text("Data Retention")
+                            Text(L10n.settings.dataRetention)
                             Spacer()
-                            Text("\(state.subscriptionManager.dataRetentionDays) days")
+                            Text("\(state.subscriptionManager.dataRetentionDays) \(L10n.settings.days)")
                                 .foregroundStyle(.secondary)
                         }
 
@@ -69,9 +69,9 @@ struct iOSSettingsTab: View {
                         } label: {
                             HStack {
                                 if state.subscriptionManager.isProOrAbove {
-                                    Label("Manage Subscription", systemImage: "gear")
+                                    Label(L10n.settings.manageSubscription, systemImage: "gear")
                                 } else {
-                                    Label("Upgrade to Pro", systemImage: "star.fill")
+                                    Label(L10n.settings.upgradePro, systemImage: "star.fill")
                                         .foregroundStyle(PulseTheme.accent)
                                 }
                             }
@@ -79,29 +79,29 @@ struct iOSSettingsTab: View {
                     }
 
                     // General
-                    Section("General") {
+                    Section(L10n.settings.general) {
                         HStack {
-                            Text("Server")
+                            Text(L10n.settings.server)
                             Spacer()
-                            Text("Supabase (Tokyo)")
+                            Text(L10n.settings.serverName)
                                 .font(.caption.monospaced())
                                 .foregroundStyle(.secondary)
                         }
 
                         HStack {
-                            Text("Status")
+                            Text(L10n.settings.status)
                             Spacer()
                             HStack(spacing: 4) {
                                 Circle()
                                     .fill(state.serverOnline ? .green : .red)
                                     .frame(width: 8, height: 8)
-                                Text(state.serverOnline ? "Connected" : "Disconnected")
+                                Text(state.serverOnline ? L10n.settings.connected : L10n.settings.disconnected)
                                     .font(.caption)
                                     .foregroundStyle(state.serverOnline ? .green : .red)
                             }
                         }
 
-                        Picker("Refresh Interval", selection: Binding(
+                        Picker(L10n.settings.refreshInterval, selection: Binding(
                             get: { state.refreshInterval },
                             set: { state.updateRefreshInterval($0) }
                         )) {
@@ -115,11 +115,11 @@ struct iOSSettingsTab: View {
                     }
 
                     // Display
-                    Section("Display") {
-                        Toggle("Show cost estimates", isOn: $state.showCost)
-                        Toggle("Compact mode", isOn: $state.compactMode)
+                    Section(L10n.settings.display) {
+                        Toggle(L10n.settings.showCostEstimates, isOn: $state.showCost)
+                        Toggle(L10n.settings.compactMode, isOn: $state.compactMode)
 
-                        Picker("Menu Bar Mode", selection: Binding(
+                        Picker(L10n.settings.menuBarMode, selection: Binding(
                             get: { state.menuBarDisplayMode },
                             set: { state.menuBarDisplayMode = $0 }
                         )) {
@@ -147,7 +147,7 @@ struct iOSSettingsTab: View {
                                 .environmentObject(state)
                         } label: {
                             HStack {
-                                Text("Reorder Providers")
+                                Text(L10n.settings.reorderProviders)
                                 Spacer()
                                 let enabled = state.providerConfigs.filter(\.isEnabled).count
                                 Text("\(enabled)/\(state.providerConfigs.count)")
@@ -156,48 +156,48 @@ struct iOSSettingsTab: View {
                             }
                         }
                     } header: {
-                        Text("Providers")
+                        Text(L10n.settings.providers)
                     }
 
                     // Notifications
-                    Section("Notifications") {
-                        Toggle("Alert notifications", isOn: $state.notificationsEnabled)
-                        Toggle("Session quota alerts", isOn: $state.sessionQuotaNotifications)
-                        Toggle("Check provider status", isOn: $state.checkProviderStatus)
+                    Section(L10n.settings.notifications) {
+                        Toggle(L10n.settings.alertNotifications, isOn: $state.notificationsEnabled)
+                        Toggle(L10n.settings.sessionQuotaAlerts, isOn: $state.sessionQuotaNotifications)
+                        Toggle(L10n.settings.checkProviderStatus, isOn: $state.checkProviderStatus)
                     }
 
                     // Advanced
-                    Section("Advanced") {
-                        Toggle("Hide personal information", isOn: $state.hidePersonalInfo)
+                    Section(L10n.settings.advanced) {
+                        Toggle(L10n.settings.hidePersonalInfo, isOn: $state.hidePersonalInfo)
 
                         Button {
                             Task { await state.refreshAll() }
                         } label: {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
-                                Text("Force Refresh All Data")
+                                Text(L10n.settings.forceRefresh)
                             }
                         }
                         .disabled(state.isLoading)
                     }
 
                     // About
-                    Section("About") {
+                    Section(L10n.settings.about) {
                         HStack {
-                            Text("Version")
+                            Text(L10n.settings.version)
                             Spacer()
                             Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0")
                                 .foregroundStyle(.secondary)
                         }
                         HStack {
-                            Text("Build")
+                            Text(L10n.settings.build)
                             Spacer()
                             Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")
                                 .foregroundStyle(.secondary)
                         }
                         Link(destination: URL(string: "https://github.com/jasonyeyuhe/cli-pulse")!) {
                             HStack {
-                                Text("GitHub Repository")
+                                Text(L10n.settings.github)
                                 Spacer()
                                 Image(systemName: "arrow.up.forward.square")
                                     .font(.caption)
@@ -205,7 +205,7 @@ struct iOSSettingsTab: View {
                         }
                         Link(destination: URL(string: "https://github.com/jasonyeyuhe/cli-pulse/blob/main/PRIVACY.md")!) {
                             HStack {
-                                Text("Privacy Policy")
+                                Text(L10n.settings.privacyPolicy)
                                 Spacer()
                                 Image(systemName: "arrow.up.forward.square")
                                     .font(.caption)
@@ -213,7 +213,7 @@ struct iOSSettingsTab: View {
                         }
                         Link(destination: URL(string: "https://github.com/jasonyeyuhe/cli-pulse/blob/main/TERMS.md")!) {
                             HStack {
-                                Text("Terms of Use")
+                                Text(L10n.settings.termsOfUse)
                                 Spacer()
                                 Image(systemName: "arrow.up.forward.square")
                                     .font(.caption)
@@ -228,18 +228,18 @@ struct iOSSettingsTab: View {
                         } label: {
                             HStack {
                                 Image(systemName: "arrow.right.square")
-                                Text("Sign Out")
+                                Text(L10n.settings.signOut)
                             }
                         }
                     }
                 } else {
                     Section {
-                        Text("Sign in to get started")
+                        Text(L10n.settings.signInHint)
                             .foregroundStyle(.secondary)
                     }
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle(L10n.settings.title)
         }
     }
 
@@ -319,10 +319,10 @@ struct ProviderManagementView: View {
                     state.moveProvider(from: from, to: to)
                 }
             } header: {
-                Text("Drag to reorder, toggle to enable/disable")
+                Text(L10n.settings.reorderHint)
             }
         }
-        .navigationTitle("Manage Providers")
+        .navigationTitle(L10n.settings.manageProviders)
         .environment(\.editMode, .constant(.active))
     }
 }

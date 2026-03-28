@@ -15,12 +15,20 @@ struct SettingsTab: View {
         case general = "General"
         case display = "Display"
         case advanced = "Advanced"
+
+        var label: String {
+            switch self {
+            case .general: return L10n.settings.general
+            case .display: return L10n.settings.display
+            case .advanced: return L10n.settings.advanced
+            }
+        }
     }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Settings")
+                Text(L10n.settings.title)
                     .font(.system(size: 14, weight: .bold))
 
                 if state.isAuthenticated {
@@ -40,15 +48,15 @@ struct SettingsTab: View {
 
     private var loginSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionHeader(title: "Server", icon: "server.rack")
+            SectionHeader(title: L10n.settings.server, icon: "server.rack")
 
-            SectionHeader(title: "Sign In", icon: "person.circle")
+            SectionHeader(title: L10n.settings.signIn, icon: "person.circle")
 
-            TextField("Email", text: $email)
+            TextField(L10n.settings.email, text: $email)
                 .textFieldStyle(.roundedBorder)
                 .font(.system(size: 11))
 
-            TextField("Name", text: $name)
+            TextField(L10n.settings.name, text: $name)
                 .textFieldStyle(.roundedBorder)
                 .font(.system(size: 11))
 
@@ -60,7 +68,7 @@ struct SettingsTab: View {
                         ProgressView()
                             .controlSize(.small)
                     }
-                    Text("Sign In")
+                    Text(L10n.settings.signIn)
                         .font(.system(size: 11, weight: .semibold))
                 }
                 .frame(maxWidth: .infinity)
@@ -93,7 +101,7 @@ struct SettingsTab: View {
             // Section picker
             Picker("", selection: $settingsSection) {
                 ForEach(SettingsSection.allCases, id: \.self) { section in
-                    Text(section.rawValue)
+                    Text(section.label)
                 }
             }
             .pickerStyle(.segmented)
@@ -133,7 +141,7 @@ struct SettingsTab: View {
 
             VStack(alignment: .trailing, spacing: 2) {
                 StatusBadge(
-                    text: state.isPaired ? "Paired" : "Not Paired",
+                    text: state.isPaired ? L10n.settings.paired : L10n.settings.notPaired,
                     color: state.isPaired ? .green : .orange
                 )
             }
@@ -147,10 +155,10 @@ struct SettingsTab: View {
 
     private var subscriptionSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeader(title: "Subscription", icon: "creditcard")
+            SectionHeader(title: L10n.settings.subscription, icon: "creditcard")
 
             HStack {
-                Text("Current Plan")
+                Text(L10n.settings.currentPlan)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -158,7 +166,7 @@ struct SettingsTab: View {
             }
 
             HStack {
-                Text("Providers")
+                Text(L10n.settings.providers)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -168,7 +176,7 @@ struct SettingsTab: View {
             }
 
             HStack {
-                Text("Devices")
+                Text(L10n.settings.devices)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -178,11 +186,11 @@ struct SettingsTab: View {
             }
 
             HStack {
-                Text("Data Retention")
+                Text(L10n.settings.dataRetention)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(state.subscriptionManager.dataRetentionDays) days")
+                Text("\(state.subscriptionManager.dataRetentionDays) \(L10n.settings.days)")
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
             }
@@ -191,7 +199,7 @@ struct SettingsTab: View {
                 Button {
                     openWindow(id: "subscription")
                 } label: {
-                    Label("Manage Subscription", systemImage: "gear")
+                    Label(L10n.settings.manageSubscription, systemImage: "gear")
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.plain)
@@ -203,7 +211,7 @@ struct SettingsTab: View {
                     HStack {
                         Image(systemName: "star.fill")
                             .font(.system(size: 9))
-                        Text("Upgrade to Pro")
+                        Text(L10n.settings.upgradePro)
                             .font(.system(size: 11, weight: .semibold))
                     }
                     .frame(maxWidth: .infinity)
@@ -219,33 +227,33 @@ struct SettingsTab: View {
 
     private var generalSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionHeader(title: "Connection", icon: "server.rack")
+            SectionHeader(title: L10n.settings.connection, icon: "server.rack")
 
             HStack {
-                Text("Server")
+                Text(L10n.settings.server)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("Supabase (Tokyo)")
+                Text(L10n.settings.serverName)
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.tertiary)
             }
 
             HStack {
-                Text("Status")
+                Text(L10n.settings.status)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                 Spacer()
                 Circle()
                     .fill(state.serverOnline ? .green : .red)
                     .frame(width: 6, height: 6)
-                Text(state.serverOnline ? "Connected" : "Disconnected")
+                Text(state.serverOnline ? L10n.settings.connected : L10n.settings.disconnected)
                     .font(.system(size: 10))
                     .foregroundStyle(state.serverOnline ? .green : .red)
             }
 
             HStack {
-                Text("Refresh Cadence")
+                Text(L10n.settings.refreshCadence)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -266,13 +274,13 @@ struct SettingsTab: View {
 
             Divider()
 
-            SectionHeader(title: "Notifications", icon: "bell")
+            SectionHeader(title: L10n.settings.notifications, icon: "bell")
 
             Toggle(isOn: $state.notificationsEnabled) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Desktop notifications")
+                    Text(L10n.settings.desktopNotifications)
                         .font(.system(size: 11))
-                    Text("Alert when quota is low or errors occur")
+                    Text(L10n.settings.desktopNotificationsHint)
                         .font(.system(size: 9))
                         .foregroundStyle(.tertiary)
                 }
@@ -282,9 +290,9 @@ struct SettingsTab: View {
 
             Toggle(isOn: $state.sessionQuotaNotifications) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Session quota notifications")
+                    Text(L10n.settings.sessionQuotaNotifications)
                         .font(.system(size: 11))
-                    Text("Notify when 5-hour session quota is depleted")
+                    Text(L10n.settings.sessionQuotaHint)
                         .font(.system(size: 9))
                         .foregroundStyle(.tertiary)
                 }
@@ -294,7 +302,7 @@ struct SettingsTab: View {
 
             Divider()
 
-            SectionHeader(title: "Cost Tracking", icon: "dollarsign.circle")
+            SectionHeader(title: L10n.settings.costTracking, icon: "dollarsign.circle")
 
             Toggle(isOn: $state.showCost) {
                 VStack(alignment: .leading, spacing: 1) {
@@ -310,7 +318,7 @@ struct SettingsTab: View {
 
             Toggle(isOn: $state.checkProviderStatus) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Check provider status")
+                    Text(L10n.settings.checkProviderStatus)
                         .font(.system(size: 11))
                     Text("Auto-poll provider status pages")
                         .font(.system(size: 9))
@@ -389,7 +397,7 @@ struct SettingsTab: View {
             SectionHeader(title: "Appearance", icon: "paintbrush")
 
             Toggle(isOn: $state.compactMode) {
-                Text("Compact mode")
+                Text(L10n.settings.compactMode)
                     .font(.system(size: 11))
             }
             .toggleStyle(.switch)
@@ -463,7 +471,7 @@ struct SettingsTab: View {
 
             Toggle(isOn: $state.hidePersonalInfo) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Hide personal information")
+                    Text(L10n.settings.hidePersonalInfo)
                         .font(.system(size: 11))
                     Text("Hide email addresses in the UI")
                         .font(.system(size: 9))
@@ -539,20 +547,20 @@ struct SettingsTab: View {
             Button {
                 openWindow(id: "about")
             } label: {
-                Label("About CLI Pulse Bar", systemImage: "info.circle")
+                Label(L10n.about.title, systemImage: "info.circle")
                     .font(.system(size: 11))
             }
             .buttonStyle(.plain)
             .foregroundStyle(PulseTheme.accent)
 
             Link(destination: URL(string: "https://github.com/jasonyeyuhe/cli-pulse/blob/main/PRIVACY.md")!) {
-                Label("Privacy Policy", systemImage: "hand.raised")
+                Label(L10n.settings.privacyPolicy, systemImage: "hand.raised")
                     .font(.system(size: 11))
             }
             .foregroundStyle(PulseTheme.accent)
 
             Link(destination: URL(string: "https://github.com/jasonyeyuhe/cli-pulse/blob/main/TERMS.md")!) {
-                Label("Terms of Use", systemImage: "doc.text")
+                Label(L10n.settings.termsOfUse, systemImage: "doc.text")
                     .font(.system(size: 11))
             }
             .foregroundStyle(PulseTheme.accent)
@@ -560,7 +568,7 @@ struct SettingsTab: View {
             Button {
                 state.signOut()
             } label: {
-                Label("Sign Out", systemImage: "arrow.right.square")
+                Label(L10n.settings.signOut, systemImage: "arrow.right.square")
                     .font(.system(size: 11))
             }
             .buttonStyle(.plain)

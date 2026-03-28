@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 import urllib.error
 import urllib.request
@@ -17,8 +18,8 @@ from system_collector import collect_alerts, collect_device_snapshot, collect_se
 CONFIG_PATH = Path.home() / ".cli-pulse-helper.json"
 SUPPORTED_PROVIDERS = {"Codex", "Gemini", "Claude", "OpenRouter", "Ollama"}
 
-SUPABASE_URL = "https://gkjwsxotmwrgqsvfijzs.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrandzeG90bXdyZ3FzdmZpanpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2OTAzNzAsImV4cCI6MjA5MDI2NjM3MH0.uPHYnh0psr2-KQynBw2NiQZOhz5eZiEaWpfCwdXrNQM"
+SUPABASE_URL = os.environ.get("CLI_PULSE_SUPABASE_URL", "https://gkjwsxotmwrgqsvfijzs.supabase.co")
+SUPABASE_ANON_KEY = os.environ.get("CLI_PULSE_SUPABASE_ANON_KEY", "")
 
 
 @dataclass
@@ -52,12 +53,18 @@ def supabase_rpc(function_name: str, params: dict[str, Any]) -> Any:
     }
     body = json.dumps(params).encode("utf-8")
     request = urllib.request.Request(url=url, data=body, headers=headers, method="POST")
+    if not SUPABASE_ANON_KEY:
+        raise SystemExit("CLI_PULSE_SUPABASE_ANON_KEY environment variable is not set")
     try:
-        with urllib.request.urlopen(request) as response:
+        with urllib.request.urlopen(request, timeout=30) as response:
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8")
         raise SystemExit(f"Supabase error {error.code}: {detail}") from error
+    except urllib.error.URLError as error:
+        raise SystemExit(f"Network error: {error.reason}") from error
+    except TimeoutError as error:
+        raise SystemExit("Request timed out — check your network connection") from error
 
 
 def pair(args: argparse.Namespace) -> None:

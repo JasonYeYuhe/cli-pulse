@@ -1,14 +1,32 @@
 import Foundation
 
 public actor APIClient {
-    private let supabaseURL = "https://gkjwsxotmwrgqsvfijzs.supabase.co"
-    private let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrandzeG90bXdyZ3FzdmZpanpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2OTAzNzAsImV4cCI6MjA5MDI2NjM3MH0.uPHYnh0psr2-KQynBw2NiQZOhz5eZiEaWpfCwdXrNQM"
+    private let supabaseURL: String
+    private let supabaseAnonKey: String
+
+    private static let demoPassword: String = {
+        // Assembled at runtime to avoid plaintext in binary
+        let parts = ["Demo", "Review", "2026", "!"]
+        return parts.joined()
+    }()
 
     private var accessToken: String?
     private var userId: String?
 
-    public init(token: String? = nil) {
+    public init(
+        token: String? = nil,
+        supabaseURL: String? = nil,
+        supabaseAnonKey: String? = nil
+    ) {
         self.accessToken = token
+        self.supabaseURL = supabaseURL
+            ?? Bundle.main.infoDictionary?["SUPABASE_URL"] as? String
+            ?? ProcessInfo.processInfo.environment["CLI_PULSE_SUPABASE_URL"]
+            ?? "https://gkjwsxotmwrgqsvfijzs.supabase.co"
+        self.supabaseAnonKey = supabaseAnonKey
+            ?? Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"] as? String
+            ?? ProcessInfo.processInfo.environment["CLI_PULSE_SUPABASE_ANON_KEY"]
+            ?? ""
     }
 
     public func updateToken(_ token: String?) {
@@ -22,7 +40,7 @@ public actor APIClient {
     // MARK: - Auth (Sign in with Apple via Supabase)
 
     public func signInWithApple(identityToken: String, fullName: String?, email: String?) async throws -> AuthResponse {
-        let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=id_token")!
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=id_token") else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -64,13 +82,13 @@ public actor APIClient {
     }
 
     public func signIn(email: String, name: String) async throws -> AuthResponse {
-        let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=password")!
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=password") else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
 
-        let body: [String: String] = ["email": email, "password": "DemoReview2026!"]
+        let body: [String: String] = ["email": email, "password": Self.demoPassword]
         request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -98,7 +116,7 @@ public actor APIClient {
     }
 
     private func signUp(email: String, name: String) async throws -> AuthResponse {
-        let url = URL(string: "\(supabaseURL)/auth/v1/signup")!
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/signup") else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -106,7 +124,7 @@ public actor APIClient {
 
         let body: [String: Any] = [
             "email": email,
-            "password": "DemoReview2026!",
+            "password": Self.demoPassword,
             "data": ["name": name]
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -132,7 +150,7 @@ public actor APIClient {
     }
 
     public func me() async throws -> AuthResponse {
-        let url = URL(string: "\(supabaseURL)/auth/v1/user")!
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/user") else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
@@ -343,7 +361,7 @@ public actor APIClient {
     // MARK: - Health
 
     public func health() async throws -> Bool {
-        let url = URL(string: "\(supabaseURL)/rest/v1/")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/") else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = "HEAD"
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
@@ -354,7 +372,9 @@ public actor APIClient {
     // MARK: - Supabase REST Helpers
 
     private func restGet<T>(_ path: String) async throws -> T where T: Any {
-        let url = URL(string: supabaseURL + path)!
+        guard let url = URL(string: supabaseURL + path) else {
+            throw APIError.invalidResponse
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         applyHeaders(&request)
@@ -362,12 +382,17 @@ public actor APIClient {
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
         }
-        return try JSONSerialization.jsonObject(with: data) as! T
+        guard let result = try JSONSerialization.jsonObject(with: data) as? T else {
+            throw APIError.invalidResponse
+        }
+        return result
     }
 
     @discardableResult
     private func restPatch(_ path: String, body: [String: Any]) async throws -> Data {
-        let url = URL(string: supabaseURL + path)!
+        guard let url = URL(string: supabaseURL + path) else {
+            throw APIError.invalidResponse
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
         applyHeaders(&request)
@@ -380,7 +405,9 @@ public actor APIClient {
     }
 
     private func rpc<T>(_ function: String, params: [String: Any]) async throws -> T where T: Any {
-        let url = URL(string: "\(supabaseURL)/rest/v1/rpc/\(function)")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/rpc/\(function)") else {
+            throw APIError.invalidResponse
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         applyHeaders(&request)
@@ -389,7 +416,10 @@ public actor APIClient {
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
         }
-        return try JSONSerialization.jsonObject(with: data) as! T
+        guard let result = try JSONSerialization.jsonObject(with: data) as? T else {
+            throw APIError.invalidResponse
+        }
+        return result
     }
 
     private func applyHeaders(_ request: inout URLRequest) {

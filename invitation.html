@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invitation</title>
+  <style>
+    :root {
+      --bg: #efe5d4;
+      --paper: rgba(65, 33, 20, 0.92);
+      --paper-soft: rgba(104, 60, 35, 0.55);
+      --line: rgba(242, 215, 166, 0.52);
+      --line-strong: rgba(248, 230, 193, 0.82);
+      --text-main: #fff7ea;
+      --text-soft: #ead7b7;
+      --text-faint: rgba(255, 247, 234, 0.74);
+      --accent: #f5d395;
+      --accent-deep: #d5ab59;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.72), transparent 30%),
+        linear-gradient(145deg, #f8f1e6, var(--bg) 44%, #d2b891 100%);
+      color: var(--text-main);
+      font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif SC", "Songti SC", serif;
+      overflow: hidden;
+    }
+
+    .invitation {
+      width: min(100%, 760px);
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 32px;
+      background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.12), transparent 32%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 26%),
+        var(--paper);
+      box-shadow:
+        0 28px 90px rgba(66, 36, 18, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      position: relative;
+      overflow: hidden;
+      animation: card-rise 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .invitation::before,
+    .invitation::after,
+    .frame::before,
+    .frame::after {
+      content: "";
+      position: absolute;
+      border: 1px solid rgba(244, 208, 141, 0.18);
+      border-radius: 50%;
+    }
+
+    .invitation::before {
+      top: -90px;
+      left: -60px;
+      width: 210px;
+      height: 210px;
+      animation: orbit-float 14s ease-in-out infinite;
+    }
+
+    .invitation::after {
+      right: -76px;
+      bottom: -92px;
+      width: 230px;
+      height: 230px;
+      animation: orbit-float 16s ease-in-out infinite reverse;
+    }
+
+    .frame {
+      position: relative;
+      padding: 52px 38px 42px;
+      border: 1px solid var(--line-strong);
+      border-radius: 24px;
+      text-align: center;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 24%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 100%);
+      isolation: isolate;
+    }
+
+    .frame::before {
+      inset: 14px auto auto 14px;
+      width: 52px;
+      height: 52px;
+      border-radius: 14px 0 0 0;
+      border-right: 0;
+      border-bottom: 0;
+    }
+
+    .frame::after {
+      right: 14px;
+      bottom: 14px;
+      width: 52px;
+      height: 52px;
+      border-radius: 0 0 14px 0;
+      border-left: 0;
+      border-top: 0;
+    }
+
+    .frame > * {
+      opacity: 0;
+      animation: fade-up 0.9s ease forwards;
+    }
+
+    .eyebrow-wrap {
+      animation-delay: 0.15s;
+    }
+
+    .eyebrow-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .eyebrow-line {
+      width: 68px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    .eyebrow {
+      margin: 0;
+      font-size: 0.78rem;
+      letter-spacing: 0.38em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.6rem, 6vw, 5rem);
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      color: var(--text-main);
+      animation-delay: 0.28s;
+    }
+
+    .subhead {
+      margin: 12px 0 0;
+      font-size: 0.95rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      animation-delay: 0.4s;
+    }
+
+    .divider {
+      width: 120px;
+      height: 1px;
+      margin: 28px auto;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation-delay: 0.52s;
+    }
+
+    .message {
+      margin: 0 auto;
+      max-width: 16em;
+      font-size: clamp(1.28rem, 2.8vw, 2rem);
+      line-height: 2;
+      color: var(--text-main);
+      animation-delay: 0.64s;
+    }
+
+    .message-en {
+      margin: 18px auto 0;
+      max-width: 32rem;
+      font-size: clamp(0.98rem, 2vw, 1.14rem);
+      line-height: 1.95;
+      color: var(--text-faint);
+      animation-delay: 0.8s;
+    }
+
+    .date-block {
+      margin-top: 30px;
+      padding-top: 22px;
+      border-top: 1px solid rgba(245, 211, 149, 0.22);
+      animation-delay: 0.95s;
+    }
+
+    .date {
+      margin: 0;
+      font-size: clamp(1.02rem, 2.4vw, 1.34rem);
+      letter-spacing: 0.16em;
+      color: var(--accent);
+    }
+
+    .date-en {
+      margin: 10px 0 0;
+      font-size: 0.96rem;
+      letter-spacing: 0.08em;
+      color: var(--text-soft);
+    }
+
+    .seal {
+      margin: 34px auto 0;
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      border: 1px solid rgba(244, 208, 141, 0.55);
+      display: grid;
+      place-items: center;
+      color: var(--accent-deep);
+      background: radial-gradient(circle, rgba(245, 211, 149, 0.2), transparent 68%);
+      font-size: 1.02rem;
+      letter-spacing: 0.24em;
+      animation:
+        fade-up 0.9s ease forwards,
+        seal-pulse 3.2s ease-in-out 1.3s infinite;
+      animation-delay: 1.08s, 1.3s;
+    }
+
+    .signature {
+      margin-top: 18px;
+      font-size: 0.92rem;
+      letter-spacing: 0.16em;
+      color: var(--text-faint);
+      animation-delay: 1.2s;
+    }
+
+    .sheen {
+      position: absolute;
+      inset: -20% auto auto -35%;
+      width: 42%;
+      height: 150%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.02),
+        rgba(255, 255, 255, 0.1),
+        rgba(255, 255, 255, 0.02),
+        transparent
+      );
+      transform: rotate(14deg);
+      pointer-events: none;
+      mix-blend-mode: screen;
+      animation: sheen-sweep 7s ease-in-out infinite;
+      z-index: 0;
+    }
+
+    @keyframes card-rise {
+      from {
+        opacity: 0;
+        transform: translateY(28px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes fade-up {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes orbit-float {
+      0%,
+      100% {
+        transform: translate3d(0, 0, 0);
+      }
+      50% {
+        transform: translate3d(0, 10px, 0);
+      }
+    }
+
+    @keyframes sheen-sweep {
+      0% {
+        transform: translateX(-20%) rotate(14deg);
+        opacity: 0;
+      }
+      12% {
+        opacity: 0.85;
+      }
+      28% {
+        transform: translateX(235%) rotate(14deg);
+        opacity: 0;
+      }
+      100% {
+        transform: translateX(235%) rotate(14deg);
+        opacity: 0;
+      }
+    }
+
+    @keyframes seal-pulse {
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(245, 211, 149, 0.08);
+        transform: translateY(0);
+      }
+      50% {
+        box-shadow: 0 0 0 12px rgba(245, 211, 149, 0);
+        transform: translateY(-2px);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+
+      .frame > * {
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .invitation {
+        padding: 18px;
+      }
+
+      .frame {
+        padding: 38px 22px 32px;
+      }
+
+      .message {
+        max-width: 100%;
+      }
+
+      .eyebrow-line {
+        width: 36px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="invitation">
+    <section class="frame">
+      <div class="sheen"></div>
+      <div class="eyebrow-wrap">
+        <span class="eyebrow-line"></span>
+        <p class="eyebrow">Private Invitation</p>
+        <span class="eyebrow-line"></span>
+      </div>
+      <h1>敬 邀</h1>
+      <p class="subhead">With Warm Regards</p>
+      <div class="divider"></div>
+      <p class="message">
+        谨此诚挚相邀<br>
+        欢迎 GGC 携两位少爷<br>
+        于春和景明之际莅临寒舍<br>
+        共叙欢聚，静享数日清欢
+      </p>
+      <p class="message-en">
+        With sincere pleasure, we warmly invite GGC and the two young gentlemen
+        to visit our home, spend a few graceful days together, and enjoy a warm,
+        unhurried gathering in good company.
+      </p>
+      <div class="date-block">
+        <p class="date">敬候光临 · 三月 25 日至 29 日</p>
+        <p class="date-en">March 25 to March 29</p>
+      </div>
+      <div class="seal">恭候</div>
+      <p class="signature">静候雅临</p>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,190 @@
+{
+  "identifier" : "CLIPulseProducts",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6761163709",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : "",
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "cli_pulse_pro",
+      "localizations" : [
+        {
+          "description" : "Unlock advanced monitoring features",
+          "displayName" : "CLI Pulse Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "CLI Pulse Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "pro_monthly_001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited providers, 5 devices, 90-day retention",
+              "displayName" : "CLI Pulse Pro Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.clipulse.pro.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "CLI Pulse Pro Monthly",
+          "subscriptionGroupID" : "cli_pulse_pro",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "49.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "pro_yearly_001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited providers, 5 devices, 90-day retention — save 17%",
+              "displayName" : "CLI Pulse Pro Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.clipulse.pro.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "CLI Pulse Pro Yearly",
+          "subscriptionGroupID" : "cli_pulse_pro",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "team_monthly_001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited everything, 365-day retention, team features",
+              "displayName" : "CLI Pulse Team Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.clipulse.team.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "CLI Pulse Team Monthly",
+          "subscriptionGroupID" : "cli_pulse_pro",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "99.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "team_yearly_001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited everything, 365-day retention, team features — save 17%",
+              "displayName" : "CLI Pulse Team Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.clipulse.team.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "CLI Pulse Team Yearly",
+          "subscriptionGroupID" : "cli_pulse_pro",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

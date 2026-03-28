@@ -1,0 +1,201 @@
+/* CLI Pulse — 简体中文 */
+
+/* ── 标签页 ── */
+"tab.overview" = "概览";
+"tab.providers" = "服务商";
+"tab.sessions" = "会话";
+"tab.alerts" = "告警";
+"tab.settings" = "设置";
+
+/* ── 概览 / 仪表盘 ── */
+"dashboard.title" = "仪表盘";
+"dashboard.updated" = "更新于 %@";
+"dashboard.server_online" = "服务器在线";
+"dashboard.server_offline" = "服务器离线";
+"dashboard.no_data" = "暂无数据";
+"dashboard.connect_helper" = "连接助手设备以开始监控";
+"dashboard.usage_today" = "今日用量";
+"dashboard.cost_today" = "今日费用";
+"dashboard.est_cost" = "预估费用";
+"dashboard.requests" = "请求数";
+"dashboard.active_sessions" = "活跃会话";
+"dashboard.online_devices" = "设备";
+"dashboard.unresolved_alerts" = "告警";
+"dashboard.cost_summary" = "费用概览";
+"dashboard.today" = "今日";
+"dashboard.30day_est" = "30天预估";
+"dashboard.provider_usage" = "服务商用量";
+"dashboard.top_projects" = "热门项目";
+"dashboard.no_projects" = "暂无跟踪的项目";
+"dashboard.risk_signals" = "风险信号";
+"dashboard.activity" = "活动";
+"dashboard.quick_stats" = "快速统计";
+"dashboard.monitor" = "监控";
+"dashboard.manage" = "管理";
+"dashboard.no_unresolved_alerts" = "无未解决告警";
+
+/* ── 服务商 ── */
+"providers.title" = "服务商";
+"providers.show_all" = "显示全部";
+"providers.hide_disabled" = "隐藏已禁用";
+"providers.tracked" = "跟踪中";
+"providers.no_providers" = "无服务商";
+"providers.no_data" = "无服务商数据";
+"providers.empty_hint" = "助手同步后将显示服务商数据";
+"providers.all_hidden" = "所有服务商已隐藏";
+"providers.show_all_hint" = "点按「显示全部」查看已禁用的服务商";
+"providers.this_week" = "本周";
+"providers.quota" = "配额";
+"providers.status" = "状态";
+
+/* ── 会话 ── */
+"sessions.title" = "会话";
+"sessions.select" = "选择会话";
+"sessions.select_hint" = "从列表中选择一个会话查看详情";
+"sessions.no_sessions" = "无会话";
+"sessions.empty_hint" = "检测到 AI 工具运行时将显示会话";
+"sessions.running" = "运行中";
+"sessions.details" = "会话详情";
+"sessions.count_running" = "%d 运行中";
+
+/* ── 告警 ── */
+"alerts.title" = "告警";
+"alerts.all_clear" = "一切正常";
+"alerts.no_alerts" = "无告警";
+"alerts.no_unresolved" = "无未解决告警";
+"alerts.no_matching" = "无匹配告警";
+"alerts.open" = "未处理";
+"alerts.resolved" = "已解决";
+"alerts.all" = "全部";
+"alerts.filter" = "筛选";
+"alerts.ack" = "确认";
+"alerts.acknowledge" = "确认";
+"alerts.resolve" = "解决";
+"alerts.snooze" = "暂缓";
+"alerts.snooze_minutes" = "%d 分钟";
+"alerts.created" = "创建时间";
+"alerts.related" = "关联";
+"alerts.actions" = "操作";
+"alerts.severity_critical" = "严重";
+"alerts.severity_warning" = "警告";
+"alerts.unresolved_count" = "%d 未解决";
+
+/* ── 设置 ── */
+"settings.title" = "设置";
+"settings.account" = "账户";
+"settings.general" = "通用";
+"settings.server" = "服务器";
+"settings.server_name" = "Supabase (东京)";
+"settings.status" = "状态";
+"settings.connected" = "已连接";
+"settings.disconnected" = "未连接";
+"settings.paired" = "已配对";
+"settings.not_paired" = "未配对";
+"settings.connection" = "连接";
+"settings.refresh_cadence" = "刷新频率";
+"settings.refresh_interval" = "刷新间隔";
+"settings.subscription" = "订阅";
+"settings.current_plan" = "当前方案";
+"settings.manage_subscription" = "管理订阅";
+"settings.upgrade_pro" = "升级到 Pro";
+"settings.providers" = "服务商";
+"settings.devices" = "设备";
+"settings.data_retention" = "数据保留";
+"settings.days" = "天";
+"settings.notifications" = "通知";
+"settings.desktop_notifications" = "桌面通知";
+"settings.desktop_notifications_hint" = "配额不足或出错时发送提醒";
+"settings.session_quota_notifications" = "会话配额通知";
+"settings.session_quota_hint" = "5小时会话配额用完时通知";
+"settings.alert_notifications" = "告警通知";
+"settings.session_quota_alerts" = "会话配额提醒";
+"settings.check_provider_status" = "检查服务商状态";
+"settings.cost_tracking" = "费用追踪";
+"settings.display" = "显示";
+"settings.show_cost_estimates" = "显示费用预估";
+"settings.compact_mode" = "紧凑模式";
+"settings.menu_bar_mode" = "菜单栏模式";
+"settings.reorder_providers" = "排序服务商";
+"settings.reorder_hint" = "拖拽排序，点按启用/禁用";
+"settings.manage_providers" = "管理服务商";
+"settings.advanced" = "高级";
+"settings.hide_personal_info" = "隐藏个人信息";
+"settings.force_refresh" = "强制刷新所有数据";
+"settings.about" = "关于";
+"settings.version" = "版本";
+"settings.build" = "构建";
+"settings.privacy_policy" = "隐私政策";
+"settings.terms_of_use" = "使用条款";
+"settings.github" = "GitHub 仓库";
+"settings.sign_out" = "退出登录";
+"settings.sign_in" = "登录";
+"settings.sign_in_email" = "邮箱登录";
+"settings.sign_in_hint" = "登录以开始使用";
+"settings.email" = "邮箱";
+"settings.name" = "姓名";
+
+/* ── 认证 / 登录 ── */
+"auth.title" = "CLI Pulse";
+"auth.subtitle" = "监控你的 AI 编程工具";
+"auth.or" = "或";
+"auth.try_demo" = "试用演示";
+"auth.welcome" = "欢迎";
+"auth.watch_hint" = "在 iPhone 上登录或在下方输入凭据";
+
+/* ── 订阅 ── */
+"subscription.title" = "订阅";
+"subscription.pro_title" = "CLI Pulse Pro";
+"subscription.unlock" = "解锁 CLI Pulse 的全部功能";
+"subscription.monthly" = "月付";
+"subscription.yearly_save" = "年付（省 17%）";
+"subscription.popular" = "热门";
+"subscription.not_available" = "暂不可用";
+"subscription.restore" = "恢复购买";
+"subscription.pro" = "Pro";
+"subscription.team" = "团队";
+"subscription.everything_in_pro" = "包含 Pro 的所有功能";
+"subscription.unlimited_devices" = "无限设备";
+"subscription.data_retention_365" = "365天数据保留";
+"subscription.team_dashboards" = "团队仪表盘";
+"subscription.shared_alerts" = "共享告警和规则";
+"subscription.admin_controls" = "管理员控制";
+"subscription.unlimited_providers" = "无限服务商";
+"subscription.up_to_5_devices" = "最多 5 台设备";
+"subscription.data_retention_90" = "90天数据保留";
+"subscription.priority_alerts" = "优先告警";
+"subscription.cost_analytics" = "费用分析";
+"subscription.per_year" = "/年";
+"subscription.per_month" = "/月";
+"subscription.upgrade_pro" = "升级到 Pro";
+"subscription.switch_pro" = "切换到 Pro";
+"subscription.switch_team" = "切换到团队版";
+
+/* ── 关于 ── */
+"about.title" = "关于 CLI Pulse Bar";
+"about.description" = "从菜单栏监控你的 AI 编程工具。跟踪 Claude、Codex、Gemini 等 20+ 服务商的用量、费用和告警。";
+"about.copyright" = "© 2025 CLI Pulse 贡献者";
+"about.report_issue" = "报告问题";
+
+/* ── 小组件 ── */
+"widget.usage_title" = "用量";
+"widget.usage_description" = "在锁屏上快速查看使用百分比。";
+"widget.overview_title" = "用量概览";
+"widget.overview_description" = "一目了然地监控 AI 编程工具使用情况。";
+"widget.app_name" = "CLI Pulse";
+"widget.no_data" = "暂无数据";
+"widget.no_provider_data" = "无服务商数据";
+"widget.used" = "已使用";
+
+/* ── 时间 ── */
+"time.just_now" = "刚刚";
+"time.ago" = "前";
+
+/* ── 通用 ── */
+"common.online" = "在线";
+"common.offline" = "离线";
+"common.refresh_all" = "全部刷新";
+"common.cancel" = "取消";
+"common.done" = "完成";
+"common.save" = "保存";
+"common.delete" = "删除";
+"common.enabled" = "已启用";

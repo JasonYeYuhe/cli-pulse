@@ -1,0 +1,201 @@
+/* CLI Pulse — English (Base) */
+
+/* ── Tabs ── */
+"tab.overview" = "Overview";
+"tab.providers" = "Providers";
+"tab.sessions" = "Sessions";
+"tab.alerts" = "Alerts";
+"tab.settings" = "Settings";
+
+/* ── Overview / Dashboard ── */
+"dashboard.title" = "Dashboard";
+"dashboard.updated" = "Updated %@";
+"dashboard.server_online" = "Server Online";
+"dashboard.server_offline" = "Server Offline";
+"dashboard.no_data" = "No Data";
+"dashboard.connect_helper" = "Connect a helper device to start monitoring";
+"dashboard.usage_today" = "Usage Today";
+"dashboard.cost_today" = "Cost Today";
+"dashboard.est_cost" = "Est. Cost";
+"dashboard.requests" = "Requests";
+"dashboard.active_sessions" = "Active Sessions";
+"dashboard.online_devices" = "Devices";
+"dashboard.unresolved_alerts" = "Alerts";
+"dashboard.cost_summary" = "Cost Summary";
+"dashboard.today" = "Today";
+"dashboard.30day_est" = "30 Day Est.";
+"dashboard.provider_usage" = "Provider Usage";
+"dashboard.top_projects" = "Top Projects";
+"dashboard.no_projects" = "No projects tracked yet";
+"dashboard.risk_signals" = "Risk Signals";
+"dashboard.activity" = "Activity";
+"dashboard.quick_stats" = "Quick Stats";
+"dashboard.monitor" = "Monitor";
+"dashboard.manage" = "Manage";
+"dashboard.no_unresolved_alerts" = "No unresolved alerts";
+
+/* ── Providers ── */
+"providers.title" = "Providers";
+"providers.show_all" = "Show All";
+"providers.hide_disabled" = "Hide Disabled";
+"providers.tracked" = "tracked";
+"providers.no_providers" = "No Providers";
+"providers.no_data" = "No provider data";
+"providers.empty_hint" = "Provider data appears after helper syncs";
+"providers.all_hidden" = "All providers hidden";
+"providers.show_all_hint" = "Tap \"Show All\" to see disabled providers";
+"providers.this_week" = "This Week";
+"providers.quota" = "Quota";
+"providers.status" = "Status";
+
+/* ── Sessions ── */
+"sessions.title" = "Sessions";
+"sessions.select" = "Select a Session";
+"sessions.select_hint" = "Choose a session from the list to see details";
+"sessions.no_sessions" = "No Sessions";
+"sessions.empty_hint" = "Sessions appear when AI tools are detected running";
+"sessions.running" = "running";
+"sessions.details" = "Session Details";
+"sessions.count_running" = "%d Running";
+
+/* ── Alerts ── */
+"alerts.title" = "Alerts";
+"alerts.all_clear" = "All Clear";
+"alerts.no_alerts" = "No Alerts";
+"alerts.no_unresolved" = "No unresolved alerts";
+"alerts.no_matching" = "No matching alerts";
+"alerts.open" = "Open";
+"alerts.resolved" = "Resolved";
+"alerts.all" = "All";
+"alerts.filter" = "Filter";
+"alerts.ack" = "Ack";
+"alerts.acknowledge" = "Acknowledge";
+"alerts.resolve" = "Resolve";
+"alerts.snooze" = "Snooze";
+"alerts.snooze_minutes" = "%d minutes";
+"alerts.created" = "Created";
+"alerts.related" = "Related";
+"alerts.actions" = "Actions";
+"alerts.severity_critical" = "critical";
+"alerts.severity_warning" = "warning";
+"alerts.unresolved_count" = "%d unresolved";
+
+/* ── Settings ── */
+"settings.title" = "Settings";
+"settings.account" = "Account";
+"settings.general" = "General";
+"settings.server" = "Server";
+"settings.server_name" = "Supabase (Tokyo)";
+"settings.status" = "Status";
+"settings.connected" = "Connected";
+"settings.disconnected" = "Disconnected";
+"settings.paired" = "Paired";
+"settings.not_paired" = "Not Paired";
+"settings.connection" = "Connection";
+"settings.refresh_cadence" = "Refresh Cadence";
+"settings.refresh_interval" = "Refresh Interval";
+"settings.subscription" = "Subscription";
+"settings.current_plan" = "Current Plan";
+"settings.manage_subscription" = "Manage Subscription";
+"settings.upgrade_pro" = "Upgrade to Pro";
+"settings.providers" = "Providers";
+"settings.devices" = "Devices";
+"settings.data_retention" = "Data Retention";
+"settings.days" = "days";
+"settings.notifications" = "Notifications";
+"settings.desktop_notifications" = "Desktop notifications";
+"settings.desktop_notifications_hint" = "Alert when quota is low or errors occur";
+"settings.session_quota_notifications" = "Session quota notifications";
+"settings.session_quota_hint" = "Notify when 5-hour session quota is depleted";
+"settings.alert_notifications" = "Alert notifications";
+"settings.session_quota_alerts" = "Session quota alerts";
+"settings.check_provider_status" = "Check provider status";
+"settings.cost_tracking" = "Cost Tracking";
+"settings.display" = "Display";
+"settings.show_cost_estimates" = "Show cost estimates";
+"settings.compact_mode" = "Compact mode";
+"settings.menu_bar_mode" = "Menu Bar Mode";
+"settings.reorder_providers" = "Reorder Providers";
+"settings.reorder_hint" = "Drag to reorder, toggle to enable/disable";
+"settings.manage_providers" = "Manage Providers";
+"settings.advanced" = "Advanced";
+"settings.hide_personal_info" = "Hide personal information";
+"settings.force_refresh" = "Force Refresh All Data";
+"settings.about" = "About";
+"settings.version" = "Version";
+"settings.build" = "Build";
+"settings.privacy_policy" = "Privacy Policy";
+"settings.terms_of_use" = "Terms of Use";
+"settings.github" = "GitHub Repository";
+"settings.sign_out" = "Sign Out";
+"settings.sign_in" = "Sign In";
+"settings.sign_in_email" = "Sign In with Email";
+"settings.sign_in_hint" = "Sign in to get started";
+"settings.email" = "Email";
+"settings.name" = "Name";
+
+/* ── Auth / Login ── */
+"auth.title" = "CLI Pulse";
+"auth.subtitle" = "Monitor your AI coding tools";
+"auth.or" = "or";
+"auth.try_demo" = "Try Demo";
+"auth.welcome" = "Welcome";
+"auth.watch_hint" = "Sign in on iPhone or enter credentials below";
+
+/* ── Subscription ── */
+"subscription.title" = "Subscription";
+"subscription.pro_title" = "CLI Pulse Pro";
+"subscription.unlock" = "Unlock the full power of CLI Pulse";
+"subscription.monthly" = "Monthly";
+"subscription.yearly_save" = "Yearly (Save 17%)";
+"subscription.popular" = "POPULAR";
+"subscription.not_available" = "Not Available";
+"subscription.restore" = "Restore Purchases";
+"subscription.pro" = "Pro";
+"subscription.team" = "Team";
+"subscription.everything_in_pro" = "Everything in Pro";
+"subscription.unlimited_devices" = "Unlimited devices";
+"subscription.data_retention_365" = "365-day data retention";
+"subscription.team_dashboards" = "Team dashboards";
+"subscription.shared_alerts" = "Shared alerts & rules";
+"subscription.admin_controls" = "Admin controls";
+"subscription.unlimited_providers" = "Unlimited providers";
+"subscription.up_to_5_devices" = "Up to 5 devices";
+"subscription.data_retention_90" = "90-day data retention";
+"subscription.priority_alerts" = "Priority alerts";
+"subscription.cost_analytics" = "Cost analytics";
+"subscription.per_year" = "/year";
+"subscription.per_month" = "/month";
+"subscription.upgrade_pro" = "Upgrade to Pro";
+"subscription.switch_pro" = "Switch to Pro";
+"subscription.switch_team" = "Switch to Team";
+
+/* ── About ── */
+"about.title" = "About CLI Pulse Bar";
+"about.description" = "Monitor your AI coding tools from the menu bar. Track usage, costs, and alerts across 20+ providers including Claude, Codex, and Gemini.";
+"about.copyright" = "© 2025 CLI Pulse Contributors";
+"about.report_issue" = "Report an Issue";
+
+/* ── Widgets ── */
+"widget.usage_title" = "Usage";
+"widget.usage_description" = "Quick usage percentage on your Lock Screen.";
+"widget.overview_title" = "Usage Overview";
+"widget.overview_description" = "Monitor your AI coding tool usage at a glance.";
+"widget.app_name" = "CLI Pulse";
+"widget.no_data" = "No data";
+"widget.no_provider_data" = "No provider data";
+"widget.used" = "used";
+
+/* ── Time ── */
+"time.just_now" = "just now";
+"time.ago" = "ago";
+
+/* ── Common ── */
+"common.online" = "Online";
+"common.offline" = "Offline";
+"common.refresh_all" = "Refresh All";
+"common.cancel" = "Cancel";
+"common.done" = "Done";
+"common.save" = "Save";
+"common.delete" = "Delete";
+"common.enabled" = "enabled";

@@ -17,10 +17,10 @@ struct iOSLoginView: View {
                             .font(.system(size: 56, weight: .light))
                             .foregroundStyle(PulseTheme.accent)
 
-                        Text("CLI Pulse")
+                        Text(L10n.auth.title)
                             .font(.system(size: 28, weight: .bold, design: .rounded))
 
-                        Text("Monitor your AI coding tools")
+                        Text(L10n.auth.subtitle)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -64,7 +64,7 @@ struct iOSLoginView: View {
                     // Demo mode divider
                     HStack {
                         Rectangle().frame(height: 1).foregroundStyle(.quaternary)
-                        Text("or")
+                        Text(L10n.auth.or)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Rectangle().frame(height: 1).foregroundStyle(.quaternary)
@@ -74,7 +74,7 @@ struct iOSLoginView: View {
                     // Email sign in (for App Store review demo account)
                     VStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Email")
+                            Text(L10n.settings.email)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             TextField("you@example.com", text: $email)
@@ -85,7 +85,7 @@ struct iOSLoginView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Name")
+                            Text(L10n.settings.name)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             TextField("Your Name", text: $name)
@@ -102,7 +102,7 @@ struct iOSLoginView: View {
                                 ProgressView()
                                     .tint(.white)
                             }
-                            Text("Sign In with Email")
+                            Text(L10n.settings.signInEmail)
                                 .font(.headline)
                         }
                         .frame(maxWidth: .infinity)
@@ -118,7 +118,7 @@ struct iOSLoginView: View {
                     } label: {
                         HStack {
                             Image(systemName: "play.circle.fill")
-                            Text("Try Demo")
+                            Text(L10n.auth.tryDemo)
                                 .font(.headline)
                         }
                         .frame(maxWidth: .infinity)
@@ -129,7 +129,7 @@ struct iOSLoginView: View {
                     .padding(.horizontal)
                 }
             }
-            .navigationTitle("Welcome")
+            .navigationTitle(L10n.auth.welcome)
             .navigationBarTitleDisplayMode(.inline)
         }
     }

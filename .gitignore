@@ -1,4 +1,25 @@
+# macOS
 .DS_Store
+
+# Python
 .venv/
 __pycache__/
+*.pyc
 .pytest_cache/
+
+# Database
+*.db
+
+# Xcode
+build/
+*.xcodeproj/xcuserdata/
+*.swiftpm/
+DerivedData/
+
+# IDE
+.idea/
+*.xcworkspace/xcuserdata/
+
+# Environment
+.env
+.env.local
