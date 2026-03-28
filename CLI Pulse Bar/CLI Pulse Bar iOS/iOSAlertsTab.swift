@@ -238,7 +238,7 @@ struct iOSAlertRow: View {
                 .lineLimit(1)
         }
         .font(.caption2)
-        .foregroundStyle(tappable ? .blue : .tertiary)
+        .foregroundStyle(tappable ? Color.blue : Color.secondary)
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
         .background((tappable ? Color.blue : Color.gray).opacity(0.08))

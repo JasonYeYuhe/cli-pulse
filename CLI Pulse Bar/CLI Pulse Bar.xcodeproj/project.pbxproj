@@ -166,6 +166,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				PKG00007 /* CLIPulseCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
