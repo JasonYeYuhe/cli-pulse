@@ -1,6 +1,7 @@
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 import pytest
@@ -722,3 +723,112 @@ def test_cannot_create_duplicate_team(client: TestClient) -> None:
 
     second = client.post("/v1/team", headers=headers, json={"name": "Team B"})
     assert second.status_code == 403
+
+
+# ── Phase 4: Helper Collection Unit Tests ──
+
+
+from helper.system_collector import (
+    CollectedSession,
+    CollectionResult,
+    DeviceSnapshot,
+    HELPER_VERSION,
+    _deduplicate_sessions,
+    _detect_provider,
+    _elapsed_to_seconds,
+    _guess_project,
+    _should_ignore_command,
+    collect_all,
+)
+
+
+def _make_session(**overrides) -> CollectedSession:
+    defaults = dict(
+        session_id="proc-100",
+        name="test-process",
+        provider="Claude",
+        project="my-project",
+        status="Running",
+        total_usage=1000,
+        requests=10,
+        error_count=0,
+        started_at=datetime.now(timezone.utc).isoformat(),
+        last_active_at=datetime.now(timezone.utc).isoformat(),
+        exact_cost=None,
+        cpu_usage=5.0,
+        command="/usr/bin/claude --project foo",
+        collection_confidence="high",
+    )
+    defaults.update(overrides)
+    return CollectedSession(**defaults)
+
+
+def test_deduplicate_sessions_merges_same_provider_project() -> None:
+    """Sessions with same provider+project should be merged."""
+    s1 = _make_session(session_id="proc-1", total_usage=500, requests=5, cpu_usage=10.0, collection_confidence="high")
+    s2 = _make_session(session_id="proc-2", total_usage=300, requests=3, cpu_usage=5.0, collection_confidence="low")
+
+    result = _deduplicate_sessions([s1, s2])
+    assert len(result) == 1
+    merged = result[0]
+    assert merged.total_usage == 800
+    assert merged.requests == 8
+    assert merged.cpu_usage == 15.0
+    assert merged.collection_confidence == "high"  # highest kept
+    assert "(+1 workers)" in merged.name
+
+
+def test_deduplicate_sessions_keeps_different_providers_separate() -> None:
+    """Sessions with different providers should NOT be merged."""
+    s1 = _make_session(session_id="proc-1", provider="Claude")
+    s2 = _make_session(session_id="proc-2", provider="Codex")
+
+    result = _deduplicate_sessions([s1, s2])
+    assert len(result) == 2
+
+
+def test_detect_provider_returns_confidence() -> None:
+    assert _detect_provider("/usr/bin/claude chat") == ("Claude", "high")
+    assert _detect_provider("copilot --agent") == ("Copilot", "high")
+    assert _detect_provider("some openai script") == ("Codex", "medium")
+    assert _detect_provider("/bin/bash") is None
+
+
+def test_should_ignore_command() -> None:
+    assert _should_ignore_command("crashpad_handler --database=/tmp/crash")
+    assert _should_ignore_command("electron --type=renderer --no-sandbox")
+    assert _should_ignore_command(".vscode-server/bin/something")
+    assert not _should_ignore_command("/usr/bin/claude chat")
+
+
+def test_elapsed_to_seconds() -> None:
+    assert _elapsed_to_seconds("00:30") == 30
+    assert _elapsed_to_seconds("05:30") == 330
+    assert _elapsed_to_seconds("1:05:30") == 3930
+    assert _elapsed_to_seconds("2-01:00:00") == 2 * 86400 + 3600
+
+
+def test_guess_project_with_markers(tmp_path: Path) -> None:
+    """_guess_project should find project root via markers."""
+    project_dir = tmp_path / "myapp"
+    project_dir.mkdir()
+    (project_dir / "package.json").write_text("{}")
+    sub = project_dir / "src"
+    sub.mkdir()
+    test_file = sub / "index.ts"
+    test_file.write_text("")
+
+    result = _guess_project(f"node {test_file}")
+    assert result == "myapp"
+
+
+def test_collect_all_graceful_degradation() -> None:
+    """collect_all should return partial results even when subsystems fail."""
+    with patch("helper.system_collector.collect_sessions", side_effect=RuntimeError("ps broken")):
+        result = collect_all()
+    assert isinstance(result, CollectionResult)
+    assert result.sessions == []
+    assert any("sessions" in e for e in result.collection_errors)
+    assert result.helper_version == HELPER_VERSION
+    # Device snapshot should still work
+    assert isinstance(result.device, DeviceSnapshot)

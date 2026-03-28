@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
+HELPER_VERSION = "0.2.0"
+
+logger = logging.getLogger("cli_pulse.collector")
 
 PROCESS_PATTERNS: list[tuple[str, str, str]] = [
     # (provider_name, regex_pattern, confidence: high|medium|low)
@@ -42,7 +46,13 @@ IGNORED_COMMAND_PATTERNS: list[str] = [
     r"--utility-sub-type",
     r"codex helper",
     r"electron framework",
+    r"\.vscode-server",
+    r"--ms-enable-electron",
+    r"node_modules/\.bin",
 ]
+
+# Confidence ranking for deduplication: higher is better
+_CONFIDENCE_RANK = {"high": 3, "medium": 2, "low": 1}
 
 
 @dataclass
@@ -67,6 +77,7 @@ class CollectedSession:
     cpu_usage: float
     command: str
     collection_confidence: str = "medium"  # high, medium, low
+    _child_pids: list[str] = field(default_factory=list, repr=False)
 
 
 @dataclass
@@ -85,6 +96,67 @@ class CollectedAlert:
     related_device_name: Optional[str] = None
 
 
+@dataclass
+class CollectionResult:
+    """Full collection result with metadata."""
+    device: DeviceSnapshot
+    sessions: list[CollectedSession]
+    alerts: list[CollectedAlert]
+    provider_remaining: dict[str, int]
+    helper_version: str = HELPER_VERSION
+    collection_errors: list[str] = field(default_factory=list)
+    collected_at: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.collected_at:
+            self.collected_at = datetime.now(timezone.utc).isoformat()
+
+
+def collect_all() -> CollectionResult:
+    """Perform a full collection cycle with graceful degradation."""
+    errors: list[str] = []
+
+    # Device snapshot
+    try:
+        device = collect_device_snapshot()
+    except Exception as exc:
+        logger.warning("Device snapshot failed: %s", exc)
+        errors.append(f"device_snapshot: {exc}")
+        device = DeviceSnapshot(cpu_usage=0, memory_usage=0)
+
+    # Sessions
+    try:
+        sessions = collect_sessions()
+    except Exception as exc:
+        logger.warning("Session collection failed: %s", exc)
+        errors.append(f"sessions: {exc}")
+        sessions = []
+
+    # Alerts
+    try:
+        alerts = collect_alerts(sessions, device)
+    except Exception as exc:
+        logger.warning("Alert collection failed: %s", exc)
+        errors.append(f"alerts: {exc}")
+        alerts = []
+
+    # Remaining quota estimates
+    try:
+        remaining = estimate_provider_remaining(sessions)
+    except Exception as exc:
+        logger.warning("Quota estimation failed: %s", exc)
+        errors.append(f"quota_estimation: {exc}")
+        remaining = {}
+
+    return CollectionResult(
+        device=device,
+        sessions=sessions,
+        alerts=alerts,
+        provider_remaining=remaining,
+        collection_errors=errors,
+    )
+
+
 def collect_device_snapshot() -> DeviceSnapshot:
     cpu_usage = _collect_cpu_usage()
     memory_usage = _collect_memory_usage()
@@ -92,8 +164,10 @@ def collect_device_snapshot() -> DeviceSnapshot:
 
 
 def collect_sessions() -> list[CollectedSession]:
-    sessions: list[CollectedSession] = []
-    for row in _process_rows():
+    rows = _process_rows()
+    raw_sessions: list[CollectedSession] = []
+
+    for row in rows:
         if _should_ignore_command(row["command"]):
             continue
 
@@ -108,7 +182,7 @@ def collect_sessions() -> list[CollectedSession]:
         cpu = float(row["pcpu"])
         project = _guess_project(command)
 
-        sessions.append(
+        raw_sessions.append(
             CollectedSession(
                 session_id=f"proc-{row['pid']}",
                 name=_pretty_name(command),
@@ -124,11 +198,70 @@ def collect_sessions() -> list[CollectedSession]:
                 cpu_usage=cpu,
                 command=command,
                 collection_confidence=confidence,
+                _child_pids=[row["pid"]],
             )
         )
 
-    sessions.sort(key=lambda item: (item.cpu_usage, item.last_active_at), reverse=True)
-    return sessions[:12]
+    # Deduplicate: merge child processes with same provider+project
+    deduplicated = _deduplicate_sessions(raw_sessions)
+    deduplicated.sort(key=lambda s: (s.cpu_usage, s.last_active_at), reverse=True)
+    return deduplicated[:12]
+
+
+def _deduplicate_sessions(sessions: list[CollectedSession]) -> list[CollectedSession]:
+    """Merge sessions with the same provider + project into a single logical session.
+
+    When multiple processes belong to the same provider and project (e.g. parent
+    process + child worker), aggregate their usage and keep the highest-confidence
+    match as the representative.
+    """
+    groups: dict[tuple[str, str], list[CollectedSession]] = {}
+    for session in sessions:
+        key = (session.provider, session.project)
+        groups.setdefault(key, []).append(session)
+
+    merged: list[CollectedSession] = []
+    for (provider, project), group in groups.items():
+        if len(group) == 1:
+            merged.append(group[0])
+            continue
+
+        # Pick the session with highest confidence as representative
+        group.sort(key=lambda s: _CONFIDENCE_RANK.get(s.collection_confidence, 0), reverse=True)
+        primary = group[0]
+
+        # Aggregate metrics from children
+        total_usage = sum(s.total_usage for s in group)
+        total_requests = sum(s.requests for s in group)
+        total_errors = sum(s.error_count for s in group)
+        total_cpu = sum(s.cpu_usage for s in group)
+        all_pids = []
+        for s in group:
+            all_pids.extend(s._child_pids)
+
+        # Use earliest start, latest active
+        earliest_start = min(s.started_at for s in group)
+        latest_active = max(s.last_active_at for s in group)
+
+        merged.append(CollectedSession(
+            session_id=primary.session_id,
+            name=f"{primary.name} (+{len(group) - 1} workers)" if len(group) > 1 else primary.name,
+            provider=provider,
+            project=project,
+            status="Running",
+            total_usage=total_usage,
+            requests=total_requests,
+            error_count=total_errors,
+            started_at=earliest_start,
+            last_active_at=latest_active,
+            exact_cost=None,
+            cpu_usage=round(total_cpu, 1),
+            command=primary.command,
+            collection_confidence=primary.collection_confidence,
+            _child_pids=all_pids,
+        ))
+
+    return merged
 
 
 def collect_alerts(sessions: list[CollectedSession], device_snapshot: DeviceSnapshot) -> list[CollectedAlert]:
@@ -153,8 +286,8 @@ def collect_alerts(sessions: list[CollectedSession], device_snapshot: DeviceSnap
                 CollectedAlert(
                     alert_id=f"session-spike-{session.session_id}",
                     type="Usage Spike",
-                severity="Warning",
-                title=f"{session.name} is consuming high CPU",
+                    severity="Warning",
+                    title=f"{session.name} is consuming high CPU",
                     message=f"Process CPU is {session.cpu_usage:.1f}% for {session.provider}.",
                     created_at=now,
                     related_project_id=_project_id(session.project),
@@ -218,12 +351,22 @@ def estimate_provider_remaining(sessions: list[CollectedSession]) -> dict[str, i
 
 
 def _process_rows() -> list[dict[str, str]]:
-    result = subprocess.run(
-        ["ps", "-axo", "pid=,pcpu=,pmem=,etime=,command="],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    try:
+        result = subprocess.run(
+            ["ps", "-axo", "pid=,pcpu=,pmem=,etime=,command="],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode != 0:
+            logger.warning("ps command failed with code %d", result.returncode)
+            return []
+    except subprocess.TimeoutExpired:
+        logger.warning("ps command timed out")
+        return []
+    except FileNotFoundError:
+        logger.warning("ps command not found")
+        return []
 
     rows: list[dict[str, str]] = []
     for line in result.stdout.splitlines():
@@ -275,12 +418,48 @@ def _pretty_name(command: str) -> str:
     return compact[:45] + "..."
 
 
+# Project marker files, checked in order of specificity
+_PROJECT_MARKERS = [
+    "package.json",
+    "Cargo.toml",
+    "go.mod",
+    "pyproject.toml",
+    "setup.py",
+    "Makefile",
+    "CMakeLists.txt",
+    ".git",
+]
+
+
 def _guess_project(command: str) -> str:
-    path_matches = re.findall(r"/Users/[^ ]+|/home/[^ ]+|/opt/[^ ]+", command)
+    """Guess the project name from the command string.
+
+    Strategy:
+    1. Extract file paths from the command
+    2. Walk up from each path looking for project markers (.git, package.json, etc.)
+    3. Use the directory name containing the marker as the project name
+    4. Fall back to the deepest non-system directory component
+    5. Final fallback: current working directory name
+    """
+    path_matches = re.findall(r"(/(?:Users|home|opt|var|tmp|srv)[^\s\"']+)", command)
+
     for match in path_matches:
-        parts = [part for part in Path(match).parts if part not in {"/", "Users", "home", "opt"}]
+        p = Path(match)
+        # Walk up looking for project root markers
+        for ancestor in [p] + list(p.parents):
+            if str(ancestor) in {"/", "/Users", "/home", "/opt", "/var", "/tmp", "/srv"}:
+                break
+            for marker in _PROJECT_MARKERS:
+                if (ancestor / marker).exists():
+                    return ancestor.name
+        # Fallback: use deepest meaningful directory
+        parts = [part for part in p.parts if part not in {"/", "Users", "home", "opt", "var", "tmp", "srv"}]
+        # Skip username, take the next meaningful directory
+        if len(parts) >= 2:
+            return parts[1]  # parts[0] is usually the username
         if parts:
             return parts[-1]
+
     return Path(os.getcwd()).name or "local-workspace"
 
 
@@ -290,14 +469,22 @@ def _project_id(value: str) -> str:
 
 
 def _collect_cpu_usage() -> int:
-    cpu_count = max(os.cpu_count() or 1, 1)
-    load = os.getloadavg()[0]
-    return max(0, min(100, int(load / cpu_count * 100)))
+    try:
+        cpu_count = max(os.cpu_count() or 1, 1)
+        load = os.getloadavg()[0]
+        return max(0, min(100, int(load / cpu_count * 100)))
+    except (OSError, AttributeError):
+        return 0
 
 
 def _collect_memory_usage() -> int:
     try:
-        result = subprocess.run(["vm_stat"], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["vm_stat"], capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode != 0:
+            return 0
+
         page_size = 4096
         page_size_match = re.search(r"page size of (\d+) bytes", result.stdout)
         if page_size_match:
@@ -319,5 +506,5 @@ def _collect_memory_usage() -> int:
             return 0
         used_ratio = active / total
         return max(0, min(100, int(used_ratio * 100)))
-    except Exception:
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
         return 0
