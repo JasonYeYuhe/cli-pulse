@@ -553,13 +553,13 @@ struct SettingsTab: View {
             .buttonStyle(.plain)
             .foregroundStyle(PulseTheme.accent)
 
-            Link(destination: URL(string: "https://github.com/jasonyeyuhe/cli-pulse/blob/main/PRIVACY.md")!) {
+            Link(destination: URL(string: "https://jasonyeyuhe.github.io/cli-pulse/privacy.html")!) {
                 Label(L10n.settings.privacyPolicy, systemImage: "hand.raised")
                     .font(.system(size: 11))
             }
             .foregroundStyle(PulseTheme.accent)
 
-            Link(destination: URL(string: "https://github.com/jasonyeyuhe/cli-pulse/blob/main/TERMS.md")!) {
+            Link(destination: URL(string: "https://jasonyeyuhe.github.io/cli-pulse/terms.html")!) {
                 Label(L10n.settings.termsOfUse, systemImage: "doc.text")
                     .font(.system(size: 11))
             }

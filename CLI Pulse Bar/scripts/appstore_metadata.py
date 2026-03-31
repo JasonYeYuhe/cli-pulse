@@ -144,7 +144,16 @@ PRIVACY-FIRST:
 - No cloud sync or third-party analytics
 - Connects to your self-hosted CLI Pulse backend
 
-Perfect for developers who use multiple AI coding tools and want to understand their usage patterns, control costs, and stay informed about their AI assistant activity."""
+Perfect for developers who use multiple AI coding tools and want to understand their usage patterns, control costs, and stay informed about their AI assistant activity.
+
+SUBSCRIPTION INFORMATION
+
+CLI Pulse Pro is available as a monthly ($4.99/month) or yearly ($49.99/year) auto-renewable subscription. CLI Pulse Team is available as a monthly ($9.99/month) or yearly ($99.99/year) auto-renewable subscription.
+
+Payment will be charged to your Apple ID account at the confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Your account will be charged for renewal within 24 hours prior to the end of the current period. You can manage and cancel your subscriptions by going to your account settings on the App Store after purchase.
+
+Terms of Use: https://jasonyeyuhe.github.io/cli-pulse/terms.html
+Privacy Policy: https://jasonyeyuhe.github.io/cli-pulse/privacy.html"""
 
     keywords = "AI,coding,monitor,Claude,Codex,Gemini,developer,usage,API,tools"
 
@@ -374,7 +383,7 @@ def set_app_info():
                     "id": loc["id"],
                     "attributes": {
                         "name": "CLI Pulse",
-                        "privacyPolicyUrl": "https://github.com/jasonyeyuhe/cli-pulse/blob/main/PRIVACY.md",
+                        "privacyPolicyUrl": "https://jasonyeyuhe.github.io/cli-pulse/privacy.html",
                     }
                 }
             })

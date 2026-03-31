@@ -87,13 +87,13 @@ def select_build(version_id, platform_label):
 
     # Wait for build to be processed
     for attempt in range(12):
-        r = get(f"/builds?filter[app]={APP_ID}&filter[version]=4&sort=-uploadedDate&limit=5")
+        r = get(f"/builds?filter[app]={APP_ID}&filter[version]=6&sort=-uploadedDate&limit=5")
         builds = r.get("data", [])
         for b in builds:
             proc = b["attributes"].get("processingState", "")
             ver = b["attributes"].get("version", "")
             print(f"  Build {b['id']}: version={ver} processing={proc}")
-            if proc == "VALID" and ver == "4":
+            if proc == "VALID" and ver == "6":
                 # Select this build
                 patch(f"/appStoreVersions/{version_id}", {
                     "data": {
@@ -265,7 +265,7 @@ def main():
     print("  Waiting 5s for state to propagate...")
     time.sleep(5)
 
-    # Step 2: Get version IDs and select builds
+    # Step 2: Get version IDs and update description + select builds
     mac_vid = None
     ios_vid = None
     for platform in ["MAC_OS", "IOS"]:
@@ -279,7 +279,71 @@ def main():
                 else:
                     ios_vid = v["id"]
 
-    # Try to select build 3
+    # Update description with subscription info for each version
+    DESCRIPTION = """CLI Pulse monitors your AI coding tool usage across Claude, Codex, Gemini, OpenRouter, Ollama, and 20+ providers in real-time.
+
+FEATURES:
+- Real-time usage monitoring for all major AI coding assistants
+- Track API costs and spending across providers
+- Session history with detailed metrics
+- Smart alerts for rate limits, errors, and unusual activity
+- Provider-level analytics with usage breakdowns
+
+MULTI-PLATFORM:
+- macOS menu bar app for quick access
+- iPhone & iPad app with adaptive layouts
+- Apple Watch app with quick glance dashboard
+- Home Screen & Lock Screen widgets
+
+PRIVACY-FIRST:
+- All data stays on your local network
+- No cloud sync or third-party analytics
+- Connects to your self-hosted CLI Pulse backend
+
+Perfect for developers who use multiple AI coding tools and want to understand their usage patterns, control costs, and stay informed about their AI assistant activity.
+
+SUBSCRIPTION INFORMATION
+
+CLI Pulse Pro is available as a monthly ($4.99/month) or yearly ($49.99/year) auto-renewable subscription. CLI Pulse Team is available as a monthly ($9.99/month) or yearly ($99.99/year) auto-renewable subscription.
+
+Payment will be charged to your Apple ID account at the confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Your account will be charged for renewal within 24 hours prior to the end of the current period. You can manage and cancel your subscriptions by going to your account settings on the App Store after purchase.
+
+Terms of Use: https://jasonyeyuhe.github.io/cli-pulse/terms.html
+Privacy Policy: https://jasonyeyuhe.github.io/cli-pulse/privacy.html"""
+
+    for vid in [mac_vid, ios_vid]:
+        if not vid:
+            continue
+        r = get(f"/appStoreVersions/{vid}/appStoreVersionLocalizations")
+        for loc in r.get("data", []):
+            if loc["attributes"]["locale"] == "en-US":
+                patch(f"/appStoreVersionLocalizations/{loc['id']}", {
+                    "data": {
+                        "type": "appStoreVersionLocalizations",
+                        "id": loc["id"],
+                        "attributes": {"description": DESCRIPTION},
+                    }
+                })
+                print(f"  Updated description for {loc['id']}")
+
+    # Update privacy policy URL
+    r = get(f"/apps/{APP_ID}/appInfos")
+    for info in r.get("data", []):
+        r2 = get(f"/appInfos/{info['id']}/appInfoLocalizations")
+        for loc in r2.get("data", []):
+            if loc["attributes"]["locale"] == "en-US":
+                patch(f"/appInfoLocalizations/{loc['id']}", {
+                    "data": {
+                        "type": "appInfoLocalizations",
+                        "id": loc["id"],
+                        "attributes": {
+                            "privacyPolicyUrl": "https://jasonyeyuhe.github.io/cli-pulse/privacy.html",
+                        }
+                    }
+                })
+                print(f"  Updated privacy policy URL")
+
+    # Try to select latest build
     if mac_vid:
         select_build(mac_vid, "macOS")
     if ios_vid:
@@ -320,10 +384,23 @@ def main():
                         upload_screenshots(ios_loc, files, "APP_IPAD_PRO_3GEN_129")
 
     # Step 4: Submit for review
-    submit_for_review()
+    # NOTE: IAP must be bound via ASC web UI before submitting!
+    print("\n" + "=" * 50)
+    print("  IMPORTANT: Before submitting, go to App Store Connect:")
+    print("  1. Open the iOS version page")
+    print("  2. Scroll to 'In-App Purchases and Subscriptions'")
+    print("  3. Click 'Select In-App Purchases or Subscriptions'")
+    print("  4. Check all 4 subscription products")
+    print("  5. Click Done")
+    print("  6. Then submit via ASC web UI: Add for Review → Submit")
+    print("=" * 50)
+    print()
+    print("  Do NOT use API submission - IAP won't be included!")
+    print("  The API reviewSubmissions endpoint does not bind IAP.")
+    print()
 
     print("\n" + "=" * 50)
-    print("  Done!")
+    print("  Metadata update done!")
     print("=" * 50)
 
 

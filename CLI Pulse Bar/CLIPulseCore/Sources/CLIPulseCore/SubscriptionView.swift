@@ -245,10 +245,10 @@ public struct SubscriptionView: View {
 
     private var legalLinks: some View {
         HStack(spacing: 16) {
-            Link(L10n.settings.privacyPolicy, destination: URL(string: "https://github.com/jasonyeyuhe/cli-pulse/blob/main/PRIVACY.md")!)
+            Link(L10n.settings.privacyPolicy, destination: URL(string: "https://jasonyeyuhe.github.io/cli-pulse/privacy.html")!)
             Text("·")
                 .foregroundStyle(.tertiary)
-            Link(L10n.settings.termsOfUse, destination: URL(string: "https://github.com/jasonyeyuhe/cli-pulse/blob/main/TERMS.md")!)
+            Link(L10n.settings.termsOfUse, destination: URL(string: "https://jasonyeyuhe.github.io/cli-pulse/terms.html")!)
         }
         .font(.caption2)
         .foregroundStyle(.secondary)
