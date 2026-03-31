@@ -40,7 +40,7 @@ struct WatchLoginView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(PulseTheme.accent)
-                    .disabled(otpCode.count < 6)
+                    .disabled(otpCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
                     Button {
                         otpCode = ""

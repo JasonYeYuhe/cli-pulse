@@ -53,16 +53,16 @@ public enum PulseTheme {
     }
 
     public static func statusColor(_ status: String) -> Color {
-        switch status {
-        case "Running": return .green
-        case "Idle": return .orange
-        case "Failed": return .red
-        case "Syncing": return .blue
-        case "Online": return .green
-        case "Degraded": return .orange
-        case "Offline": return .red
-        case "Operational": return .green
-        case "Down": return .red
+        switch status.lowercased() {
+        case "running": return .green
+        case "idle": return .orange
+        case "failed": return .red
+        case "syncing": return .blue
+        case "online": return .green
+        case "degraded": return .orange
+        case "offline": return .red
+        case "operational": return .green
+        case "down": return .red
         default: return .gray
         }
     }

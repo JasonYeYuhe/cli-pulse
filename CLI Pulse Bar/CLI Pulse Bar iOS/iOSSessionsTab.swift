@@ -68,7 +68,7 @@ struct iOSSessionsTab: View {
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    let running = state.sessions.filter { $0.status == "Running" }.count
+                    let running = state.sessions.filter { $0.status.caseInsensitiveCompare("running") == .orderedSame }.count
                     if running > 0 {
                         StatusBadge(text: L10n.sessions.countRunning(running), color: .green)
                     }
@@ -110,7 +110,7 @@ struct iOSSessionsTab: View {
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                let running = state.sessions.filter { $0.status == "Running" }.count
+                let running = state.sessions.filter { $0.status.caseInsensitiveCompare("running") == .orderedSame }.count
                 if running > 0 {
                     StatusBadge(text: L10n.sessions.countRunning(running), color: .green)
                 }
@@ -278,7 +278,7 @@ struct iOSSessionRow: View {
         .overlay(
             RoundedRectangle(cornerRadius: 10)
                 .stroke(
-                    session.status == "Failed" ? Color.red.opacity(0.3) :
+                    session.status.caseInsensitiveCompare("failed") == .orderedSame ? Color.red.opacity(0.3) :
                     PulseTheme.providerColor(session.provider).opacity(0.15),
                     lineWidth: 1
                 )

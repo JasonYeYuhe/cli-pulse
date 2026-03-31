@@ -52,6 +52,29 @@ struct MenuBarView: View {
                 .background(Color.orange.opacity(0.08))
             }
 
+            // Tier limit warning banner
+            if let warning = state.tierLimitWarning {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.arrow.trianglehead.counterclockwise.rotate.90")
+                        .font(.system(size: 9))
+                    Text(warning)
+                        .font(.system(size: 9))
+                        .lineLimit(2)
+                    Spacer()
+                    Button {
+                        state.tierLimitWarning = nil
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 8))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .foregroundStyle(.purple)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+                .background(Color.purple.opacity(0.08))
+            }
+
             tabBar
 
             // Tab Content

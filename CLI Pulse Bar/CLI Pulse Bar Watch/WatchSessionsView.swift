@@ -5,11 +5,11 @@ struct WatchSessionsView: View {
     @EnvironmentObject var state: AppState
 
     private var runningSessions: [SessionRecord] {
-        state.sessions.filter { $0.status == "Running" }
+        state.sessions.filter { $0.status.caseInsensitiveCompare("running") == .orderedSame }
     }
 
     private var otherSessions: [SessionRecord] {
-        state.sessions.filter { $0.status != "Running" }
+        state.sessions.filter { $0.status.caseInsensitiveCompare("running") != .orderedSame }
     }
 
     var body: some View {

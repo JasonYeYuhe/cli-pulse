@@ -11,7 +11,7 @@ struct SessionsTab: View {
                     Text(L10n.sessions.title)
                         .font(.system(size: 14, weight: .bold))
                     Spacer()
-                    let running = state.sessions.filter { $0.status == "Running" }.count
+                    let running = state.sessions.filter { $0.status.caseInsensitiveCompare("running") == .orderedSame }.count
                     if running > 0 {
                         StatusBadge(text: "\(running) \(L10n.sessions.running)", color: .green)
                     }
@@ -92,7 +92,7 @@ struct SessionRow: View {
         .overlay(
             RoundedRectangle(cornerRadius: 6)
                 .stroke(
-                    session.status == "Failed" ? Color.red.opacity(0.3) :
+                    session.status.caseInsensitiveCompare("failed") == .orderedSame ? Color.red.opacity(0.3) :
                     PulseTheme.providerColor(session.provider).opacity(0.15),
                     lineWidth: 1
                 )

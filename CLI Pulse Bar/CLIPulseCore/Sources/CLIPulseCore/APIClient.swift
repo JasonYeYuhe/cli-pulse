@@ -78,7 +78,7 @@ public actor APIClient {
         )
     }
 
-    /// Send a 6-digit OTP code to the user's email (magic link / passwordless)
+    /// Send an OTP code to the user's email
     public func sendOTP(email: String) async throws {
         guard let url = URL(string: "\(supabaseURL)/auth/v1/otp") else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
@@ -86,6 +86,8 @@ public actor APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
 
+        // Do not pass email_redirect_to — we use manual code entry, not magic link redirect.
+        // Email appearance is controlled by the Supabase Dashboard Magic Link template (uses {{ .Token }}).
         let body: [String: Any] = [
             "email": email,
             "create_user": true
@@ -99,9 +101,9 @@ public actor APIClient {
         }
     }
 
-    /// Verify the 6-digit OTP code and sign the user in
+    /// Verify the OTP code and sign the user in
     public func verifyOTP(email: String, code: String) async throws -> AuthResponse {
-        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=magiclink") else { throw APIError.invalidResponse }
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/verify") else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -110,7 +112,7 @@ public actor APIClient {
         let body: [String: String] = [
             "email": email,
             "token": code,
-            "type": "magiclink"
+            "type": "email"
         ]
         request.httpBody = try JSONEncoder().encode(body)
 
@@ -377,16 +379,30 @@ public actor APIClient {
     // MARK: - Pairing
 
     public func pairingCode() async throws -> PairingInfo {
-        let json: [String: Any] = try await rpc("generate_pairing_code", params: [:])
-        let code = json["code"] as? String ?? ""
+        // Generate a code and insert directly into pairing_codes via PostgREST
+        let code = "PULSE-\(UUID().uuidString.prefix(6).uppercased())"
+        let now = ISO8601DateFormatter().string(from: Date())
+        let expires = ISO8601DateFormatter().string(from: Date().addingTimeInterval(600))
+
+        guard let uid = userId else { throw APIError.invalidResponse }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/pairing_codes") else {
+            throw APIError.invalidResponse
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        applyHeaders(&request)
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "code": code, "user_id": uid,
+            "created_at": now, "expires_at": expires
+        ])
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
+        }
         return PairingInfo(
             code: code,
-            install_command: "python3 cli_pulse_helper.py pair --pairing-code \(code)"
+            install_command: "python3 helper/cli_pulse_helper.py pair --pairing-code \(code)"
         )
-    }
-
-    public func completePairing() async throws -> SuccessResponse {
-        return SuccessResponse(ok: true)
     }
 
     // MARK: - Account Deletion

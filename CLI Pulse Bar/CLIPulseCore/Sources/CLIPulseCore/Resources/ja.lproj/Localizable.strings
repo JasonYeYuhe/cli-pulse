@@ -149,7 +149,7 @@
 "auth.verify_code" = "認証";
 "auth.enter_code" = "認証コードを入力";
 "auth.code_sent" = "送信済み";
-"auth.code_sent_to" = "6桁の認証コードを %@ に送信しました";
+"auth.code_sent_to" = "認証コードを %@ に送信しました";
 "auth.resend_code" = "再送信";
 "auth.back_to_email" = "戻る";
 "auth.code_placeholder" = "000000";

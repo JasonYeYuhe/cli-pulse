@@ -28,6 +28,7 @@ public final class AppState: ObservableObject {
     @Published public var selectedTab: Tab = .overview
     @Published public var isLoading = false
     @Published public var lastError: String?
+    @Published public var tierLimitWarning: String?
     @Published public var lastRefresh: Date?
     @Published public var serverOnline = false
 
@@ -167,6 +168,18 @@ public final class AppState: ObservableObject {
 
     public func toggleProvider(_ kind: ProviderKind) {
         if let idx = providerConfigs.firstIndex(where: { $0.kind == kind }) {
+            let wasEnabled = providerConfigs[idx].isEnabled
+            // Enforce tier limit when enabling
+            if !wasEnabled {
+                let maxProviders = subscriptionManager.maxProviders
+                if maxProviders >= 0 {
+                    let currentEnabled = providerConfigs.filter(\.isEnabled).count
+                    if currentEnabled >= maxProviders {
+                        tierLimitWarning = "Your \(subscriptionManager.currentTier.rawValue) plan allows up to \(maxProviders) providers. Upgrade to enable more."
+                        return
+                    }
+                }
+            }
             providerConfigs[idx].isEnabled.toggle()
             saveProviderConfigs()
         }
@@ -331,6 +344,43 @@ public final class AppState: ObservableObject {
             }
         } catch {
             lastError = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    // MARK: - Pairing
+
+    @Published public var pairingInfo: PairingInfo?
+    @Published public var pairingError: String?
+
+    public func generatePairingCode() async {
+        isLoading = true
+        pairingError = nil
+        do {
+            pairingInfo = try await api.pairingCode()
+        } catch {
+            pairingError = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    public func checkPairingStatus() async {
+        isLoading = true
+        pairingError = nil
+        do {
+            // The helper calls register_helper RPC which sets paired=true.
+            // We just need to re-check our profile.
+            let response = try await api.me()
+            isPaired = response.paired
+            if isPaired {
+                pairingInfo = nil
+                startRefreshLoop()
+                await refreshAll()
+            } else {
+                pairingError = "Helper hasn't connected yet. Run the command above, then try again."
+            }
+        } catch {
+            pairingError = error.localizedDescription
         }
         isLoading = false
     }
@@ -520,11 +570,12 @@ public final class AppState: ObservableObject {
         lastError = nil
         do {
             try await api.deleteAccount()
+            isLoading = false
+            signOut()
         } catch {
             lastError = error.localizedDescription
+            isLoading = false
         }
-        isLoading = false
-        signOut()
     }
 
     public func restoreSession() async {
@@ -580,6 +631,21 @@ public final class AppState: ObservableObject {
             providers = provs
             sessions = sess
             devices = devs
+
+            // Check tier limits and surface warnings
+            let maxDevices = subscriptionManager.maxDevices
+            let maxProviders = subscriptionManager.maxProviders
+            var warnings: [String] = []
+            if maxDevices >= 0, devs.count > maxDevices {
+                warnings.append("Devices: \(devs.count)/\(maxDevices)")
+            }
+            if maxProviders >= 0 {
+                let enabledCount = providerConfigs.filter(\.isEnabled).count
+                if enabledCount > maxProviders {
+                    warnings.append("Providers: \(enabledCount)/\(maxProviders)")
+                }
+            }
+            tierLimitWarning = warnings.isEmpty ? nil : "Over \(subscriptionManager.currentTier.rawValue) plan limits — \(warnings.joined(separator: ", ")). Upgrade or reduce usage."
 
             // Check for new alerts before updating
             let newAlerts = alts.filter { alert in

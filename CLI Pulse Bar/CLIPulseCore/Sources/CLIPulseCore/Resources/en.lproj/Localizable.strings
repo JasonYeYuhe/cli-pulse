@@ -149,7 +149,7 @@
 "auth.verify_code" = "Verify Code";
 "auth.enter_code" = "Enter verification code";
 "auth.code_sent" = "Code Sent";
-"auth.code_sent_to" = "A 6-digit code was sent to %@";
+"auth.code_sent_to" = "A verification code was sent to %@";
 "auth.resend_code" = "Resend Code";
 "auth.back_to_email" = "Back";
 "auth.code_placeholder" = "000000";

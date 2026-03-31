@@ -237,7 +237,7 @@ struct iOSLoginView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(PulseTheme.accent)
-            .disabled(otpCode.count < 6 || state.isLoading)
+            .disabled(otpCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || state.isLoading)
             .padding(.horizontal)
 
             HStack(spacing: 16) {

@@ -74,7 +74,7 @@ struct SettingsTab: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(PulseTheme.accent)
-                .disabled(otpCode.count < 6 || state.isLoading)
+                .disabled(otpCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || state.isLoading)
 
                 Button { otpCode = ""; state.resetOTP() } label: {
                     Text(L10n.auth.backToEmail).font(.system(size: 10))
@@ -114,32 +114,139 @@ struct SettingsTab: View {
         VStack(alignment: .leading, spacing: 12) {
             accountCard
 
-            Divider()
+            if !state.isPaired {
+                Divider()
+                pairingSection
+            } else {
+                Divider()
 
-            subscriptionSection
+                subscriptionSection
 
-            Divider()
+                Divider()
 
-            // Section picker
-            Picker("", selection: $settingsSection) {
-                ForEach(SettingsSection.allCases, id: \.self) { section in
-                    Text(section.label)
+                // Section picker
+                Picker("", selection: $settingsSection) {
+                    ForEach(SettingsSection.allCases, id: \.self) { section in
+                        Text(section.label)
+                    }
                 }
-            }
-            .pickerStyle(.segmented)
-            .controlSize(.small)
+                .pickerStyle(.segmented)
+                .controlSize(.small)
 
-            switch settingsSection {
-            case .general:
-                generalSection
-            case .display:
-                displaySection
-            case .advanced:
-                advancedSection
+                switch settingsSection {
+                case .general:
+                    generalSection
+                case .display:
+                    displaySection
+                case .advanced:
+                    advancedSection
+                }
             }
 
             Divider()
             dangerZone
+        }
+    }
+
+    // MARK: - Pairing
+
+    private var pairingSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader(title: L10n.settings.connection, icon: "link")
+
+            Text("Connect a CLI helper to start monitoring your AI usage.")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+
+            if let info = state.pairingInfo {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Your pairing code:")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+
+                    HStack {
+                        Text(info.code)
+                            .font(.system(size: 18, weight: .bold, design: .monospaced))
+                            .foregroundStyle(PulseTheme.accent)
+                            .textSelection(.enabled)
+                        Spacer()
+                        Button {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(info.code, forType: .string)
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                                .font(.system(size: 11))
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(PulseTheme.accent)
+                    }
+                    .padding(8)
+                    .background(PulseTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                    Text("Run on your machine:")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+
+                    HStack {
+                        Text(info.install_command)
+                            .font(.system(size: 9, design: .monospaced))
+                            .textSelection(.enabled)
+                            .lineLimit(2)
+                        Spacer()
+                        Button {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(info.install_command, forType: .string)
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                                .font(.system(size: 11))
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(PulseTheme.accent)
+                    }
+                    .padding(8)
+                    .background(PulseTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                    Button {
+                        Task { await state.checkPairingStatus() }
+                    } label: {
+                        HStack {
+                            if state.isLoading { ProgressView().controlSize(.small) }
+                            Text("I've paired — check status")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(PulseTheme.accent)
+                    .disabled(state.isLoading)
+                }
+            } else {
+                Button {
+                    Task { await state.generatePairingCode() }
+                } label: {
+                    HStack {
+                        if state.isLoading { ProgressView().controlSize(.small) }
+                        Image(systemName: "link.badge.plus")
+                            .font(.system(size: 10))
+                        Text("Generate Pairing Code")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(PulseTheme.accent)
+                .disabled(state.isLoading)
+            }
+
+            if let error = state.pairingError {
+                Text(error)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.red)
+            }
         }
     }
 
@@ -505,23 +612,6 @@ struct SettingsTab: View {
 
             Divider()
 
-            SectionHeader(title: "Tools", icon: "wrench")
-
-            Button {
-                installCLI()
-            } label: {
-                Label("Install CLI", systemImage: "terminal")
-                    .font(.system(size: 11))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(PulseTheme.accent)
-
-            Text("Creates symlink at /usr/local/bin/clipulse")
-                .font(.system(size: 9))
-                .foregroundStyle(.tertiary)
-
-            Divider()
-
             SectionHeader(title: "Debug", icon: "ladybug")
 
             HStack {
@@ -607,13 +697,4 @@ struct SettingsTab: View {
         }
     }
 
-    private func installCLI() {
-        // Placeholder for CLI installation
-        let alert = NSAlert()
-        alert.messageText = "Install CLI"
-        alert.informativeText = "This would create a symlink at /usr/local/bin/clipulse"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
-    }
 }

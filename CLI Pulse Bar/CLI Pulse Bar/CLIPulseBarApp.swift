@@ -49,6 +49,12 @@ struct CLIPulseBarApp: App {
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
         .defaultPosition(.center)
+
+        Window(L10n.settings.subscription, id: "subscription") {
+            SubscriptionView(manager: appState.subscriptionManager)
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
     }
 }
 

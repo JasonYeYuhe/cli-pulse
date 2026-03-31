@@ -149,7 +149,7 @@
 "auth.verify_code" = "Verificar";
 "auth.enter_code" = "Ingrese el código de verificación";
 "auth.code_sent" = "Código enviado";
-"auth.code_sent_to" = "Se envió un código de 6 dígitos a %@";
+"auth.code_sent_to" = "Se envió un código de verificación a %@";
 "auth.resend_code" = "Reenviar código";
 "auth.back_to_email" = "Volver";
 "auth.code_placeholder" = "000000";

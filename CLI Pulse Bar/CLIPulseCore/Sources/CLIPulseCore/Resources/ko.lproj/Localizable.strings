@@ -149,7 +149,7 @@
 "auth.verify_code" = "인증";
 "auth.enter_code" = "인증 코드 입력";
 "auth.code_sent" = "전송됨";
-"auth.code_sent_to" = "6자리 인증 코드가 %@(으)로 전송되었습니다";
+"auth.code_sent_to" = "인증 코드가 %@(으)로 전송되었습니다";
 "auth.resend_code" = "재전송";
 "auth.back_to_email" = "돌아가기";
 "auth.code_placeholder" = "000000";

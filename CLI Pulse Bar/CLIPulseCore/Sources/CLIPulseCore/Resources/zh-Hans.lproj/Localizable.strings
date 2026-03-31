@@ -149,7 +149,7 @@
 "auth.verify_code" = "验证";
 "auth.enter_code" = "输入验证码";
 "auth.code_sent" = "已发送";
-"auth.code_sent_to" = "6位验证码已发送至 %@";
+"auth.code_sent_to" = "验证码已发送至 %@";
 "auth.resend_code" = "重新发送";
 "auth.back_to_email" = "返回";
 "auth.code_placeholder" = "000000";
