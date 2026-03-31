@@ -4,6 +4,7 @@ import CLIPulseCore
 struct iOSSettingsTab: View {
     @EnvironmentObject var state: AppState
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var showDeleteConfirmation = false
 
     private var isIPad: Bool { horizontalSizeClass == .regular }
 
@@ -28,7 +29,7 @@ struct iOSSettingsTab: View {
                             }
                             Spacer()
                             StatusBadge(
-                                text: state.isPaired ? "Paired" : "Not Paired",
+                                text: state.isPaired ? L10n.settings.paired : L10n.settings.notPaired,
                                 color: state.isPaired ? .green : .orange
                             )
                         }
@@ -46,14 +47,14 @@ struct iOSSettingsTab: View {
                         HStack {
                             Text(L10n.settings.providers)
                             Spacer()
-                            Text(state.subscriptionManager.maxProviders < 0 ? "Unlimited" : "\(state.subscriptionManager.maxProviders)")
+                            Text(state.subscriptionManager.maxProviders < 0 ? L10n.account.unlimited : "\(state.subscriptionManager.maxProviders)")
                                 .foregroundStyle(.secondary)
                         }
 
                         HStack {
                             Text(L10n.settings.devices)
                             Spacer()
-                            Text(state.subscriptionManager.maxDevices < 0 ? "Unlimited" : "\(state.subscriptionManager.maxDevices)")
+                            Text(state.subscriptionManager.maxDevices < 0 ? L10n.account.unlimited : "\(state.subscriptionManager.maxDevices)")
                                 .foregroundStyle(.secondary)
                         }
 
@@ -116,6 +117,12 @@ struct iOSSettingsTab: View {
 
                     // Display
                     Section(L10n.settings.display) {
+                        Picker(L10n.settings.appearance, selection: $state.appearanceModeRaw) {
+                            Text(L10n.settings.appearanceSystem).tag(0)
+                            Text(L10n.settings.appearanceLight).tag(1)
+                            Text(L10n.settings.appearanceDark).tag(2)
+                        }
+
                         Toggle(L10n.settings.showCostEstimates, isOn: $state.showCost)
                         Toggle(L10n.settings.compactMode, isOn: $state.compactMode)
 
@@ -124,7 +131,7 @@ struct iOSSettingsTab: View {
                             set: { state.menuBarDisplayMode = $0 }
                         )) {
                             ForEach(MenuBarDisplayMode.allCases, id: \.self) { mode in
-                                Text(mode.rawValue).tag(mode)
+                                Text(mode.localizedName).tag(mode)
                             }
                         }
                     }
@@ -221,7 +228,7 @@ struct iOSSettingsTab: View {
                         }
                     }
 
-                    // Sign Out
+                    // Sign Out & Delete Account
                     Section {
                         Button(role: .destructive) {
                             state.signOut()
@@ -230,6 +237,23 @@ struct iOSSettingsTab: View {
                                 Image(systemName: "arrow.right.square")
                                 Text(L10n.settings.signOut)
                             }
+                        }
+
+                        Button(role: .destructive) {
+                            showDeleteConfirmation = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "trash")
+                                Text(L10n.account.deleteAccount)
+                            }
+                        }
+                        .alert(L10n.account.deleteConfirmTitle, isPresented: $showDeleteConfirmation) {
+                            Button(L10n.common.cancel, role: .cancel) { }
+                            Button(L10n.common.delete, role: .destructive) {
+                                Task { await state.deleteAccount() }
+                            }
+                        } message: {
+                            Text(L10n.account.deleteConfirmMessage)
                         }
                     }
                 } else {
@@ -296,11 +320,11 @@ struct ProviderManagementView: View {
                             Text(config.kind.rawValue)
                                 .font(.body)
                             if let usage = state.providers.first(where: { $0.provider == config.kind.rawValue }) {
-                                Text("\(CostFormatter.formatUsage(usage.today_usage)) today")
+                                Text(L10n.detail.usageToday(CostFormatter.formatUsage(usage.today_usage)))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             } else {
-                                Text("No data")
+                                Text(L10n.common.noData)
                                     .font(.caption)
                                     .foregroundStyle(.tertiary)
                             }

@@ -168,6 +168,10 @@ public enum L10n {
         public static var signIn: String { tr("settings.sign_in") }
         public static var signInEmail: String { tr("settings.sign_in_email") }
         public static var signInHint: String { tr("settings.sign_in_hint") }
+        public static var appearance: String { tr("settings.appearance") }
+        public static var appearanceSystem: String { tr("settings.appearance_system") }
+        public static var appearanceLight: String { tr("settings.appearance_light") }
+        public static var appearanceDark: String { tr("settings.appearance_dark") }
         public static var email: String { tr("settings.email") }
         public static var name: String { tr("settings.name") }
     }
@@ -181,6 +185,16 @@ public enum L10n {
         public static var tryDemo: String { tr("auth.try_demo") }
         public static var welcome: String { tr("auth.welcome") }
         public static var watchHint: String { tr("auth.watch_hint") }
+        public static var sendCode: String { tr("auth.send_code") }
+        public static var verifyCode: String { tr("auth.verify_code") }
+        public static var enterCode: String { tr("auth.enter_code") }
+        public static var codeSent: String { tr("auth.code_sent") }
+        public static func codeSentTo(_ email: String) -> String { tr("auth.code_sent_to", email) }
+        public static var resendCode: String { tr("auth.resend_code") }
+        public static var backToEmail: String { tr("auth.back_to_email") }
+        public static var codePlaceholder: String { tr("auth.code_placeholder") }
+        public static var passwordOptional: String { tr("auth.password_optional") }
+        public static var passwordPlaceholder: String { tr("auth.password_placeholder") }
     }
 
     // MARK: - Subscription
@@ -243,6 +257,105 @@ public enum L10n {
         public static var ago: String { tr("time.ago") }
     }
 
+    // MARK: - Account
+
+    public enum account {
+        public static var deleteAccount: String { tr("account.delete_account") }
+        public static var deleteConfirmTitle: String { tr("account.delete_confirm_title") }
+        public static var deleteConfirmMessage: String { tr("account.delete_confirm_message") }
+        public static var unlimited: String { tr("account.unlimited") }
+    }
+
+    // MARK: - Session Details
+
+    public enum detail {
+        public static var provider: String { tr("detail.provider") }
+        public static var project: String { tr("detail.project") }
+        public static var device: String { tr("detail.device") }
+        public static var started: String { tr("detail.started") }
+        public static var usage: String { tr("detail.usage") }
+        public static var cost: String { tr("detail.cost") }
+        public static var requests: String { tr("detail.requests") }
+        public static var errors: String { tr("detail.errors") }
+        public static var remaining: String { tr("detail.remaining") }
+        public static func remainingValue(_ value: String) -> String { tr("detail.remaining_value", value) }
+        public static func usageToday(_ value: String) -> String { tr("detail.usage_today", value) }
+    }
+
+    // MARK: - Quota Status
+
+    public enum quota {
+        public static var low: String { tr("quota.low") }
+        public static var moderate: String { tr("quota.moderate") }
+        public static var ok: String { tr("quota.ok") }
+    }
+
+    // MARK: - Login Placeholders
+
+    public enum login {
+        public static var emailPlaceholder: String { tr("login.email_placeholder") }
+        public static var namePlaceholder: String { tr("login.name_placeholder") }
+    }
+
+    // MARK: - Display Mode
+
+    public enum display {
+        public static var icon: String { tr("display.icon") }
+        public static var percent: String { tr("display.percent") }
+        public static var pace: String { tr("display.pace") }
+        public static var mostUsed: String { tr("display.most_used") }
+    }
+
+    // MARK: - Status
+
+    public enum status {
+        public static var running: String { tr("status.running") }
+        public static var idle: String { tr("status.idle") }
+        public static var failed: String { tr("status.failed") }
+        public static var syncing: String { tr("status.syncing") }
+        public static var online: String { tr("status.online") }
+        public static var offline: String { tr("status.offline") }
+        public static var degraded: String { tr("status.degraded") }
+        public static var operational: String { tr("status.operational") }
+        public static var down: String { tr("status.down") }
+        public static var disabled: String { tr("status.disabled") }
+
+        /// Map a server status string to its localized display text.
+        public static func localized(_ raw: String) -> String {
+            switch raw {
+            case "Running", "running": return running
+            case "Idle", "idle": return idle
+            case "Failed", "failed": return failed
+            case "Syncing", "syncing": return syncing
+            case "Online", "online": return online
+            case "Offline", "offline": return offline
+            case "Degraded", "degraded": return degraded
+            case "Operational", "operational": return operational
+            case "Down", "down": return down
+            case "Disabled", "disabled": return disabled
+            default: return raw
+            }
+        }
+    }
+
+    // MARK: - Badges
+
+    public enum badge {
+        public static var free: String { tr("badge.free") }
+        public static var pro: String { tr("badge.pro") }
+        public static var team: String { tr("badge.team") }
+        public static var exact: String { tr("badge.exact") }
+        public static var estimated: String { tr("badge.estimated") }
+        public static var unavailable: String { tr("badge.unavailable") }
+        public static var high: String { tr("badge.high") }
+        public static var medium: String { tr("badge.medium") }
+        public static var low: String { tr("badge.low") }
+        public static var cloud: String { tr("badge.cloud") }
+        public static var local: String { tr("badge.local") }
+        public static var aggregator: String { tr("badge.aggregator") }
+        public static var ide: String { tr("badge.ide") }
+    }
+
     // MARK: - Common
 
     public enum common {
@@ -254,6 +367,11 @@ public enum L10n {
         public static var save: String { tr("common.save") }
         public static var delete: String { tr("common.delete") }
         public static var enabled: String { tr("common.enabled") }
+        public static var today: String { tr("common.today") }
+        public static var noData: String { tr("common.no_data") }
+        public static var navigation: String { tr("common.navigation") }
+        public static var data: String { tr("common.data") }
+        public static var refresh: String { tr("common.refresh") }
     }
 }
 

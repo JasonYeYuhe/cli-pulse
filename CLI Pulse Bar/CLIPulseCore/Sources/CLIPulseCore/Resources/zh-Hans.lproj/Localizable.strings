@@ -131,6 +131,10 @@
 "settings.sign_in" = "登录";
 "settings.sign_in_email" = "邮箱登录";
 "settings.sign_in_hint" = "登录以开始使用";
+"settings.appearance" = "外观";
+"settings.appearance_system" = "跟随系统";
+"settings.appearance_light" = "浅色";
+"settings.appearance_dark" = "深色";
 "settings.email" = "邮箱";
 "settings.name" = "姓名";
 
@@ -141,6 +145,16 @@
 "auth.try_demo" = "试用演示";
 "auth.welcome" = "欢迎";
 "auth.watch_hint" = "在 iPhone 上登录或在下方输入凭据";
+"auth.send_code" = "发送验证码";
+"auth.verify_code" = "验证";
+"auth.enter_code" = "输入验证码";
+"auth.code_sent" = "已发送";
+"auth.code_sent_to" = "6位验证码已发送至 %@";
+"auth.resend_code" = "重新发送";
+"auth.back_to_email" = "返回";
+"auth.code_placeholder" = "000000";
+"auth.password_optional" = "密码（可选）";
+"auth.password_placeholder" = "输入密码";
 
 /* ── 订阅 ── */
 "subscription.title" = "订阅";
@@ -199,3 +213,69 @@
 "common.save" = "保存";
 "common.delete" = "删除";
 "common.enabled" = "已启用";
+"common.today" = "今日";
+"common.no_data" = "暂无数据";
+"common.navigation" = "导航";
+"common.data" = "数据";
+"common.refresh" = "刷新";
+
+/* ── 账户 ── */
+"account.delete_account" = "删除账户";
+"account.delete_confirm_title" = "删除账户";
+"account.delete_confirm_message" = "这将永久删除您的账户和所有相关数据。此操作无法撤销。";
+"account.unlimited" = "无限";
+
+/* ── 会话详情 ── */
+"detail.provider" = "服务商";
+"detail.project" = "项目";
+"detail.device" = "设备";
+"detail.started" = "开始时间";
+"detail.usage" = "用量";
+"detail.cost" = "费用";
+"detail.requests" = "请求数";
+"detail.errors" = "错误";
+"detail.remaining" = "剩余";
+"detail.remaining_value" = "剩余 %@";
+"detail.usage_today" = "%@ 今日";
+
+/* ── 配额 ── */
+"quota.low" = "不足";
+"quota.moderate" = "中等";
+"quota.ok" = "正常";
+
+/* ── 登录 ── */
+"login.email_placeholder" = "you@example.com";
+"login.name_placeholder" = "您的姓名";
+
+/* ── 显示模式 ── */
+"display.icon" = "图标";
+"display.percent" = "百分比";
+"display.pace" = "用量进度";
+"display.most_used" = "最常用";
+
+/* ── 状态 ── */
+"status.running" = "运行中";
+"status.idle" = "空闲";
+"status.failed" = "失败";
+"status.syncing" = "同步中";
+"status.online" = "在线";
+"status.offline" = "离线";
+"status.degraded" = "降级";
+"status.operational" = "正常运行";
+"status.down" = "已停止";
+"status.disabled" = "已禁用";
+
+/* ── 徽章 ── */
+"badge.free" = "免费";
+"badge.pro" = "专业";
+"badge.team" = "团队";
+"badge.exact" = "精确";
+"badge.estimated" = "预估";
+"badge.unavailable" = "不可用";
+"badge.high" = "高";
+"badge.medium" = "中";
+"badge.low" = "低";
+"badge.cloud" = "云端";
+"badge.local" = "本地";
+"badge.aggregator" = "聚合";
+"badge.ide" = "IDE";

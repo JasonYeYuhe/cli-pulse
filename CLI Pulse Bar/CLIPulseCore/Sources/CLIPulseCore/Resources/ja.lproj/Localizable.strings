@@ -131,6 +131,10 @@
 "settings.sign_in" = "サインイン";
 "settings.sign_in_email" = "メールでサインイン";
 "settings.sign_in_hint" = "サインインして始めましょう";
+"settings.appearance" = "外観";
+"settings.appearance_system" = "システム";
+"settings.appearance_light" = "ライト";
+"settings.appearance_dark" = "ダーク";
 "settings.email" = "メール";
 "settings.name" = "名前";
 
@@ -141,6 +145,16 @@
 "auth.try_demo" = "デモを試す";
 "auth.welcome" = "ようこそ";
 "auth.watch_hint" = "iPhoneでサインインするか、下に認証情報を入力";
+"auth.send_code" = "認証コードを送信";
+"auth.verify_code" = "認証";
+"auth.enter_code" = "認証コードを入力";
+"auth.code_sent" = "送信済み";
+"auth.code_sent_to" = "6桁の認証コードを %@ に送信しました";
+"auth.resend_code" = "再送信";
+"auth.back_to_email" = "戻る";
+"auth.code_placeholder" = "000000";
+"auth.password_optional" = "パスワード（任意）";
+"auth.password_placeholder" = "パスワードを入力";
 
 /* ── サブスクリプション ── */
 "subscription.title" = "サブスクリプション";
@@ -199,3 +213,69 @@
 "common.save" = "保存";
 "common.delete" = "削除";
 "common.enabled" = "有効";
+"common.today" = "本日";
+"common.no_data" = "データなし";
+"common.navigation" = "ナビゲーション";
+"common.data" = "データ";
+"common.refresh" = "更新";
+
+/* ── アカウント ── */
+"account.delete_account" = "アカウント削除";
+"account.delete_confirm_title" = "アカウント削除";
+"account.delete_confirm_message" = "アカウントとすべての関連データが完全に削除されます。この操作は元に戻せません。";
+"account.unlimited" = "無制限";
+
+/* ── セッション詳細 ── */
+"detail.provider" = "プロバイダー";
+"detail.project" = "プロジェクト";
+"detail.device" = "デバイス";
+"detail.started" = "開始";
+"detail.usage" = "使用量";
+"detail.cost" = "コスト";
+"detail.requests" = "リクエスト";
+"detail.errors" = "エラー";
+"detail.remaining" = "残り";
+"detail.remaining_value" = "残り %@";
+"detail.usage_today" = "%@ 本日";
+
+/* ── クォータ ── */
+"quota.low" = "不足";
+"quota.moderate" = "中程度";
+"quota.ok" = "OK";
+
+/* ── ログイン ── */
+"login.email_placeholder" = "you@example.com";
+"login.name_placeholder" = "お名前";
+
+/* ── 表示モード ── */
+"display.icon" = "アイコン";
+"display.percent" = "パーセント";
+"display.pace" = "ペース";
+"display.most_used" = "最も使用";
+
+/* ── ステータス ── */
+"status.running" = "実行中";
+"status.idle" = "待機中";
+"status.failed" = "失敗";
+"status.syncing" = "同期中";
+"status.online" = "オンライン";
+"status.offline" = "オフライン";
+"status.degraded" = "低下";
+"status.operational" = "正常";
+"status.down" = "停止";
+"status.disabled" = "無効";
+
+/* ── バッジ ── */
+"badge.free" = "無料";
+"badge.pro" = "プロ";
+"badge.team" = "チーム";
+"badge.exact" = "正確";
+"badge.estimated" = "推定";
+"badge.unavailable" = "不可";
+"badge.high" = "高";
+"badge.medium" = "中";
+"badge.low" = "低";
+"badge.cloud" = "クラウド";
+"badge.local" = "ローカル";
+"badge.aggregator" = "アグリゲーター";
+"badge.ide" = "IDE";

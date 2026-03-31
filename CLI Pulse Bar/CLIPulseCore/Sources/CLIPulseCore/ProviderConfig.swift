@@ -92,6 +92,15 @@ public enum MenuBarDisplayMode: String, Codable, CaseIterable, Sendable {
     case pace = "Pace"
     case mostUsed = "Most Used"
 
+    public var localizedName: String {
+        switch self {
+        case .icon: return L10n.display.icon
+        case .percent: return L10n.display.percent
+        case .pace: return L10n.display.pace
+        case .mostUsed: return L10n.display.mostUsed
+        }
+    }
+
     public var description: String {
         switch self {
         case .icon: return "App icon only"

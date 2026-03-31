@@ -4,8 +4,7 @@ import CLIPulseCore
 struct WatchLoginView: View {
     @EnvironmentObject var state: AppState
     @State private var email = ""
-    @State private var name = ""
-    @State private var showNameField = false
+    @State private var otpCode = ""
 
     var body: some View {
         ScrollView {
@@ -22,31 +21,58 @@ struct WatchLoginView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
-                TextField(L10n.settings.email, text: $email)
-                    .textContentType(.emailAddress)
-                    #if os(watchOS)
-                    .textInputAutocapitalization(.never)
-                    #endif
+                if state.otpSent {
+                    // Step 2: Enter code
+                    Text(L10n.auth.codeSent)
+                        .font(.caption2)
+                        .foregroundStyle(.green)
 
-                if showNameField {
-                    TextField(L10n.settings.name, text: $name)
-                }
+                    TextField(L10n.auth.codePlaceholder, text: $otpCode)
+                        #if os(watchOS)
+                        .textInputAutocapitalization(.never)
+                        #endif
 
-                Button {
-                    if !showNameField {
-                        showNameField = true
-                    } else {
-                        Task {
-                            await state.signIn(email: email, name: name)
-                        }
+                    Button {
+                        Task { await state.verifyOTP(code: otpCode) }
+                    } label: {
+                        Text(L10n.auth.verifyCode)
+                            .frame(maxWidth: .infinity)
                     }
-                } label: {
-                    Text(showNameField ? L10n.settings.signIn : L10n.settings.signInHint)
-                        .frame(maxWidth: .infinity)
+                    .buttonStyle(.borderedProminent)
+                    .tint(PulseTheme.accent)
+                    .disabled(otpCode.count < 6)
+
+                    Button {
+                        otpCode = ""
+                        state.resetOTP()
+                    } label: {
+                        Text(L10n.auth.backToEmail)
+                            .font(.caption2)
+                    }
+                } else {
+                    // Step 1: Enter email
+                    TextField(L10n.settings.email, text: $email)
+                        .textContentType(.emailAddress)
+                        #if os(watchOS)
+                        .textInputAutocapitalization(.never)
+                        #endif
+
+                    Button {
+                        Task { await state.sendOTP(email: email) }
+                    } label: {
+                        Text(L10n.auth.sendCode)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(PulseTheme.accent)
+                    .disabled(email.isEmpty || !email.contains("@"))
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(PulseTheme.accent)
-                .disabled(email.isEmpty || (showNameField && name.isEmpty))
+
+                if let error = state.lastError {
+                    Text(error)
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                }
             }
             .padding()
         }

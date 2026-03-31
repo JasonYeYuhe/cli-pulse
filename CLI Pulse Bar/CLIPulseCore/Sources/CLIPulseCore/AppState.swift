@@ -58,6 +58,15 @@ public final class AppState: ObservableObject {
     @AppStorage("cli_pulse_check_provider_status") public var checkProviderStatus = true
     @AppStorage("cli_pulse_session_quota_notifications") public var sessionQuotaNotifications = true
     @AppStorage("cli_pulse_hide_personal_info") public var hidePersonalInfo = false
+    @AppStorage("cli_pulse_appearance") public var appearanceModeRaw = 0 // 0=system, 1=light, 2=dark
+
+    public var appearanceMode: ColorScheme? {
+        switch appearanceModeRaw {
+        case 1: return .light
+        case 2: return .dark
+        default: return nil // system
+        }
+    }
 
     // MARK: - Settings — Display
     @AppStorage("cli_pulse_menubar_display_mode") public var menuBarDisplayModeRaw = MenuBarDisplayMode.icon.rawValue
@@ -238,11 +247,52 @@ public final class AppState: ObservableObject {
 
     // MARK: - Auth
 
-    public func signIn(email: String, name: String) async {
+    /// OTP step 1: send verification code to email
+    @Published public var otpSent = false
+    @Published public var otpEmail = ""
+
+    public func sendOTP(email: String) async {
         isLoading = true
         lastError = nil
         do {
-            let response = try await api.signIn(email: email, name: name)
+            try await api.sendOTP(email: email)
+            otpEmail = email
+            otpSent = true
+        } catch {
+            lastError = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    /// OTP step 2: verify code and sign in
+    public func verifyOTP(code: String) async {
+        isLoading = true
+        lastError = nil
+        do {
+            let response = try await api.verifyOTP(email: otpEmail, code: code)
+            storedToken = response.access_token
+            userName = response.user.name
+            userEmail = response.user.email
+            isPaired = response.paired
+            isAuthenticated = true
+            otpSent = false
+            otpEmail = ""
+            if isPaired {
+                startRefreshLoop()
+                await refreshAll()
+            }
+        } catch {
+            lastError = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    /// Password-based sign in (for demo / review account)
+    public func signInWithPassword(email: String, password: String) async {
+        isLoading = true
+        lastError = nil
+        do {
+            let response = try await api.signInWithPassword(email: email, password: password)
             storedToken = response.access_token
             userName = response.user.name
             userEmail = response.user.email
@@ -258,11 +308,18 @@ public final class AppState: ObservableObject {
         isLoading = false
     }
 
-    public func signInWithApple(identityToken: String, fullName: String?, email: String?) async {
+    /// Reset OTP flow (go back to email entry)
+    public func resetOTP() {
+        otpSent = false
+        otpEmail = ""
+        lastError = nil
+    }
+
+    public func signInWithApple(identityToken: String, nonce: String? = nil, fullName: String?, email: String?) async {
         isLoading = true
         lastError = nil
         do {
-            let response = try await api.signInWithApple(identityToken: identityToken, fullName: fullName, email: email)
+            let response = try await api.signInWithApple(identityToken: identityToken, nonce: nonce, fullName: fullName, email: email)
             storedToken = response.access_token
             userName = response.user.name
             userEmail = response.user.email
@@ -456,6 +513,18 @@ public final class AppState: ObservableObject {
         devices = []
         alerts = []
         selectedTab = .overview
+    }
+
+    public func deleteAccount() async {
+        isLoading = true
+        lastError = nil
+        do {
+            try await api.deleteAccount()
+        } catch {
+            lastError = error.localizedDescription
+        }
+        isLoading = false
+        signOut()
     }
 
     public func restoreSession() async {

@@ -189,7 +189,7 @@ struct iOSEnhancedProviderCard: View {
                 // Quota bar
                 if let quota = provider.quota, quota > 0 {
                     UsageBar(
-                        label: "Quota",
+                        label: L10n.providers.quota,
                         value: provider.usagePercent,
                         color: usageColor,
                         detail: remainingText
@@ -225,17 +225,17 @@ struct iOSEnhancedProviderCard: View {
 
     private var remainingText: String? {
         guard let remaining = provider.remaining else { return nil }
-        return "\(CostFormatter.formatUsage(remaining)) remaining"
+        return L10n.detail.remainingValue(CostFormatter.formatUsage(remaining))
     }
 
     private var quotaBadge: some View {
         Group {
             if provider.usagePercent > 0.9 {
-                StatusBadge(text: "LOW", color: .red)
+                StatusBadge(text: L10n.quota.low, color: .red)
             } else if provider.usagePercent > 0.7 {
-                StatusBadge(text: "MODERATE", color: .orange)
+                StatusBadge(text: L10n.quota.moderate, color: .orange)
             } else {
-                StatusBadge(text: "OK", color: .green)
+                StatusBadge(text: L10n.quota.ok, color: .green)
             }
         }
     }

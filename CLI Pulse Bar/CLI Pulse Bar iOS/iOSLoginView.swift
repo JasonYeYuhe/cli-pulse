@@ -1,11 +1,30 @@
 import SwiftUI
 import AuthenticationServices
+import CryptoKit
 import CLIPulseCore
 
 struct iOSLoginView: View {
     @EnvironmentObject var state: AppState
     @State private var email = ""
-    @State private var name = ""
+    @State private var password = ""
+    @State private var otpCode = ""
+    @State private var currentNonce: String?
+    @FocusState private var codeFieldFocused: Bool
+
+    private func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        var randomBytes = [UInt8](repeating: 0, count: length)
+        let errorCode = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
+        if errorCode != errSecSuccess { fatalError("Unable to generate nonce.") }
+        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        return String(randomBytes.map { charset[Int($0) % charset.count] })
+    }
+
+    private func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashed = SHA256.hash(data: inputData)
+        return hashed.compactMap { String(format: "%02x", $0) }.joined()
+    }
 
     var body: some View {
         NavigationStack {
@@ -28,7 +47,10 @@ struct iOSLoginView: View {
 
                     // Sign in with Apple
                     SignInWithAppleButton(.signIn) { request in
+                        let nonce = randomNonceString()
+                        currentNonce = nonce
                         request.requestedScopes = [.fullName, .email]
+                        request.nonce = sha256(nonce)
                     } onCompletion: { result in
                         switch result {
                         case .success(let authorization):
@@ -41,6 +63,7 @@ struct iOSLoginView: View {
                                 Task {
                                     await state.signInWithApple(
                                         identityToken: identityToken,
+                                        nonce: currentNonce,
                                         fullName: fullName.isEmpty ? nil : fullName,
                                         email: appleIDCredential.email
                                     )
@@ -50,7 +73,7 @@ struct iOSLoginView: View {
                             state.lastError = error.localizedDescription
                         }
                     }
-                    .signInWithAppleButtonStyle(.white)
+                    .signInWithAppleButtonStyle(.black)
                     .frame(height: 50)
                     .padding(.horizontal)
 
@@ -61,7 +84,7 @@ struct iOSLoginView: View {
                             .padding(.horizontal)
                     }
 
-                    // Demo mode divider
+                    // Divider
                     HStack {
                         Rectangle().frame(height: 1).foregroundStyle(.quaternary)
                         Text(L10n.auth.or)
@@ -71,48 +94,16 @@ struct iOSLoginView: View {
                     }
                     .padding(.horizontal)
 
-                    // Email sign in (for App Store review demo account)
-                    VStack(spacing: 16) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(L10n.settings.email)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            TextField("you@example.com", text: $email)
-                                .textFieldStyle(.roundedBorder)
-                                .keyboardType(.emailAddress)
-                                .autocorrectionDisabled()
-                                .textInputAutocapitalization(.never)
-                        }
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(L10n.settings.name)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            TextField("Your Name", text: $name)
-                                .textFieldStyle(.roundedBorder)
-                        }
+                    // OTP Email flow
+                    if state.otpSent {
+                        // Step 2: Enter verification code
+                        otpVerifyView
+                    } else {
+                        // Step 1: Enter email
+                        emailEntryView
                     }
-                    .padding(.horizontal)
 
-                    Button {
-                        Task { await state.signIn(email: email, name: name) }
-                    } label: {
-                        HStack {
-                            if state.isLoading {
-                                ProgressView()
-                                    .tint(.white)
-                            }
-                            Text(L10n.settings.signInEmail)
-                                .font(.headline)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(PulseTheme.accent)
-                    .disabled(email.isEmpty || name.isEmpty || state.isLoading)
-                    .padding(.horizontal)
-
+                    // Demo mode
                     Button {
                         state.enterDemoMode()
                     } label: {
@@ -131,6 +122,142 @@ struct iOSLoginView: View {
             }
             .navigationTitle(L10n.auth.welcome)
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                email = ""
+                password = ""
+                otpCode = ""
+                state.lastError = nil
+            }
+            .onChange(of: state.isAuthenticated) { _, isAuth in
+                if !isAuth {
+                    email = ""
+                    password = ""
+                    otpCode = ""
+                    state.resetOTP()
+                }
+            }
+        }
+    }
+
+    // MARK: - Step 1: Email Entry
+
+    private var emailEntryView: some View {
+        VStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L10n.settings.email)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField(L10n.login.emailPlaceholder, text: $email)
+                    .textFieldStyle(.roundedBorder)
+                    .keyboardType(.emailAddress)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+            }
+            .padding(.horizontal)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L10n.auth.passwordOptional)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                SecureField(L10n.auth.passwordPlaceholder, text: $password)
+                    .textFieldStyle(.roundedBorder)
+            }
+            .padding(.horizontal)
+
+            Button {
+                Task {
+                    if !password.isEmpty {
+                        await state.signInWithPassword(email: email, password: password)
+                    } else {
+                        await state.sendOTP(email: email)
+                    }
+                }
+            } label: {
+                HStack {
+                    if state.isLoading {
+                        ProgressView()
+                            .tint(.white)
+                    }
+                    Text(password.isEmpty ? L10n.auth.sendCode : L10n.settings.signIn)
+                        .font(.headline)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(PulseTheme.accent)
+            .disabled(email.isEmpty || !email.contains("@") || state.isLoading)
+            .padding(.horizontal)
+        }
+    }
+
+    // MARK: - Step 2: OTP Verification
+
+    private var otpVerifyView: some View {
+        VStack(spacing: 16) {
+            // Success indicator
+            VStack(spacing: 8) {
+                Image(systemName: "envelope.badge.fill")
+                    .font(.system(size: 36))
+                    .foregroundStyle(PulseTheme.accent)
+
+                Text(L10n.auth.codeSentTo(state.otpEmail))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L10n.auth.enterCode)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField(L10n.auth.codePlaceholder, text: $otpCode)
+                    .textFieldStyle(.roundedBorder)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
+                    .font(.system(size: 24, weight: .semibold, design: .monospaced))
+                    .focused($codeFieldFocused)
+                    .onAppear { codeFieldFocused = true }
+            }
+            .padding(.horizontal)
+
+            Button {
+                Task { await state.verifyOTP(code: otpCode) }
+            } label: {
+                HStack {
+                    if state.isLoading {
+                        ProgressView()
+                            .tint(.white)
+                    }
+                    Text(L10n.auth.verifyCode)
+                        .font(.headline)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(PulseTheme.accent)
+            .disabled(otpCode.count < 6 || state.isLoading)
+            .padding(.horizontal)
+
+            HStack(spacing: 16) {
+                Button {
+                    otpCode = ""
+                    state.resetOTP()
+                } label: {
+                    Text(L10n.auth.backToEmail)
+                        .font(.subheadline)
+                }
+
+                Button {
+                    otpCode = ""
+                    Task { await state.sendOTP(email: state.otpEmail) }
+                } label: {
+                    Text(L10n.auth.resendCode)
+                        .font(.subheadline)
+                }
+            }
+            .foregroundStyle(PulseTheme.accent)
         }
     }
 }

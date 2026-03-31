@@ -4,12 +4,6 @@ public actor APIClient {
     private let supabaseURL: String
     private let supabaseAnonKey: String
 
-    private static let demoPassword: String = {
-        // Assembled at runtime to avoid plaintext in binary
-        let parts = ["Demo", "Review", "2026", "!"]
-        return parts.joined()
-    }()
-
     private var accessToken: String?
     private var userId: String?
 
@@ -39,7 +33,7 @@ public actor APIClient {
 
     // MARK: - Auth (Sign in with Apple via Supabase)
 
-    public func signInWithApple(identityToken: String, fullName: String?, email: String?) async throws -> AuthResponse {
+    public func signInWithApple(identityToken: String, nonce: String? = nil, fullName: String?, email: String?) async throws -> AuthResponse {
         guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=id_token") else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -50,6 +44,9 @@ public actor APIClient {
             "provider": "apple",
             "id_token": identityToken
         ]
+        if let nonce = nonce {
+            body["nonce"] = nonce
+        }
         if let fullName = fullName {
             body["name"] = fullName
         }
@@ -81,19 +78,46 @@ public actor APIClient {
         )
     }
 
-    public func signIn(email: String, name: String) async throws -> AuthResponse {
-        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=password") else { throw APIError.invalidResponse }
+    /// Send a 6-digit OTP code to the user's email (magic link / passwordless)
+    public func sendOTP(email: String) async throws {
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/otp") else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
 
-        let body: [String: String] = ["email": email, "password": Self.demoPassword]
+        let body: [String: Any] = [
+            "email": email,
+            "create_user": true
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: body)
+        }
+    }
+
+    /// Verify the 6-digit OTP code and sign the user in
+    public func verifyOTP(email: String, code: String) async throws -> AuthResponse {
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=magiclink") else { throw APIError.invalidResponse }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+
+        let body: [String: String] = [
+            "email": email,
+            "token": code,
+            "type": "magiclink"
+        ]
         request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            return try await signUp(email: email, name: name)
+            let errorBody = String(data: data, encoding: .utf8) ?? ""
+            throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: errorBody)
         }
 
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
@@ -105,7 +129,7 @@ public actor APIClient {
 
         let profile: [[String: Any]] = try await restGet("/rest/v1/profiles?id=eq.\(userId ?? "")&select=paired,name,email")
         let paired = profile.first?["paired"] as? Bool ?? false
-        let profileName = profile.first?["name"] as? String ?? name
+        let profileName = profile.first?["name"] as? String ?? ""
         let profileEmail = profile.first?["email"] as? String ?? email
 
         return AuthResponse(
@@ -115,24 +139,21 @@ public actor APIClient {
         )
     }
 
-    private func signUp(email: String, name: String) async throws -> AuthResponse {
-        guard let url = URL(string: "\(supabaseURL)/auth/v1/signup") else { throw APIError.invalidResponse }
+    /// Password-based sign in (for demo / review account)
+    public func signInWithPassword(email: String, password: String) async throws -> AuthResponse {
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=password") else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
 
-        let body: [String: Any] = [
-            "email": email,
-            "password": Self.demoPassword,
-            "data": ["name": name]
-        ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let body: [String: String] = ["email": email, "password": password]
+        request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: body)
+            let errorBody = String(data: data, encoding: .utf8) ?? ""
+            throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: errorBody)
         }
 
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
@@ -142,10 +163,15 @@ public actor APIClient {
         self.accessToken = token
         self.userId = user["id"] as? String
 
+        let profile: [[String: Any]] = try await restGet("/rest/v1/profiles?id=eq.\(userId ?? "")&select=paired,name,email")
+        let paired = profile.first?["paired"] as? Bool ?? false
+        let profileName = profile.first?["name"] as? String ?? ""
+        let profileEmail = profile.first?["email"] as? String ?? email
+
         return AuthResponse(
             access_token: token,
-            user: UserDTO(id: userId ?? "", name: name, email: email),
-            paired: false
+            user: UserDTO(id: userId ?? "", name: profileName, email: profileEmail),
+            paired: paired
         )
     }
 
@@ -361,6 +387,22 @@ public actor APIClient {
 
     public func completePairing() async throws -> SuccessResponse {
         return SuccessResponse(ok: true)
+    }
+
+    // MARK: - Account Deletion
+
+    public func deleteAccount() async throws {
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/rpc/delete_user_account") else {
+            throw APIError.invalidResponse
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        applyHeaders(&request)
+        request.httpBody = try JSONSerialization.data(withJSONObject: [:] as [String: Any])
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
+        }
     }
 
     // MARK: - Health

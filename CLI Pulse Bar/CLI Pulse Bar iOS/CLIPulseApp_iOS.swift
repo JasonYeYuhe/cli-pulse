@@ -17,20 +17,20 @@ struct CLIPulseApp: App {
         }
         .commands {
             CommandGroup(replacing: .newItem) { }
-            CommandMenu("Navigation") {
-                Button("Dashboard") { appState.selectedTab = .overview }
+            CommandMenu(L10n.common.navigation) {
+                Button(L10n.dashboard.title) { appState.selectedTab = .overview }
                     .keyboardShortcut("1", modifiers: .command)
-                Button("Providers") { appState.selectedTab = .providers }
+                Button(L10n.tab.providers) { appState.selectedTab = .providers }
                     .keyboardShortcut("2", modifiers: .command)
-                Button("Sessions") { appState.selectedTab = .sessions }
+                Button(L10n.tab.sessions) { appState.selectedTab = .sessions }
                     .keyboardShortcut("3", modifiers: .command)
-                Button("Alerts") { appState.selectedTab = .alerts }
+                Button(L10n.tab.alerts) { appState.selectedTab = .alerts }
                     .keyboardShortcut("4", modifiers: .command)
-                Button("Settings") { appState.selectedTab = .settings }
+                Button(L10n.tab.settings) { appState.selectedTab = .settings }
                     .keyboardShortcut("5", modifiers: .command)
             }
-            CommandMenu("Data") {
-                Button("Refresh") {
+            CommandMenu(L10n.common.data) {
+                Button(L10n.common.refresh) {
                     Task { await appState.refreshAll() }
                 }
                 .keyboardShortcut("r", modifiers: .command)

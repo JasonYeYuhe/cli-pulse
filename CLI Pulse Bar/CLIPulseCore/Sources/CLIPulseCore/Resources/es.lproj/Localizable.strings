@@ -131,6 +131,10 @@
 "settings.sign_in" = "Iniciar sesión";
 "settings.sign_in_email" = "Iniciar sesión con correo";
 "settings.sign_in_hint" = "Inicie sesión para comenzar";
+"settings.appearance" = "Apariencia";
+"settings.appearance_system" = "Sistema";
+"settings.appearance_light" = "Claro";
+"settings.appearance_dark" = "Oscuro";
 "settings.email" = "Correo";
 "settings.name" = "Nombre";
 
@@ -141,6 +145,16 @@
 "auth.try_demo" = "Probar demo";
 "auth.welcome" = "Bienvenido";
 "auth.watch_hint" = "Inicie sesión en iPhone o ingrese credenciales abajo";
+"auth.send_code" = "Enviar código de verificación";
+"auth.verify_code" = "Verificar";
+"auth.enter_code" = "Ingrese el código de verificación";
+"auth.code_sent" = "Código enviado";
+"auth.code_sent_to" = "Se envió un código de 6 dígitos a %@";
+"auth.resend_code" = "Reenviar código";
+"auth.back_to_email" = "Volver";
+"auth.code_placeholder" = "000000";
+"auth.password_optional" = "Contraseña (opcional)";
+"auth.password_placeholder" = "Ingrese contraseña";
 
 /* ── Suscripción ── */
 "subscription.title" = "Suscripción";
@@ -199,3 +213,69 @@
 "common.save" = "Guardar";
 "common.delete" = "Eliminar";
 "common.enabled" = "habilitado";
+"common.today" = "hoy";
+"common.no_data" = "Sin datos";
+"common.navigation" = "Navegación";
+"common.data" = "Datos";
+"common.refresh" = "Actualizar";
+
+/* ── Cuenta ── */
+"account.delete_account" = "Eliminar cuenta";
+"account.delete_confirm_title" = "Eliminar cuenta";
+"account.delete_confirm_message" = "Esto eliminará permanentemente su cuenta y todos los datos asociados. Esta acción no se puede deshacer.";
+"account.unlimited" = "Ilimitado";
+
+/* ── Detalles de sesión ── */
+"detail.provider" = "Proveedor";
+"detail.project" = "Proyecto";
+"detail.device" = "Dispositivo";
+"detail.started" = "Iniciado";
+"detail.usage" = "Uso";
+"detail.cost" = "Costo";
+"detail.requests" = "Solicitudes";
+"detail.errors" = "Errores";
+"detail.remaining" = "restante";
+"detail.remaining_value" = "%@ restante";
+"detail.usage_today" = "%@ hoy";
+
+/* ── Cuota ── */
+"quota.low" = "BAJA";
+"quota.moderate" = "MODERADA";
+"quota.ok" = "OK";
+
+/* ── Inicio de sesión ── */
+"login.email_placeholder" = "you@example.com";
+"login.name_placeholder" = "Su nombre";
+
+/* ── Modo de pantalla ── */
+"display.icon" = "Icono";
+"display.percent" = "Porcentaje";
+"display.pace" = "Ritmo";
+"display.most_used" = "Más usado";
+
+/* ── Estado ── */
+"status.running" = "Ejecutando";
+"status.idle" = "Inactivo";
+"status.failed" = "Fallido";
+"status.syncing" = "Sincronizando";
+"status.online" = "En línea";
+"status.offline" = "Fuera de línea";
+"status.degraded" = "Degradado";
+"status.operational" = "Operativo";
+"status.down" = "Caído";
+"status.disabled" = "Deshabilitado";
+
+/* ── Insignias ── */
+"badge.free" = "GRATIS";
+"badge.pro" = "PRO";
+"badge.team" = "EQUIPO";
+"badge.exact" = "EXACTO";
+"badge.estimated" = "EST";
+"badge.unavailable" = "N/D";
+"badge.high" = "Alto";
+"badge.medium" = "Medio";
+"badge.low" = "Bajo";
+"badge.cloud" = "NUBE";
+"badge.local" = "LOCAL";
+"badge.aggregator" = "AGREGADOR";
+"badge.ide" = "IDE";

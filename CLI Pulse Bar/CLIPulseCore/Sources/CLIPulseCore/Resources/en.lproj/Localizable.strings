@@ -131,6 +131,10 @@
 "settings.sign_in" = "Sign In";
 "settings.sign_in_email" = "Sign In with Email";
 "settings.sign_in_hint" = "Sign in to get started";
+"settings.appearance" = "Appearance";
+"settings.appearance_system" = "System";
+"settings.appearance_light" = "Light";
+"settings.appearance_dark" = "Dark";
 "settings.email" = "Email";
 "settings.name" = "Name";
 
@@ -141,6 +145,16 @@
 "auth.try_demo" = "Try Demo";
 "auth.welcome" = "Welcome";
 "auth.watch_hint" = "Sign in on iPhone or enter credentials below";
+"auth.send_code" = "Send Verification Code";
+"auth.verify_code" = "Verify Code";
+"auth.enter_code" = "Enter verification code";
+"auth.code_sent" = "Code Sent";
+"auth.code_sent_to" = "A 6-digit code was sent to %@";
+"auth.resend_code" = "Resend Code";
+"auth.back_to_email" = "Back";
+"auth.code_placeholder" = "000000";
+"auth.password_optional" = "Password (optional)";
+"auth.password_placeholder" = "Enter password";
 
 /* ── Subscription ── */
 "subscription.title" = "Subscription";
@@ -199,3 +213,69 @@
 "common.save" = "Save";
 "common.delete" = "Delete";
 "common.enabled" = "enabled";
+"common.today" = "today";
+"common.no_data" = "No data";
+"common.navigation" = "Navigation";
+"common.data" = "Data";
+"common.refresh" = "Refresh";
+
+/* ── Account ── */
+"account.delete_account" = "Delete Account";
+"account.delete_confirm_title" = "Delete Account";
+"account.delete_confirm_message" = "This will permanently delete your account and all associated data. This action cannot be undone.";
+"account.unlimited" = "Unlimited";
+
+/* ── Session Details ── */
+"detail.provider" = "Provider";
+"detail.project" = "Project";
+"detail.device" = "Device";
+"detail.started" = "Started";
+"detail.usage" = "Usage";
+"detail.cost" = "Cost";
+"detail.requests" = "Requests";
+"detail.errors" = "Errors";
+"detail.remaining" = "remaining";
+"detail.remaining_value" = "%@ remaining";
+"detail.usage_today" = "%@ today";
+
+/* ── Quota ── */
+"quota.low" = "LOW";
+"quota.moderate" = "MODERATE";
+"quota.ok" = "OK";
+
+/* ── Login ── */
+"login.email_placeholder" = "you@example.com";
+"login.name_placeholder" = "Your Name";
+
+/* ── Display Mode ── */
+"display.icon" = "Icon";
+"display.percent" = "Percent";
+"display.pace" = "Pace";
+"display.most_used" = "Most Used";
+
+/* ── Status ── */
+"status.running" = "Running";
+"status.idle" = "Idle";
+"status.failed" = "Failed";
+"status.syncing" = "Syncing";
+"status.online" = "Online";
+"status.offline" = "Offline";
+"status.degraded" = "Degraded";
+"status.operational" = "Operational";
+"status.down" = "Down";
+"status.disabled" = "Disabled";
+
+/* ── Badges ── */
+"badge.free" = "FREE";
+"badge.pro" = "PRO";
+"badge.team" = "TEAM";
+"badge.exact" = "EXACT";
+"badge.estimated" = "EST";
+"badge.unavailable" = "N/A";
+"badge.high" = "High";
+"badge.medium" = "Medium";
+"badge.low" = "Low";
+"badge.cloud" = "CLOUD";
+"badge.local" = "LOCAL";
+"badge.aggregator" = "AGGREGATOR";
+"badge.ide" = "IDE";

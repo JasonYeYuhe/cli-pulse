@@ -258,9 +258,9 @@ public struct SubscriptionBadge: View {
 
     private var label: String {
         switch tier {
-        case .free: return "FREE"
-        case .pro: return "PRO"
-        case .team: return "TEAM"
+        case .free: return L10n.badge.free
+        case .pro: return L10n.badge.pro
+        case .team: return L10n.badge.team
         }
     }
 
@@ -294,9 +294,9 @@ public struct CostStatusBadge: View {
 
     private var label: String {
         switch status {
-        case "Exact": return "EXACT"
-        case "Estimated": return "EST"
-        case "Unavailable": return "N/A"
+        case "Exact": return L10n.badge.exact
+        case "Estimated": return L10n.badge.estimated
+        case "Unavailable": return L10n.badge.unavailable
         default: return status.uppercased()
         }
     }
@@ -348,11 +348,20 @@ public struct ConfidenceBadge: View {
         }
     }
 
+    private var localizedConfidence: String {
+        switch confidence {
+        case "high": return L10n.badge.high
+        case "medium": return L10n.badge.medium
+        case "low": return L10n.badge.low
+        default: return confidence.capitalized
+        }
+    }
+
     public var body: some View {
         HStack(spacing: 2) {
             Image(systemName: icon)
                 .font(.system(size: 8))
-            Text(confidence.capitalized)
+            Text(localizedConfidence)
                 .font(.system(size: 8, weight: .medium))
         }
         .foregroundStyle(color)
@@ -379,7 +388,13 @@ public struct CategoryBadge: View {
     }
 
     private var label: String {
-        category.uppercased()
+        switch category {
+        case "cloud": return L10n.badge.cloud
+        case "local": return L10n.badge.local
+        case "aggregator": return L10n.badge.aggregator
+        case "ide": return L10n.badge.ide
+        default: return category.uppercased()
+        }
     }
 
     public var body: some View {

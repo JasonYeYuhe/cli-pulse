@@ -6,7 +6,7 @@ struct SettingsTab: View {
     @EnvironmentObject var state: AppState
     @Environment(\.openWindow) private var openWindow
     @State private var email = ""
-    @State private var name = ""
+    @State private var otpCode = ""
     @State private var serverInput = ""
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var settingsSection: SettingsSection = .general
@@ -52,31 +52,53 @@ struct SettingsTab: View {
 
             SectionHeader(title: L10n.settings.signIn, icon: "person.circle")
 
-            TextField(L10n.settings.email, text: $email)
-                .textFieldStyle(.roundedBorder)
-                .font(.system(size: 11))
+            if state.otpSent {
+                Text(L10n.auth.codeSentTo(state.otpEmail))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
 
-            TextField(L10n.settings.name, text: $name)
-                .textFieldStyle(.roundedBorder)
-                .font(.system(size: 11))
+                TextField(L10n.auth.codePlaceholder, text: $otpCode)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
 
-            Button {
-                Task { await state.signIn(email: email, name: name) }
-            } label: {
-                HStack {
-                    if state.isLoading {
-                        ProgressView()
-                            .controlSize(.small)
+                Button {
+                    Task { await state.verifyOTP(code: otpCode) }
+                } label: {
+                    HStack {
+                        if state.isLoading { ProgressView().controlSize(.small) }
+                        Text(L10n.auth.verifyCode)
+                            .font(.system(size: 11, weight: .semibold))
                     }
-                    Text(L10n.settings.signIn)
-                        .font(.system(size: 11, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
+                .buttonStyle(.borderedProminent)
+                .tint(PulseTheme.accent)
+                .disabled(otpCode.count < 6 || state.isLoading)
+
+                Button { otpCode = ""; state.resetOTP() } label: {
+                    Text(L10n.auth.backToEmail).font(.system(size: 10))
+                }
+            } else {
+                TextField(L10n.settings.email, text: $email)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 11))
+
+                Button {
+                    Task { await state.sendOTP(email: email) }
+                } label: {
+                    HStack {
+                        if state.isLoading { ProgressView().controlSize(.small) }
+                        Text(L10n.auth.sendCode)
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(PulseTheme.accent)
+                .disabled(email.isEmpty || !email.contains("@") || state.isLoading)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(PulseTheme.accent)
-            .disabled(email.isEmpty || name.isEmpty || state.isLoading)
 
             if let error = state.lastError {
                 Text(error)

@@ -21,7 +21,7 @@ struct iOSOverviewTab: View {
                             .foregroundStyle(.secondary)
                         Spacer()
                         if let lastRefresh = state.lastRefresh {
-                            Text("Updated \(RelativeTime.format(ISO8601DateFormatter().string(from: lastRefresh)))")
+                            Text(L10n.dashboard.updated(RelativeTime.format(ISO8601DateFormatter().string(from: lastRefresh))))
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
                         }

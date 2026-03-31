@@ -17,6 +17,7 @@ struct iOSMainView: View {
                 iPhoneTabView
             }
         }
+        .preferredColorScheme(state.appearanceMode)
         .task {
             state.requestNotificationPermission()
         }
@@ -143,7 +144,7 @@ struct iPadSplitView: View {
             selectedSection = tab
         } label: {
             HStack {
-                Label(tab.rawValue, systemImage: tab.icon)
+                Label(tab.label, systemImage: tab.icon)
                     .foregroundStyle(selectedSection == tab ? PulseTheme.accent : .primary)
                 Spacer()
                 if badge > 0 {

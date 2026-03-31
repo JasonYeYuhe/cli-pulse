@@ -131,6 +131,10 @@
 "settings.sign_in" = "로그인";
 "settings.sign_in_email" = "이메일로 로그인";
 "settings.sign_in_hint" = "시작하려면 로그인하세요";
+"settings.appearance" = "외관";
+"settings.appearance_system" = "시스템";
+"settings.appearance_light" = "라이트";
+"settings.appearance_dark" = "다크";
 "settings.email" = "이메일";
 "settings.name" = "이름";
 
@@ -141,6 +145,16 @@
 "auth.try_demo" = "데모 체험";
 "auth.welcome" = "환영합니다";
 "auth.watch_hint" = "iPhone에서 로그인하거나 아래에 자격 증명을 입력하세요";
+"auth.send_code" = "인증 코드 전송";
+"auth.verify_code" = "인증";
+"auth.enter_code" = "인증 코드 입력";
+"auth.code_sent" = "전송됨";
+"auth.code_sent_to" = "6자리 인증 코드가 %@(으)로 전송되었습니다";
+"auth.resend_code" = "재전송";
+"auth.back_to_email" = "돌아가기";
+"auth.code_placeholder" = "000000";
+"auth.password_optional" = "비밀번호 (선택사항)";
+"auth.password_placeholder" = "비밀번호 입력";
 
 /* ── 구독 ── */
 "subscription.title" = "구독";
@@ -199,3 +213,69 @@
 "common.save" = "저장";
 "common.delete" = "삭제";
 "common.enabled" = "활성";
+"common.today" = "오늘";
+"common.no_data" = "데이터 없음";
+"common.navigation" = "탐색";
+"common.data" = "데이터";
+"common.refresh" = "새로고침";
+
+/* ── 계정 ── */
+"account.delete_account" = "계정 삭제";
+"account.delete_confirm_title" = "계정 삭제";
+"account.delete_confirm_message" = "계정과 모든 관련 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.";
+"account.unlimited" = "무제한";
+
+/* ── 세션 상세 ── */
+"detail.provider" = "공급자";
+"detail.project" = "프로젝트";
+"detail.device" = "기기";
+"detail.started" = "시작";
+"detail.usage" = "사용량";
+"detail.cost" = "비용";
+"detail.requests" = "요청";
+"detail.errors" = "오류";
+"detail.remaining" = "남음";
+"detail.remaining_value" = "%@ 남음";
+"detail.usage_today" = "%@ 오늘";
+
+/* ── 할당량 ── */
+"quota.low" = "부족";
+"quota.moderate" = "보통";
+"quota.ok" = "양호";
+
+/* ── 로그인 ── */
+"login.email_placeholder" = "you@example.com";
+"login.name_placeholder" = "이름";
+
+/* ── 표시 모드 ── */
+"display.icon" = "아이콘";
+"display.percent" = "퍼센트";
+"display.pace" = "페이스";
+"display.most_used" = "가장 많이 사용";
+
+/* ── 상태 ── */
+"status.running" = "실행 중";
+"status.idle" = "대기";
+"status.failed" = "실패";
+"status.syncing" = "동기화 중";
+"status.online" = "온라인";
+"status.offline" = "오프라인";
+"status.degraded" = "저하";
+"status.operational" = "정상";
+"status.down" = "중지";
+"status.disabled" = "비활성";
+
+/* ── 배지 ── */
+"badge.free" = "무료";
+"badge.pro" = "프로";
+"badge.team" = "팀";
+"badge.exact" = "정확";
+"badge.estimated" = "추정";
+"badge.unavailable" = "불가";
+"badge.high" = "높음";
+"badge.medium" = "보통";
+"badge.low" = "낮음";
+"badge.cloud" = "클라우드";
+"badge.local" = "로컬";
+"badge.aggregator" = "통합";
+"badge.ide" = "IDE";

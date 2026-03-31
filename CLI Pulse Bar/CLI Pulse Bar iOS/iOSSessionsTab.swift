@@ -70,7 +70,7 @@ struct iOSSessionsTab: View {
                 ToolbarItem(placement: .primaryAction) {
                     let running = state.sessions.filter { $0.status == "Running" }.count
                     if running > 0 {
-                        StatusBadge(text: "\(running) running", color: .green)
+                        StatusBadge(text: L10n.sessions.countRunning(running), color: .green)
                     }
                 }
             }
@@ -101,7 +101,7 @@ struct iOSSessionsTab: View {
                 }
                 Spacer()
                 StatusBadge(
-                    text: session.status,
+                    text: L10n.status.localized(session.status),
                     color: PulseTheme.statusColor(session.status)
                 )
             }
@@ -112,7 +112,7 @@ struct iOSSessionsTab: View {
             ToolbarItem(placement: .primaryAction) {
                 let running = state.sessions.filter { $0.status == "Running" }.count
                 if running > 0 {
-                    StatusBadge(text: "\(running) running", color: .green)
+                    StatusBadge(text: L10n.sessions.countRunning(running), color: .green)
                 }
             }
         }
@@ -159,10 +159,10 @@ struct SessionDetailView: View {
                     GridItem(.flexible()),
                     GridItem(.flexible()),
                 ], spacing: 16) {
-                    detailItem(label: "Provider", value: session.provider, icon: "cpu")
-                    detailItem(label: "Project", value: session.project, icon: "folder")
-                    detailItem(label: "Device", value: session.device_name, icon: "desktopcomputer")
-                    detailItem(label: "Started", value: RelativeTime.format(session.started_at), icon: "clock")
+                    detailItem(label: L10n.detail.provider, value: session.provider, icon: "cpu")
+                    detailItem(label: L10n.detail.project, value: session.project, icon: "folder")
+                    detailItem(label: L10n.detail.device, value: session.device_name, icon: "desktopcomputer")
+                    detailItem(label: L10n.detail.started, value: RelativeTime.format(session.started_at), icon: "clock")
                 }
 
                 Divider()
@@ -173,13 +173,13 @@ struct SessionDetailView: View {
                     GridItem(.flexible()),
                     GridItem(.flexible()),
                 ], spacing: 16) {
-                    metricBox(title: "Usage", value: CostFormatter.formatUsage(session.total_usage))
+                    metricBox(title: L10n.detail.usage, value: CostFormatter.formatUsage(session.total_usage))
                     if showCost {
-                        metricBox(title: "Cost", value: CostFormatter.format(session.estimated_cost), color: .green)
+                        metricBox(title: L10n.detail.cost, value: CostFormatter.format(session.estimated_cost), color: .green)
                     }
-                    metricBox(title: "Requests", value: "\(session.requests)")
+                    metricBox(title: L10n.detail.requests, value: "\(session.requests)")
                     if session.error_count > 0 {
-                        metricBox(title: "Errors", value: "\(session.error_count)", color: .red)
+                        metricBox(title: L10n.detail.errors, value: "\(session.error_count)", color: .red)
                     }
                 }
             }
@@ -241,7 +241,7 @@ struct iOSSessionRow: View {
                 Spacer()
 
                 StatusBadge(
-                    text: session.status,
+                    text: L10n.status.localized(session.status),
                     color: PulseTheme.statusColor(session.status)
                 )
             }
@@ -258,13 +258,13 @@ struct iOSSessionRow: View {
             .lineLimit(1)
 
             HStack(spacing: 18) {
-                metricItem(label: "Usage", value: CostFormatter.formatUsage(session.total_usage))
+                metricItem(label: L10n.detail.usage, value: CostFormatter.formatUsage(session.total_usage))
                 if showCost {
-                    metricItem(label: "Cost", value: CostFormatter.format(session.estimated_cost), color: .green)
+                    metricItem(label: L10n.detail.cost, value: CostFormatter.format(session.estimated_cost), color: .green)
                 }
-                metricItem(label: "Requests", value: "\(session.requests)")
+                metricItem(label: L10n.detail.requests, value: "\(session.requests)")
                 if session.error_count > 0 {
-                    metricItem(label: "Errors", value: "\(session.error_count)", color: .red)
+                    metricItem(label: L10n.detail.errors, value: "\(session.error_count)", color: .red)
                 }
                 Spacer()
                 Text(RelativeTime.format(session.started_at))
