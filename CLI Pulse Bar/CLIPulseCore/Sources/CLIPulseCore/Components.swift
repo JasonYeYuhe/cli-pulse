@@ -431,10 +431,20 @@ public enum CostFormatter {
 // MARK: - Relative Time
 
 public enum RelativeTime {
+    private static let formatterWithFractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    private static let formatterBasic: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+
     public static func format(_ isoString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = formatter.date(from: isoString) ?? ISO8601DateFormatter().date(from: isoString) else {
+        guard let date = formatterWithFractional.date(from: isoString) ?? formatterBasic.date(from: isoString) else {
             return isoString
         }
         let interval = Date().timeIntervalSince(date)

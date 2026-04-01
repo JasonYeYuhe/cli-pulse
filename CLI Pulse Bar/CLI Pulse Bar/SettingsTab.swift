@@ -590,8 +590,10 @@ struct SettingsTab: View {
             }
             .toggleStyle(.switch)
             .controlSize(.small)
-            .onChange(of: launchAtLogin) { _ in
-                LaunchAtLogin.toggle()
+            .onChange(of: launchAtLogin) { oldValue, newValue in
+                if oldValue != newValue {
+                    LaunchAtLogin.toggle()
+                }
             }
 
             Divider()

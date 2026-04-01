@@ -5,7 +5,14 @@ public actor APIClient {
     private let supabaseAnonKey: String
 
     private var accessToken: String?
+    private var refreshToken: String?
     private var userId: String?
+
+    private let session: URLSession
+
+    /// Called after a successful token refresh with (newAccessToken, newRefreshToken).
+    /// Set by AppState to persist rotated tokens to Keychain.
+    public var onTokenRefreshed: (@Sendable (String, String) -> Void)?
 
     public init(
         token: String? = nil,
@@ -21,14 +28,95 @@ public actor APIClient {
             ?? Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"] as? String
             ?? ProcessInfo.processInfo.environment["CLI_PULSE_SUPABASE_ANON_KEY"]
             ?? ""
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForResource = 30
+        self.session = URLSession(configuration: config)
     }
 
     public func updateToken(_ token: String?) {
         self.accessToken = token
     }
 
+    public func updateRefreshToken(_ token: String?) {
+        self.refreshToken = token
+    }
+
+    public func setTokenRefreshHandler(_ handler: @escaping @Sendable (String, String) -> Void) {
+        self.onTokenRefreshed = handler
+    }
+
     public func getToken() -> String? {
         return accessToken
+    }
+
+    public func getRefreshToken() -> String? {
+        return refreshToken
+    }
+
+    // MARK: - Token Refresh
+
+    /// Attempt to refresh the access token using the stored refresh token.
+    /// Returns the new access token and refresh token, or throws on failure.
+    public func refreshAccessToken() async throws -> (accessToken: String, refreshToken: String) {
+        guard let currentRefreshToken = refreshToken else {
+            throw APIError.tokenExpired
+        }
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=refresh_token") else {
+            throw APIError.invalidResponse
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["refresh_token": currentRefreshToken])
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            // Refresh failed — token is invalid
+            self.accessToken = nil
+            self.refreshToken = nil
+            throw APIError.tokenExpired
+        }
+
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        let newAccess = json["access_token"] as? String ?? ""
+        let newRefresh = json["refresh_token"] as? String ?? currentRefreshToken
+
+        self.accessToken = newAccess
+        self.refreshToken = newRefresh
+
+        // Notify so caller can persist to Keychain
+        onTokenRefreshed?(newAccess, newRefresh)
+
+        return (newAccess, newRefresh)
+    }
+
+    // MARK: - Sign Out (server-side token revocation)
+
+    public func signOutServer() async {
+        // Capture token before clearing to avoid race with new sign-in
+        let tokenToRevoke = accessToken
+        self.accessToken = nil
+        self.refreshToken = nil
+        self.userId = nil
+
+        guard let tokenToRevoke, let url = URL(string: "\(supabaseURL)/auth/v1/logout") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(tokenToRevoke)", forHTTPHeaderField: "Authorization")
+        _ = try? await session.data(for: request)
+    }
+
+    // MARK: - UUID Validation
+
+    private static func isValidUUID(_ string: String) -> Bool {
+        UUID(uuidString: string) != nil
+    }
+
+    private static func sanitizeParam(_ value: String) -> String {
+        value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
     }
 
     // MARK: - Auth (Sign in with Apple via Supabase)
@@ -52,7 +140,7 @@ public actor APIClient {
         }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let body = String(data: data, encoding: .utf8) ?? ""
             throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: body)
@@ -60,12 +148,15 @@ public actor APIClient {
 
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
         let token = json["access_token"] as? String ?? ""
+        let refresh = json["refresh_token"] as? String
         let user = json["user"] as? [String: Any] ?? [:]
 
         self.accessToken = token
+        self.refreshToken = refresh
         self.userId = user["id"] as? String
 
-        let profile: [[String: Any]] = try await restGet("/rest/v1/profiles?id=eq.\(userId ?? "")&select=paired")
+        let safeUserId = Self.sanitizeParam(userId ?? "")
+        let profile: [[String: Any]] = try await restGet("/rest/v1/profiles?id=eq.\(safeUserId)&select=paired")
         let paired = profile.first?["paired"] as? Bool ?? false
 
         let name = fullName ?? (user["user_metadata"] as? [String: Any])?["name"] as? String ?? ""
@@ -73,6 +164,7 @@ public actor APIClient {
 
         return AuthResponse(
             access_token: token,
+            refresh_token: refresh,
             user: UserDTO(id: userId ?? "", name: name, email: userEmail),
             paired: paired
         )
@@ -86,15 +178,13 @@ public actor APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
 
-        // Do not pass email_redirect_to — we use manual code entry, not magic link redirect.
-        // Email appearance is controlled by the Supabase Dashboard Magic Link template (uses {{ .Token }}).
         let body: [String: Any] = [
             "email": email,
             "create_user": true
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let body = String(data: data, encoding: .utf8) ?? ""
             throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: body)
@@ -116,7 +206,7 @@ public actor APIClient {
         ]
         request.httpBody = try JSONEncoder().encode(body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let errorBody = String(data: data, encoding: .utf8) ?? ""
             throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: errorBody)
@@ -124,18 +214,22 @@ public actor APIClient {
 
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
         let token = json["access_token"] as? String ?? ""
+        let refresh = json["refresh_token"] as? String
         let user = json["user"] as? [String: Any] ?? [:]
 
         self.accessToken = token
+        self.refreshToken = refresh
         self.userId = user["id"] as? String
 
-        let profile: [[String: Any]] = try await restGet("/rest/v1/profiles?id=eq.\(userId ?? "")&select=paired,name,email")
+        let safeUserId = Self.sanitizeParam(userId ?? "")
+        let profile: [[String: Any]] = try await restGet("/rest/v1/profiles?id=eq.\(safeUserId)&select=paired,name,email")
         let paired = profile.first?["paired"] as? Bool ?? false
         let profileName = profile.first?["name"] as? String ?? ""
         let profileEmail = profile.first?["email"] as? String ?? email
 
         return AuthResponse(
             access_token: token,
+            refresh_token: refresh,
             user: UserDTO(id: userId ?? "", name: profileName, email: profileEmail),
             paired: paired
         )
@@ -152,7 +246,7 @@ public actor APIClient {
         let body: [String: String] = ["email": email, "password": password]
         request.httpBody = try JSONEncoder().encode(body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let errorBody = String(data: data, encoding: .utf8) ?? ""
             throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: errorBody)
@@ -160,24 +254,28 @@ public actor APIClient {
 
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
         let token = json["access_token"] as? String ?? ""
+        let refresh = json["refresh_token"] as? String
         let user = json["user"] as? [String: Any] ?? [:]
 
         self.accessToken = token
+        self.refreshToken = refresh
         self.userId = user["id"] as? String
 
-        let profile: [[String: Any]] = try await restGet("/rest/v1/profiles?id=eq.\(userId ?? "")&select=paired,name,email")
+        let safeUserId = Self.sanitizeParam(userId ?? "")
+        let profile: [[String: Any]] = try await restGet("/rest/v1/profiles?id=eq.\(safeUserId)&select=paired,name,email")
         let paired = profile.first?["paired"] as? Bool ?? false
         let profileName = profile.first?["name"] as? String ?? ""
         let profileEmail = profile.first?["email"] as? String ?? email
 
         return AuthResponse(
             access_token: token,
+            refresh_token: refresh,
             user: UserDTO(id: userId ?? "", name: profileName, email: profileEmail),
             paired: paired
         )
     }
 
-    public func me() async throws -> AuthResponse {
+    public func me(retried: Bool = false) async throws -> AuthResponse {
         guard let url = URL(string: "\(supabaseURL)/auth/v1/user") else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
@@ -186,22 +284,30 @@ public actor APIClient {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
+        let (data, response) = try await session.data(for: request)
+        let http = response as? HTTPURLResponse
+        // Handle 401 by attempting token refresh (once only)
+        if http?.statusCode == 401, !retried {
+            let _ = try await refreshAccessToken()
+            return try await me(retried: true)
+        }
+        guard let httpOK = http, (200...299).contains(httpOK.statusCode) else {
+            throw APIError.httpError(status: http?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
         }
 
         let user = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
         self.userId = user["id"] as? String
         let metadata = user["user_metadata"] as? [String: Any] ?? [:]
 
-        let profile: [[String: Any]] = try await restGet("/rest/v1/profiles?id=eq.\(userId ?? "")&select=paired,name,email")
+        let safeUserId = Self.sanitizeParam(userId ?? "")
+        let profile: [[String: Any]] = try await restGet("/rest/v1/profiles?id=eq.\(safeUserId)&select=paired,name,email")
         let paired = profile.first?["paired"] as? Bool ?? false
         let name = profile.first?["name"] as? String ?? metadata["name"] as? String ?? ""
         let email = profile.first?["email"] as? String ?? user["email"] as? String ?? ""
 
         return AuthResponse(
             access_token: accessToken ?? "",
+            refresh_token: refreshToken,
             user: UserDTO(id: userId ?? "", name: name, email: email),
             paired: paired
         )
@@ -262,8 +368,9 @@ public actor APIClient {
     // MARK: - Sessions
 
     public func sessions() async throws -> [SessionRecord] {
+        let safeUserId = Self.sanitizeParam(userId ?? "")
         let rows: [[String: Any]] = try await restGet(
-            "/rest/v1/sessions?user_id=eq.\(userId ?? "")&select=*,devices(name)&order=last_active_at.desc&limit=50"
+            "/rest/v1/sessions?user_id=eq.\(safeUserId)&select=*,devices(name)&order=last_active_at.desc&limit=50"
         )
         return rows.map { r in
             let device = r["devices"] as? [String: Any]
@@ -289,8 +396,9 @@ public actor APIClient {
     // MARK: - Devices
 
     public func devices() async throws -> [DeviceRecord] {
+        let safeUserId = Self.sanitizeParam(userId ?? "")
         let rows: [[String: Any]] = try await restGet(
-            "/rest/v1/devices?user_id=eq.\(userId ?? "")&select=*&order=last_seen_at.desc"
+            "/rest/v1/devices?user_id=eq.\(safeUserId)&select=*&order=last_seen_at.desc"
         )
         return rows.map { r in
             DeviceRecord(
@@ -311,8 +419,9 @@ public actor APIClient {
     // MARK: - Alerts
 
     public func alerts() async throws -> [AlertRecord] {
+        let safeUserId = Self.sanitizeParam(userId ?? "")
         let rows: [[String: Any]] = try await restGet(
-            "/rest/v1/alerts?user_id=eq.\(userId ?? "")&select=*&order=created_at.desc&limit=50"
+            "/rest/v1/alerts?user_id=eq.\(safeUserId)&select=*&order=created_at.desc&limit=50"
         )
         return rows.map { r in
             AlertRecord(
@@ -340,26 +449,39 @@ public actor APIClient {
         }
     }
 
+    private static let isoFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+
     public func acknowledgeAlert(id: String) async throws -> SuccessResponse {
-        try await restPatch("/rest/v1/alerts?id=eq.\(id)&user_id=eq.\(userId ?? "")", body: ["acknowledged_at": ISO8601DateFormatter().string(from: Date()), "is_read": true])
+        let safeId = Self.sanitizeParam(id)
+        let safeUserId = Self.sanitizeParam(userId ?? "")
+        try await restPatch("/rest/v1/alerts?id=eq.\(safeId)&user_id=eq.\(safeUserId)", body: ["acknowledged_at": Self.isoFormatter.string(from: Date()), "is_read": true])
         return SuccessResponse(ok: true)
     }
 
     public func resolveAlert(id: String) async throws -> SuccessResponse {
-        try await restPatch("/rest/v1/alerts?id=eq.\(id)&user_id=eq.\(userId ?? "")", body: ["is_resolved": true])
+        let safeId = Self.sanitizeParam(id)
+        let safeUserId = Self.sanitizeParam(userId ?? "")
+        try await restPatch("/rest/v1/alerts?id=eq.\(safeId)&user_id=eq.\(safeUserId)", body: ["is_resolved": true])
         return SuccessResponse(ok: true)
     }
 
     public func snoozeAlert(id: String, minutes: Int) async throws -> SuccessResponse {
-        let snoozeUntil = ISO8601DateFormatter().string(from: Date().addingTimeInterval(Double(minutes) * 60))
-        try await restPatch("/rest/v1/alerts?id=eq.\(id)&user_id=eq.\(userId ?? "")", body: ["snoozed_until": snoozeUntil])
+        let safeId = Self.sanitizeParam(id)
+        let safeUserId = Self.sanitizeParam(userId ?? "")
+        let snoozeUntil = Self.isoFormatter.string(from: Date().addingTimeInterval(Double(minutes) * 60))
+        try await restPatch("/rest/v1/alerts?id=eq.\(safeId)&user_id=eq.\(safeUserId)", body: ["snoozed_until": snoozeUntil])
         return SuccessResponse(ok: true)
     }
 
     // MARK: - Settings
 
     public func settings() async throws -> SettingsSnapshot {
-        let rows: [[String: Any]] = try await restGet("/rest/v1/user_settings?user_id=eq.\(userId ?? "")&select=*")
+        let safeUserId = Self.sanitizeParam(userId ?? "")
+        let rows: [[String: Any]] = try await restGet("/rest/v1/user_settings?user_id=eq.\(safeUserId)&select=*")
         let s = rows.first ?? [:]
         return SettingsSnapshot(
             notifications_enabled: s["notifications_enabled"] as? Bool ?? true,
@@ -379,12 +501,11 @@ public actor APIClient {
     // MARK: - Pairing
 
     public func pairingCode() async throws -> PairingInfo {
-        // Generate a code and insert directly into pairing_codes via PostgREST
         let code = "PULSE-\(UUID().uuidString.prefix(6).uppercased())"
-        let now = ISO8601DateFormatter().string(from: Date())
-        let expires = ISO8601DateFormatter().string(from: Date().addingTimeInterval(600))
+        let now = Self.isoFormatter.string(from: Date())
+        let expires = Self.isoFormatter.string(from: Date().addingTimeInterval(600))
 
-        guard let uid = userId else { throw APIError.invalidResponse }
+        guard let uid = userId, Self.isValidUUID(uid) else { throw APIError.invalidResponse }
         guard let url = URL(string: "\(supabaseURL)/rest/v1/pairing_codes") else {
             throw APIError.invalidResponse
         }
@@ -395,7 +516,7 @@ public actor APIClient {
             "code": code, "user_id": uid,
             "created_at": now, "expires_at": expires
         ])
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
         }
@@ -415,10 +536,12 @@ public actor APIClient {
         request.httpMethod = "POST"
         applyHeaders(&request)
         request.httpBody = try JSONSerialization.data(withJSONObject: [:] as [String: Any])
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
         }
+        // Revoke server-side token after account deletion
+        await signOutServer()
     }
 
     // MARK: - Health
@@ -428,22 +551,28 @@ public actor APIClient {
         var request = URLRequest(url: url)
         request.httpMethod = "HEAD"
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await session.data(for: request)
         return (response as? HTTPURLResponse)?.statusCode == 200
     }
 
     // MARK: - Supabase REST Helpers
 
-    private func restGet<T>(_ path: String) async throws -> T where T: Any {
+    private func restGet<T>(_ path: String, retried: Bool = false) async throws -> T where T: Any {
         guard let url = URL(string: supabaseURL + path) else {
             throw APIError.invalidResponse
         }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         applyHeaders(&request)
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
+        let (data, response) = try await session.data(for: request)
+        let http = response as? HTTPURLResponse
+        // Auto-retry on 401 with token refresh
+        if http?.statusCode == 401, !retried {
+            let _ = try await refreshAccessToken()
+            return try await restGet(path, retried: true)
+        }
+        guard let httpOK = http, (200...299).contains(httpOK.statusCode) else {
+            throw APIError.httpError(status: http?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
         }
         guard let result = try JSONSerialization.jsonObject(with: data) as? T else {
             throw APIError.invalidResponse
@@ -452,7 +581,7 @@ public actor APIClient {
     }
 
     @discardableResult
-    private func restPatch(_ path: String, body: [String: Any]) async throws -> Data {
+    private func restPatch(_ path: String, body: [String: Any], retried: Bool = false) async throws -> Data {
         guard let url = URL(string: supabaseURL + path) else {
             throw APIError.invalidResponse
         }
@@ -460,14 +589,19 @@ public actor APIClient {
         request.httpMethod = "PATCH"
         applyHeaders(&request)
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
+        let (data, response) = try await session.data(for: request)
+        let http = response as? HTTPURLResponse
+        if http?.statusCode == 401, !retried {
+            let _ = try await refreshAccessToken()
+            return try await restPatch(path, body: body, retried: true)
+        }
+        guard let httpOK = http, (200...299).contains(httpOK.statusCode) else {
+            throw APIError.httpError(status: http?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
         }
         return data
     }
 
-    private func rpc<T>(_ function: String, params: [String: Any]) async throws -> T where T: Any {
+    private func rpc<T>(_ function: String, params: [String: Any], retried: Bool = false) async throws -> T where T: Any {
         guard let url = URL(string: "\(supabaseURL)/rest/v1/rpc/\(function)") else {
             throw APIError.invalidResponse
         }
@@ -475,9 +609,14 @@ public actor APIClient {
         request.httpMethod = "POST"
         applyHeaders(&request)
         request.httpBody = try JSONSerialization.data(withJSONObject: params)
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
+        let (data, response) = try await session.data(for: request)
+        let http = response as? HTTPURLResponse
+        if http?.statusCode == 401, !retried {
+            let _ = try await refreshAccessToken()
+            return try await rpc(function, params: params, retried: true)
+        }
+        guard let httpOK = http, (200...299).contains(httpOK.statusCode) else {
+            throw APIError.httpError(status: http?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
         }
         guard let result = try JSONSerialization.jsonObject(with: data) as? T else {
             throw APIError.invalidResponse
@@ -494,9 +633,10 @@ public actor APIClient {
     }
 }
 
-public enum APIError: LocalizedError {
+public enum APIError: LocalizedError, Equatable {
     case invalidResponse
     case httpError(status: Int, body: String)
+    case tokenExpired
 
     public var errorDescription: String? {
         switch self {
@@ -504,6 +644,8 @@ public enum APIError: LocalizedError {
             return "Invalid response from server"
         case .httpError(let status, let body):
             return "HTTP \(status): \(body)"
+        case .tokenExpired:
+            return "Session expired. Please sign in again."
         }
     }
 }

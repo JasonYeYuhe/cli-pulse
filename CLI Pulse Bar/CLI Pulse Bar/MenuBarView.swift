@@ -161,7 +161,7 @@ struct MenuBarView: View {
 
             Spacer()
 
-            Text("CLI Pulse v0.1.0")
+            Text("CLI Pulse v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0")")
                 .font(.system(size: 8))
                 .foregroundStyle(.quaternary)
 

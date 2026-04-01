@@ -51,7 +51,15 @@ public struct UsageTier: Codable, Identifiable, Sendable {
 
 // MARK: - Enhanced Provider Detail (combines API data + local config)
 
-public struct ProviderDetail: Identifiable {
+public struct ProviderDetail: Identifiable, Equatable {
+    public static func == (lhs: ProviderDetail, rhs: ProviderDetail) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.config.isEnabled == rhs.config.isEnabled &&
+        lhs.config.sortOrder == rhs.config.sortOrder &&
+        lhs.operationalStatus == rhs.operationalStatus &&
+        lhs.sourceType == rhs.sourceType
+    }
+
     public let provider: ProviderUsage
     public var config: ProviderConfig
     public var tiers: [UsageTier]

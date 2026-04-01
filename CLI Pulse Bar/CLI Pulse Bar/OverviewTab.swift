@@ -296,20 +296,30 @@ struct OverviewTab: View {
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
+    private static let isoFormatterFractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    private static let isoFormatterBasic: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+
+    private static let hourFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "ha"
+        return f
+    }()
+
     private func hourLabel(_ timestamp: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = formatter.date(from: timestamp) {
-            let hf = DateFormatter()
-            hf.dateFormat = "ha"
-            return hf.string(from: date).lowercased()
+        if let date = Self.isoFormatterFractional.date(from: timestamp) {
+            return Self.hourFormatter.string(from: date).lowercased()
         }
-        // Fallback: try without fractional seconds
-        formatter.formatOptions = [.withInternetDateTime]
-        if let date = formatter.date(from: timestamp) {
-            let hf = DateFormatter()
-            hf.dateFormat = "ha"
-            return hf.string(from: date).lowercased()
+        if let date = Self.isoFormatterBasic.date(from: timestamp) {
+            return Self.hourFormatter.string(from: date).lowercased()
         }
         // Last resort: try to extract hour from the timestamp string
         if timestamp.count >= 13 {

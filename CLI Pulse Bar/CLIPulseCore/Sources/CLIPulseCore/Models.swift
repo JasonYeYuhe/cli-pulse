@@ -130,11 +130,13 @@ public struct AuthRequest: Codable, Sendable {
 
 public struct AuthResponse: Codable, Sendable {
     public let access_token: String
+    public let refresh_token: String?
     public let user: UserDTO
     public let paired: Bool
 
-    public init(access_token: String, user: UserDTO, paired: Bool) {
+    public init(access_token: String, refresh_token: String? = nil, user: UserDTO, paired: Bool) {
         self.access_token = access_token
+        self.refresh_token = refresh_token
         self.user = user
         self.paired = paired
     }

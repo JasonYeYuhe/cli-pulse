@@ -24,6 +24,9 @@ public final class AppState: ObservableObject {
     // MARK: - Subscription
     @Published public var subscriptionManager = SubscriptionManager.shared
 
+    // Forward SubscriptionManager changes to trigger UI updates
+    private var subscriptionCancellable: AnyCancellable?
+
     // MARK: - UI State
     @Published public var selectedTab: Tab = .overview
     @Published public var isLoading = false
@@ -36,6 +39,10 @@ public final class AppState: ObservableObject {
     @Published public var providerConfigs: [ProviderConfig] = ProviderConfig.defaults()
     @Published public var providerDetails: [ProviderDetail] = []
     @Published public var costSummary: CostSummary = CostSummary()
+
+    // MARK: - Refresh Task Tracking
+    private var refreshTask: Task<Void, Never>?
+    private static let refreshTokenKeychainKey = "cli_pulse_refresh_token"
 
     // MARK: - Settings — General
     private static let tokenKeychainKey = "cli_pulse_token"
@@ -52,7 +59,7 @@ public final class AppState: ObservableObject {
             UserDefaults.standard.removeObject(forKey: "cli_pulse_token")
         }
     }
-    @AppStorage("cli_pulse_refresh_interval") public var refreshInterval: Int = 30
+    @AppStorage("cli_pulse_refresh_interval") public var refreshInterval: Int = 120
     @AppStorage("cli_pulse_show_cost") public var showCost = true
     @AppStorage("cli_pulse_notifications") public var notificationsEnabled = true
     @AppStorage("cli_pulse_compact_mode") public var compactMode = false
@@ -241,6 +248,22 @@ public final class AppState: ObservableObject {
     public init() {
         self.api = APIClient()
         loadProviderConfigs()
+        // Forward SubscriptionManager objectWillChange so UI updates on tier changes
+        subscriptionCancellable = subscriptionManager.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }
+        // Persist rotated tokens to Keychain when auto-refresh happens
+        Task {
+            await api.setTokenRefreshHandler { [weak self] newAccess, newRefresh in
+                guard let self else { return }
+                Task { @MainActor in
+                    self.storedToken = newAccess
+                    if !newRefresh.isEmpty {
+                        KeychainHelper.save(key: Self.refreshTokenKeychainKey, value: newRefresh)
+                    }
+                }
+            }
+        }
         // Migrate legacy token from UserDefaults to Keychain
         if let legacyToken = UserDefaults.standard.string(forKey: "cli_pulse_token"), !legacyToken.isEmpty {
             KeychainHelper.save(key: Self.tokenKeychainKey, value: legacyToken)
@@ -252,6 +275,10 @@ public final class AppState: ObservableObject {
             } else {
                 if !storedToken.isEmpty {
                     await api.updateToken(storedToken)
+                    // Restore refresh token
+                    if let savedRefresh = KeychainHelper.load(key: Self.refreshTokenKeychainKey) {
+                        await api.updateRefreshToken(savedRefresh)
+                    }
                     await restoreSession()
                 }
             }
@@ -283,7 +310,7 @@ public final class AppState: ObservableObject {
         lastError = nil
         do {
             let response = try await api.verifyOTP(email: otpEmail, code: code)
-            storedToken = response.access_token
+            storeAuthTokens(response)
             userName = response.user.name
             userEmail = response.user.email
             isPaired = response.paired
@@ -306,7 +333,7 @@ public final class AppState: ObservableObject {
         lastError = nil
         do {
             let response = try await api.signInWithPassword(email: email, password: password)
-            storedToken = response.access_token
+            storeAuthTokens(response)
             userName = response.user.name
             userEmail = response.user.email
             isPaired = response.paired
@@ -333,7 +360,7 @@ public final class AppState: ObservableObject {
         lastError = nil
         do {
             let response = try await api.signInWithApple(identityToken: identityToken, nonce: nonce, fullName: fullName, email: email)
-            storedToken = response.access_token
+            storeAuthTokens(response)
             userName = response.user.name
             userEmail = response.user.email
             isPaired = response.paired
@@ -346,6 +373,14 @@ public final class AppState: ObservableObject {
             lastError = error.localizedDescription
         }
         isLoading = false
+    }
+
+    /// Store access + refresh tokens from an auth response
+    private func storeAuthTokens(_ response: AuthResponse) {
+        storedToken = response.access_token
+        if let refresh = response.refresh_token, !refresh.isEmpty {
+            KeychainHelper.save(key: Self.refreshTokenKeychainKey, value: refresh)
+        }
     }
 
     // MARK: - Pairing
@@ -551,7 +586,13 @@ public final class AppState: ObservableObject {
 
     public func signOut() {
         stopRefreshLoop()
+        // Cancel any in-flight refresh to prevent stale data overwriting cleared state
+        refreshTask?.cancel()
+        refreshTask = nil
+        // Revoke server-side token
+        Task { await api.signOutServer() }
         storedToken = ""
+        KeychainHelper.delete(key: Self.refreshTokenKeychainKey)
         isDemoMode = false
         isAuthenticated = false
         isPaired = false
@@ -606,6 +647,8 @@ public final class AppState: ObservableObject {
 
     public func refreshAll() async {
         guard isAuthenticated, isPaired, !isDemoMode else { return }
+        // Skip if a refresh is already in progress
+        guard !isLoading else { return }
         isLoading = true
         lastError = nil
 
@@ -619,6 +662,9 @@ public final class AppState: ObservableObject {
             return
         }
 
+        // Check cancellation before heavy work
+        guard !Task.isCancelled else { isLoading = false; return }
+
         do {
             async let d = api.dashboard()
             async let p = api.providers()
@@ -627,6 +673,9 @@ public final class AppState: ObservableObject {
             async let a = api.alerts()
 
             let (dash, provs, sess, devs, alts) = try await (d, p, s, dev, a)
+
+            // Guard against sign-out during in-flight requests
+            guard isAuthenticated else { isLoading = false; return }
             dashboard = dash
             providers = provs
             sessions = sess
@@ -663,6 +712,10 @@ public final class AppState: ObservableObject {
             buildProviderDetails()
             updateCostSummary()
             publishWidgetData()
+        } catch let error as APIError where error == .tokenExpired {
+            // Token expired and refresh failed — force sign out
+            signOut()
+            lastError = error.localizedDescription
         } catch {
             lastError = error.localizedDescription
         }
@@ -788,11 +841,13 @@ public final class AppState: ObservableObject {
 
     public func startRefreshLoop() {
         stopRefreshLoop()
-        let interval = TimeInterval(refreshInterval)
+        let interval = max(TimeInterval(refreshInterval), 60) // Minimum 60s to save battery
         refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             guard let self else { return }
             Task { @MainActor in
-                await self.refreshAll()
+                self.refreshTask = Task {
+                    await self.refreshAll()
+                }
             }
         }
     }
