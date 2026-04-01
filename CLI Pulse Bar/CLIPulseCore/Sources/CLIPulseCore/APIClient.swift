@@ -562,12 +562,9 @@ public actor APIClient {
     // MARK: - Server Tier
 
     public func serverTier() async -> String {
-        guard let uid = userId else { return "free" }
         do {
-            let rows: [[String: Any]] = try await restGet(
-                "/rest/v1/profiles?id=eq.\(Self.sanitizeParam(uid))&select=tier"
-            )
-            return (rows.first?["tier"] as? String) ?? "free"
+            let json: [String: Any] = try await rpc("get_user_tier", params: [:])
+            return (json["tier"] as? String) ?? "free"
         } catch {
             return "free"
         }
