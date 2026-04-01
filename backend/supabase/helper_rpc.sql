@@ -183,11 +183,14 @@ begin
     end;
   end loop;
 
-  -- Legacy fallback: providers in p_provider_remaining but not in p_provider_tiers
+  -- Legacy fallback: update remaining for providers not already handled by p_provider_tiers
   for v_provider, v_remaining in select * from jsonb_each_text(p_provider_remaining) loop
-    insert into public.provider_quotas (user_id, provider, remaining, updated_at)
-    values (v_user_id, v_provider, v_remaining::integer, now())
-    on conflict (user_id, provider) do nothing;
+    if NOT p_provider_tiers ? v_provider then
+      insert into public.provider_quotas (user_id, provider, remaining, updated_at)
+      values (v_user_id, v_provider, v_remaining::integer, now())
+      on conflict (user_id, provider) do update set
+        remaining = excluded.remaining, updated_at = now();
+    end if;
   end loop;
 
   return jsonb_build_object('sessions_synced', v_session_count, 'alerts_synced', v_alert_count);

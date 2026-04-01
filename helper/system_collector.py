@@ -382,19 +382,18 @@ def estimate_provider_quotas(sessions: list[CollectedSession]) -> dict[str, dict
         for t in plan["tiers"]:
             quota = t["quota"]
             reset_h = t["reset_hours"]
-            # Distribute usage proportionally across tiers
             tier_usage = min(total_requests, quota)
             remaining = max(0, quota - tier_usage)
-            # Next reset: round up to next boundary
             reset_at = now + timedelta(hours=reset_h - (now.hour % max(1, reset_h)))
+            if not tiers:  # first tier is canonical for top-level display
+                top_quota = quota
+                top_remaining = remaining
             tiers.append({
                 "name": t["name"],
                 "quota": quota,
                 "remaining": remaining,
                 "reset_time": reset_at.isoformat(),
             })
-            top_quota += quota
-            top_remaining += remaining
 
         result[provider] = {
             "quota": top_quota,
