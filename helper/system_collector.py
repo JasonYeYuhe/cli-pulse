@@ -361,34 +361,25 @@ def estimate_provider_quotas(sessions: list[CollectedSession]) -> dict[str, dict
 
 
 def _fetch_claude_usage() -> dict | None:
-    """Read Claude usage via CLI: `claude usage` or parsing credentials."""
-    # Try claude CLI /usage output
+    """Read Claude plan info from macOS Keychain."""
     try:
         proc = subprocess.run(
-            ["claude", "usage"], capture_output=True, text=True, timeout=10,
+            ["security", "find-generic-password", "-s", "Claude Code-credentials", "-w"],
+            capture_output=True, text=True, timeout=5,
         )
         if proc.returncode == 0 and proc.stdout.strip():
-            return _parse_claude_usage_output(proc.stdout)
+            data = _json.loads(proc.stdout.strip())
+            oauth = data.get("claudeAiOauth", {})
+            plan_type = (oauth.get("subscriptionType") or "free").capitalize()
+            # Anthropic doesn't expose usage API for CLI OAuth tokens yet
+            # Return plan type so the card shows it, but no bars
+            return {
+                "quota": 0, "remaining": 0,
+                "plan_type": plan_type,
+                "reset_time": None, "tiers": [],
+            }
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
-
-    # Try OAuth API via credentials in keychain (macOS)
-    creds_path = Path.home() / ".claude" / ".credentials.json"
-    if creds_path.exists():
-        try:
-    
-            creds = _json.loads(creds_path.read_text())
-            token = creds.get("oauth_token", "")
-            if token:
-                req = urllib.request.Request(
-                    "https://api.anthropic.com/api/oauth/usage",
-                    headers={"Authorization": f"Bearer {token}"},
-                )
-                with urllib.request.urlopen(req, timeout=10) as resp:
-                    data = _json.loads(resp.read())
-                    return _parse_claude_api_response(data)
-        except Exception:
-            pass
     return None
 
 
@@ -521,6 +512,26 @@ def _parse_codex_usage_response(data: dict) -> dict | None:
     }
 
 
+def _extract_gemini_cli_credentials() -> tuple[str, str]:
+    """Extract OAuth client_id/secret from installed Gemini CLI binary."""
+    import glob
+    patterns = [
+        "/opt/homebrew/Cellar/gemini-cli/*/libexec/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/code_assist/oauth2.js",
+        "/usr/local/Cellar/gemini-cli/*/libexec/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/code_assist/oauth2.js",
+    ]
+    for pattern in patterns:
+        for path in glob.glob(pattern):
+            try:
+                content = Path(path).read_text()
+                cid_match = re.search(r"OAUTH_CLIENT_ID\s*=\s*['\"]([^'\"]+)['\"]", content)
+                csecret_match = re.search(r"OAUTH_CLIENT_SECRET\s*=\s*['\"]([^'\"]+)['\"]", content)
+                if cid_match and csecret_match:
+                    return cid_match.group(1), csecret_match.group(1)
+            except Exception:
+                continue
+    return "", ""
+
+
 def _refresh_gemini_token(creds_path: Path) -> str | None:
     """Refresh expired Gemini OAuth token using refresh_token."""
     try:
@@ -528,16 +539,15 @@ def _refresh_gemini_token(creds_path: Path) -> str | None:
         refresh_token = creds.get("refresh_token")
         if not refresh_token:
             return None
-        # Extract client_id/secret from the Gemini CLI binary
-        # Use the well-known Gemini CLI client credentials
-        client_id = "936475272427.apps.googleusercontent.com"
-        client_secret = ""
-        # Try to find client_secret from the binary or use the standard one
-        # Gemini CLI uses installed app flow with no secret
+        # Extract Gemini CLI OAuth credentials from installed binary at runtime
+        client_id, client_secret = _extract_gemini_cli_credentials()
+        if not client_id:
+            return None
         body = urllib.parse.urlencode({
             "grant_type": "refresh_token",
             "refresh_token": refresh_token,
             "client_id": client_id,
+            "client_secret": client_secret,
         }).encode()
         req = urllib.request.Request(
             "https://oauth2.googleapis.com/token",
@@ -603,26 +613,29 @@ def _fetch_gemini_usage() -> dict | None:
 
 
 def _parse_gemini_quota_response(data: dict) -> dict | None:
-    """Parse Google quota API response for Gemini models."""
+    """Parse Google quota API response for Gemini models.
+
+    Real format: {"buckets": [{"resetTime":"...","tokenType":"REQUESTS","modelId":"gemini-2.5-pro","remainingFraction":1.0}]}
+    """
     tiers = []
-    quotas = data.get("quotas", data.get("userQuotas", []))
-    if isinstance(quotas, list):
-        for q in quotas:
-            model = q.get("modelId", q.get("model", "Default"))
-            # Simplify model names
+    buckets = data.get("buckets", data.get("quotas", data.get("userQuotas", [])))
+    if isinstance(buckets, list):
+        for q in buckets:
+            if q.get("tokenType") != "REQUESTS":
+                continue
+            model = q.get("modelId", "Default")
             if "pro" in model.lower():
                 name = "Pro"
-            elif "flash" in model.lower() and "lite" not in model.lower():
-                name = "Flash"
             elif "lite" in model.lower():
                 name = "Flash Lite"
+            elif "flash" in model.lower():
+                name = "Flash"
             else:
                 name = model
             fraction = q.get("remainingFraction", 1.0)
-            limit = q.get("limit", 1000)
-            remaining = int(limit * fraction)
+            remaining_pct = int(fraction * 100)
             reset = q.get("resetTime")
-            tiers.append({"name": name, "quota": limit, "remaining": remaining, "reset_time": reset})
+            tiers.append({"name": name, "quota": 100, "remaining": remaining_pct, "reset_time": reset})
     if not tiers:
         return None
     return {

@@ -576,12 +576,14 @@ public actor APIClient {
     // MARK: - Health
 
     public func health() async throws -> Bool {
-        guard let url = URL(string: "\(supabaseURL)/rest/v1/") else { throw APIError.invalidResponse }
+        // Use the auth health endpoint which doesn't require authentication
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/health") else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
-        request.httpMethod = "HEAD"
+        request.httpMethod = "GET"
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
         let (_, response) = try await session.data(for: request)
-        return (response as? HTTPURLResponse)?.statusCode == 200
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        return (200...299).contains(status)
     }
 
     // MARK: - Supabase REST Helpers

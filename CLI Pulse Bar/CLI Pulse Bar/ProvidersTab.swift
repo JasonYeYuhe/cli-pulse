@@ -196,7 +196,7 @@ struct EnhancedProviderCard: View {
                         ForEach(detail.tiers) { tier in
                             UsageBar(
                                 label: tier.name,
-                                value: tier.usagePercent,
+                                value: 1.0 - tier.usagePercent,
                                 color: tierColor(tier),
                                 detail: tierDetail(tier)
                             )
