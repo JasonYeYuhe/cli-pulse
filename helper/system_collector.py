@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json as _json
 import logging
 import os
 import re
 import subprocess
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -324,86 +327,333 @@ def estimate_provider_remaining(sessions: list[CollectedSession]) -> dict[str, i
 
 
 def estimate_provider_quotas(sessions: list[CollectedSession]) -> dict[str, dict]:
-    """Return per-provider quota info with sub-tiers for CodexBar-style bars.
+    """Return per-provider quota info with real API data where possible.
 
-    Each value is a dict with:
-      quota, remaining, plan_type, reset_time, tiers: [{name, quota, remaining, reset_time}]
+    Tries real API calls for Claude/Codex/Gemini, falls back to static estimates.
     """
-    # Known plan limits (requests per reset period)
-    PROVIDER_PLANS: dict[str, dict] = {
-        "Claude": {
-            "plan_type": "Max",
-            "tiers": [
-                {"name": "Session", "quota": 45, "reset_hours": 5},
-                {"name": "Weekly", "quota": 1400, "reset_hours": 168},
-            ],
-        },
-        "Codex": {
-            "plan_type": "Plus",
-            "tiers": [
-                {"name": "Session", "quota": 500, "reset_hours": 4},
-                {"name": "Weekly", "quota": 3500, "reset_hours": 168},
-            ],
-        },
-        "Gemini": {
-            "plan_type": "Paid",
-            "tiers": [
-                {"name": "Pro", "quota": 1000, "reset_hours": 24},
-                {"name": "Flash", "quota": 1500, "reset_hours": 24},
-                {"name": "Flash Lite", "quota": 2000, "reset_hours": 24},
-            ],
-        },
-        "Cursor": {
-            "plan_type": "Pro",
-            "tiers": [{"name": "Fast", "quota": 500, "reset_hours": 720}],
-        },
-        "Copilot": {
-            "plan_type": "Pro",
-            "tiers": [{"name": "Default", "quota": 1000, "reset_hours": 720}],
-        },
-    }
-    # Generic fallback for unlisted providers
-    GENERIC = {"plan_type": "Free", "tiers": [{"name": "Default", "quota": 300, "reset_hours": 24}]}
-
-    # Aggregate requests per provider
-    usage_by_provider: dict[str, int] = {}
-    for s in sessions:
-        usage_by_provider[s.provider] = usage_by_provider.get(s.provider, 0) + s.requests
-
-    now = datetime.now(timezone.utc)
     result: dict[str, dict] = {}
+    active_providers = {s.provider for s in sessions}
 
-    for provider, total_requests in usage_by_provider.items():
-        plan = PROVIDER_PLANS.get(provider, GENERIC)
-        tiers = []
-        top_quota = 0
-        top_remaining = 0
+    # Try real API data first for known providers
+    for provider in active_providers:
+        try:
+            if provider == "Claude":
+                data = _fetch_claude_usage()
+                if data:
+                    result["Claude"] = data
+                    continue
+            elif provider == "Codex":
+                data = _fetch_codex_usage()
+                if data:
+                    result["Codex"] = data
+                    continue
+            elif provider == "Gemini":
+                data = _fetch_gemini_usage()
+                if data:
+                    result["Gemini"] = data
+                    continue
+        except Exception as e:
+            logging.debug(f"Real quota fetch failed for {provider}: {e}")
 
-        for t in plan["tiers"]:
-            quota = t["quota"]
-            reset_h = t["reset_hours"]
-            tier_usage = min(total_requests, quota)
-            remaining = max(0, quota - tier_usage)
-            reset_at = now + timedelta(hours=reset_h - (now.hour % max(1, reset_h)))
-            if not tiers:  # first tier is canonical for top-level display
-                top_quota = quota
-                top_remaining = remaining
-            tiers.append({
-                "name": t["name"],
-                "quota": quota,
-                "remaining": remaining,
-                "reset_time": reset_at.isoformat(),
-            })
-
-        result[provider] = {
-            "quota": top_quota,
-            "remaining": top_remaining,
-            "plan_type": plan["plan_type"],
-            "reset_time": tiers[0]["reset_time"] if tiers else None,
-            "tiers": tiers,
-        }
+        # Fallback: static estimate (won't show bars — just marks presence)
+        if provider not in result:
+            result[provider] = {
+                "quota": 0, "remaining": 0,
+                "plan_type": "Unknown", "reset_time": None, "tiers": [],
+            }
 
     return result
+
+
+def _fetch_claude_usage() -> dict | None:
+    """Read Claude usage via CLI: `claude usage` or parsing credentials."""
+    # Try claude CLI /usage output
+    try:
+        proc = subprocess.run(
+            ["claude", "usage"], capture_output=True, text=True, timeout=10,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            return _parse_claude_usage_output(proc.stdout)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    # Try OAuth API via credentials in keychain (macOS)
+    creds_path = Path.home() / ".claude" / ".credentials.json"
+    if creds_path.exists():
+        try:
+    
+            creds = _json.loads(creds_path.read_text())
+            token = creds.get("oauth_token", "")
+            if token:
+                req = urllib.request.Request(
+                    "https://api.anthropic.com/api/oauth/usage",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = _json.loads(resp.read())
+                    return _parse_claude_api_response(data)
+        except Exception:
+            pass
+    return None
+
+
+def _parse_claude_usage_output(output: str) -> dict | None:
+    """Parse `claude usage` CLI output into tier data."""
+    tiers = []
+    for line in output.splitlines():
+        line = line.strip()
+        # Look for patterns like "Current session: 15% used (resets in 3h 20m)"
+        # or "Current week: 8% used"
+        if "session" in line.lower() and "%" in line:
+            pct = _extract_percent(line)
+            if pct is not None:
+                quota = 45  # Opus session limit
+                used = int(quota * pct / 100)
+                reset = _extract_reset_time(line)
+                tiers.append({"name": "Session", "quota": quota, "remaining": max(0, quota - used), "reset_time": reset})
+        elif "week" in line.lower() and "%" in line:
+            pct = _extract_percent(line)
+            if pct is not None:
+                quota = 1400
+                used = int(quota * pct / 100)
+                reset = _extract_reset_time(line)
+                tiers.append({"name": "Weekly", "quota": quota, "remaining": max(0, quota - used), "reset_time": reset})
+
+    if not tiers:
+        return None
+    return {
+        "quota": tiers[0]["quota"],
+        "remaining": tiers[0]["remaining"],
+        "plan_type": "Max",
+        "reset_time": tiers[0]["reset_time"],
+        "tiers": tiers,
+    }
+
+
+def _parse_claude_api_response(data: dict) -> dict | None:
+    """Parse Anthropic OAuth usage API response."""
+    tiers = []
+    if "five_hour" in data:
+        fh = data["five_hour"]
+        quota = fh.get("limit", 45)
+        remaining = fh.get("remaining", quota)
+        reset = fh.get("resets_at")
+        tiers.append({"name": "Session", "quota": quota, "remaining": remaining, "reset_time": reset})
+    if "seven_day" in data:
+        sd = data["seven_day"]
+        quota = sd.get("limit", 1400)
+        remaining = sd.get("remaining", quota)
+        reset = sd.get("resets_at")
+        tiers.append({"name": "Weekly", "quota": quota, "remaining": remaining, "reset_time": reset})
+    if not tiers:
+        return None
+    return {
+        "quota": tiers[0]["quota"],
+        "remaining": tiers[0]["remaining"],
+        "plan_type": "Max",
+        "reset_time": tiers[0].get("reset_time"),
+        "tiers": tiers,
+    }
+
+
+def _fetch_codex_usage() -> dict | None:
+    """Read Codex usage via auth.json token → OpenAI usage API."""
+    auth_path = Path.home() / ".codex" / "auth.json"
+    if not auth_path.exists():
+        return None
+    try:
+
+        auth = _json.loads(auth_path.read_text())
+        tokens = auth.get("tokens", {})
+        # tokens may be flat {"access_token": "...", ...} or nested
+        access_token = tokens.get("access_token", "")
+        if not access_token:
+            for _key, tok in tokens.items():
+                if isinstance(tok, dict) and tok.get("access_token"):
+                    access_token = tok["access_token"]
+                    break
+        if not access_token:
+            return None
+
+        req = urllib.request.Request(
+            "https://chatgpt.com/backend-api/wham/usage",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "User-Agent": "CLI-Pulse-Helper/0.1",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = _json.loads(resp.read())
+            return _parse_codex_usage_response(data)
+    except Exception:
+        return None
+
+
+def _parse_codex_usage_response(data: dict) -> dict | None:
+    """Parse OpenAI/Codex wham/usage API response.
+
+    Real format:
+    {"plan_type":"plus","rate_limit":{"primary_window":{"used_percent":23,"reset_after_seconds":2391,"reset_at":1775054266},...}}
+    """
+    tiers = []
+    plan_type = (data.get("plan_type") or "Plus").capitalize()
+    rl = data.get("rate_limit", {})
+
+    pw = rl.get("primary_window")
+    if pw:
+        pct_used = pw.get("used_percent", 0)
+        remaining_pct = 100 - pct_used
+        reset_ts = pw.get("reset_at")
+        reset_iso = datetime.fromtimestamp(reset_ts, tz=timezone.utc).isoformat() if reset_ts else None
+        tiers.append({"name": "Session", "quota": 100, "remaining": remaining_pct, "reset_time": reset_iso})
+
+    sw = rl.get("secondary_window")
+    if sw:
+        pct_used = sw.get("used_percent", 0)
+        remaining_pct = 100 - pct_used
+        reset_ts = sw.get("reset_at")
+        reset_iso = datetime.fromtimestamp(reset_ts, tz=timezone.utc).isoformat() if reset_ts else None
+        tiers.append({"name": "Weekly", "quota": 100, "remaining": remaining_pct, "reset_time": reset_iso})
+
+    if not tiers:
+        return None
+    return {
+        "quota": tiers[0]["quota"],
+        "remaining": tiers[0]["remaining"],
+        "plan_type": plan_type,
+        "reset_time": tiers[0].get("reset_time"),
+        "tiers": tiers,
+    }
+
+
+def _refresh_gemini_token(creds_path: Path) -> str | None:
+    """Refresh expired Gemini OAuth token using refresh_token."""
+    try:
+        creds = _json.loads(creds_path.read_text())
+        refresh_token = creds.get("refresh_token")
+        if not refresh_token:
+            return None
+        # Extract client_id/secret from the Gemini CLI binary
+        # Use the well-known Gemini CLI client credentials
+        client_id = "936475272427.apps.googleusercontent.com"
+        client_secret = ""
+        # Try to find client_secret from the binary or use the standard one
+        # Gemini CLI uses installed app flow with no secret
+        body = urllib.parse.urlencode({
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "client_id": client_id,
+        }).encode()
+        req = urllib.request.Request(
+            "https://oauth2.googleapis.com/token",
+            data=body,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = _json.loads(resp.read())
+            new_token = data.get("access_token")
+            if new_token:
+                creds["access_token"] = new_token
+                if "expires_in" in data:
+                    creds["expiry_date"] = int((datetime.now(timezone.utc).timestamp() + data["expires_in"]) * 1000)
+                creds_path.write_text(_json.dumps(creds, indent=2))
+                return new_token
+    except Exception:
+        pass
+    return None
+
+
+def _fetch_gemini_usage() -> dict | None:
+    """Read Gemini usage via OAuth token → Google quota API."""
+    creds_path = Path.home() / ".gemini" / "oauth_creds.json"
+    settings_path = Path.home() / ".gemini" / "settings.json"
+    if not creds_path.exists():
+        return None
+    try:
+
+        creds = _json.loads(creds_path.read_text())
+        access_token = creds.get("access_token", "")
+
+        # Check if token is expired and refresh
+        expiry = creds.get("expiry_date", 0)
+        if isinstance(expiry, (int, float)):
+            exp_ts = expiry / 1000 if expiry > 1e12 else expiry
+            if exp_ts < datetime.now(timezone.utc).timestamp():
+                access_token = _refresh_gemini_token(creds_path) or access_token
+
+        if not access_token:
+            return None
+
+        # Get project ID from settings
+        project_id = ""
+        if settings_path.exists():
+            settings = _json.loads(settings_path.read_text())
+            project_id = settings.get("project", "")
+
+        req = urllib.request.Request(
+            "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota",
+            data=_json.dumps({"project": project_id}).encode(),
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = _json.loads(resp.read())
+            return _parse_gemini_quota_response(data)
+    except Exception:
+        return None
+
+
+def _parse_gemini_quota_response(data: dict) -> dict | None:
+    """Parse Google quota API response for Gemini models."""
+    tiers = []
+    quotas = data.get("quotas", data.get("userQuotas", []))
+    if isinstance(quotas, list):
+        for q in quotas:
+            model = q.get("modelId", q.get("model", "Default"))
+            # Simplify model names
+            if "pro" in model.lower():
+                name = "Pro"
+            elif "flash" in model.lower() and "lite" not in model.lower():
+                name = "Flash"
+            elif "lite" in model.lower():
+                name = "Flash Lite"
+            else:
+                name = model
+            fraction = q.get("remainingFraction", 1.0)
+            limit = q.get("limit", 1000)
+            remaining = int(limit * fraction)
+            reset = q.get("resetTime")
+            tiers.append({"name": name, "quota": limit, "remaining": remaining, "reset_time": reset})
+    if not tiers:
+        return None
+    return {
+        "quota": tiers[0]["quota"],
+        "remaining": tiers[0]["remaining"],
+        "plan_type": "Paid",
+        "reset_time": tiers[0].get("reset_time"),
+        "tiers": tiers,
+    }
+
+
+def _extract_percent(text: str) -> int | None:
+    """Extract percentage number from text like '15% used'."""
+    m = re.search(r"(\d+)%", text)
+    return int(m.group(1)) if m else None
+
+
+def _extract_reset_time(text: str) -> str | None:
+    """Extract reset time from text and convert to ISO timestamp."""
+    m = re.search(r"resets?\s+in\s+(\d+)h?\s*(\d+)?m?", text, re.IGNORECASE)
+    if m:
+        hours = int(m.group(1))
+        mins = int(m.group(2) or 0)
+        reset = datetime.now(timezone.utc) + timedelta(hours=hours, minutes=mins)
+        return reset.isoformat()
+    return None
 
 
 def _process_rows() -> list[dict[str, str]]:
