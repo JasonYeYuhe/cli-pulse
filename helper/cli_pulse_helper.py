@@ -23,7 +23,10 @@ SUPPORTED_PROVIDERS = {
 }
 
 SUPABASE_URL = os.environ.get("CLI_PULSE_SUPABASE_URL", "https://gkjwsxotmwrgqsvfijzs.supabase.co")
-SUPABASE_ANON_KEY = os.environ.get("CLI_PULSE_SUPABASE_ANON_KEY", "")
+SUPABASE_ANON_KEY = os.environ.get(
+    "CLI_PULSE_SUPABASE_ANON_KEY",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrandzeG90bXdyZ3FzdmZpanpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2OTAzNzAsImV4cCI6MjA5MDI2NjM3MH0.uPHYnh0psr2-KQynBw2NiQZOhz5eZiEaWpfCwdXrNQM",
+)
 
 
 @dataclass
@@ -55,10 +58,10 @@ def supabase_rpc(function_name: str, params: dict[str, Any]) -> Any:
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
     }
-    body = json.dumps(params).encode("utf-8")
-    request = urllib.request.Request(url=url, data=body, headers=headers, method="POST")
     if not SUPABASE_ANON_KEY:
         raise SystemExit("CLI_PULSE_SUPABASE_ANON_KEY environment variable is not set")
+    body = json.dumps(params).encode("utf-8")
+    request = urllib.request.Request(url=url, data=body, headers=headers, method="POST")
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             return json.loads(response.read().decode("utf-8"))
@@ -168,6 +171,22 @@ def sync(_: argparse.Namespace) -> None:
     print(f"synced {response.get('sessions_synced', 0)} sessions")
 
 
+def daemon(args: argparse.Namespace) -> None:
+    """Run continuously: heartbeat + sync every interval seconds."""
+    interval = max(args.interval, 10)
+    print(f"CLI Pulse helper daemon started (interval={interval}s). Press Ctrl+C to stop.")
+    try:
+        while True:
+            try:
+                heartbeat(args)
+                sync(args)
+            except (Exception, SystemExit) as exc:
+                print(f"[error] {exc}")
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        print("\nDaemon stopped.")
+
+
 def run_demo(args: argparse.Namespace) -> None:
     for _ in range(args.cycles):
         heartbeat(args)
@@ -209,6 +228,10 @@ def main() -> None:
 
     sync_parser = subparsers.add_parser("sync", help="sync sessions and alerts")
     sync_parser.set_defaults(func=sync)
+
+    daemon_parser = subparsers.add_parser("daemon", help="run continuously syncing in the foreground")
+    daemon_parser.add_argument("--interval", type=int, default=120, help="sync interval in seconds (default: 120)")
+    daemon_parser.set_defaults(func=daemon)
 
     demo_parser = subparsers.add_parser("run-demo", help="emit heartbeats and syncs in a loop")
     demo_parser.add_argument("--cycles", type=int, default=3)
