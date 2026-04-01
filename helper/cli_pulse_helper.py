@@ -35,6 +35,7 @@ class HelperConfig:
     user_id: str
     device_name: str
     helper_version: str
+    helper_secret: str = ""
 
 
 def now_iso() -> str:
@@ -98,6 +99,7 @@ def pair(args: argparse.Namespace) -> None:
         user_id=response["user_id"],
         device_name=device_name,
         helper_version=args.helper_version,
+        helper_secret=response.get("helper_secret", ""),
     )
     save_config(config)
     print(f"paired {config.device_name} as {config.device_id}")
@@ -109,7 +111,7 @@ def heartbeat(_: argparse.Namespace) -> None:
     sessions = collect_sessions()
     supabase_rpc("helper_heartbeat", {
         "p_device_id": config.device_id,
-        "p_user_id": config.user_id,
+        "p_helper_secret": config.helper_secret,
         "p_cpu_usage": snapshot.cpu_usage,
         "p_memory_usage": snapshot.memory_usage,
         "p_active_session_count": len(sessions),
@@ -163,7 +165,7 @@ def sync(_: argparse.Namespace) -> None:
 
     response = supabase_rpc("helper_sync", {
         "p_device_id": config.device_id,
-        "p_user_id": config.user_id,
+        "p_helper_secret": config.helper_secret,
         "p_sessions": sessions,
         "p_alerts": alerts,
         "p_provider_remaining": estimate_provider_remaining(collected_sessions),
