@@ -49,7 +49,7 @@ begin
 
   return jsonb_build_object('device_id', v_device_id, 'helper_secret', v_helper_secret);
 end;
-$$ language plpgsql security invoker;
+$$ language plpgsql security definer;
 
 -- Helper heartbeat — requires device secret
 create or replace function public.helper_heartbeat(
