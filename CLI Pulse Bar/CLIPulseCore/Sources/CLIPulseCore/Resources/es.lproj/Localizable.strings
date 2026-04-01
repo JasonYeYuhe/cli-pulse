@@ -152,7 +152,7 @@
 "auth.code_sent_to" = "Se envió un código de verificación a %@";
 "auth.resend_code" = "Reenviar código";
 "auth.back_to_email" = "Volver";
-"auth.code_placeholder" = "000000";
+"auth.code_placeholder" = "Ingrese código";
 "auth.password_optional" = "Contraseña (opcional)";
 "auth.password_placeholder" = "Ingrese contraseña";
 

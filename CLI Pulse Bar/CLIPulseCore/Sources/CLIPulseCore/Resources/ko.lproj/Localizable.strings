@@ -152,7 +152,7 @@
 "auth.code_sent_to" = "인증 코드가 %@(으)로 전송되었습니다";
 "auth.resend_code" = "재전송";
 "auth.back_to_email" = "돌아가기";
-"auth.code_placeholder" = "000000";
+"auth.code_placeholder" = "코드 입력";
 "auth.password_optional" = "비밀번호 (선택사항)";
 "auth.password_placeholder" = "비밀번호 입력";
 

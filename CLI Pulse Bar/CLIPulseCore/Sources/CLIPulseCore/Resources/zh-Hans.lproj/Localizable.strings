@@ -152,7 +152,7 @@
 "auth.code_sent_to" = "验证码已发送至 %@";
 "auth.resend_code" = "重新发送";
 "auth.back_to_email" = "返回";
-"auth.code_placeholder" = "000000";
+"auth.code_placeholder" = "输入验证码";
 "auth.password_optional" = "密码（可选）";
 "auth.password_placeholder" = "输入密码";
 

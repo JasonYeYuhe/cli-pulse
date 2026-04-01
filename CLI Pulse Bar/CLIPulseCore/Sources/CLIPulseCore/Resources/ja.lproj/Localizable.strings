@@ -152,7 +152,7 @@
 "auth.code_sent_to" = "認証コードを %@ に送信しました";
 "auth.resend_code" = "再送信";
 "auth.back_to_email" = "戻る";
-"auth.code_placeholder" = "000000";
+"auth.code_placeholder" = "コードを入力";
 "auth.password_optional" = "パスワード（任意）";
 "auth.password_placeholder" = "パスワードを入力";
 

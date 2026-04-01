@@ -38,14 +38,35 @@ struct AlertsTab: View {
                     alertSummary
                 }
 
-                // Filter
-                Picker("", selection: $filter) {
-                    ForEach(AlertFilter.allCases, id: \.self) { f in
-                        Text(f.label)
+                // Filter + Resolve All
+                HStack {
+                    Picker("", selection: $filter) {
+                        ForEach(AlertFilter.allCases, id: \.self) { f in
+                            Text(f.label)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .controlSize(.small)
+
+                    if filter == .open && !filteredAlerts.isEmpty {
+                        Button {
+                            Task {
+                                for alert in filteredAlerts where !alert.is_resolved {
+                                    await state.resolveAlert(alert)
+                                }
+                            }
+                        } label: {
+                            Text("Resolve All")
+                                .font(.system(size: 9, weight: .semibold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color.green.opacity(0.1))
+                                .foregroundStyle(.green)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
-                .pickerStyle(.segmented)
-                .controlSize(.small)
 
                 // Alert List
                 if filteredAlerts.isEmpty {
