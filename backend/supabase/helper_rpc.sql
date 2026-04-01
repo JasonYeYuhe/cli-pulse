@@ -87,7 +87,8 @@ create or replace function public.helper_sync(
   p_helper_secret text,
   p_sessions jsonb default '[]'::jsonb,
   p_alerts jsonb default '[]'::jsonb,
-  p_provider_remaining jsonb default '{}'::jsonb
+  p_provider_remaining jsonb default '{}'::jsonb,
+  p_provider_tiers jsonb default '{}'::jsonb
 )
 returns jsonb as $$
 declare
@@ -160,11 +161,33 @@ begin
     v_alert_count := v_alert_count + 1;
   end loop;
 
+  -- Upsert provider quotas with tier data (new) or just remaining (legacy)
+  for v_provider in select * from jsonb_object_keys(p_provider_tiers) loop
+    declare
+      v_tier_data jsonb := p_provider_tiers -> v_provider;
+    begin
+      insert into public.provider_quotas (user_id, provider, remaining, quota, plan_type, reset_time, tiers, updated_at)
+      values (
+        v_user_id, v_provider,
+        coalesce((v_tier_data->>'remaining')::integer, 0),
+        (v_tier_data->>'quota')::integer,
+        v_tier_data->>'plan_type',
+        (v_tier_data->>'reset_time')::timestamptz,
+        coalesce(v_tier_data->'tiers', '[]'::jsonb),
+        now()
+      )
+      on conflict (user_id, provider) do update set
+        remaining = excluded.remaining, quota = excluded.quota,
+        plan_type = excluded.plan_type, reset_time = excluded.reset_time,
+        tiers = excluded.tiers, updated_at = now();
+    end;
+  end loop;
+
+  -- Legacy fallback: providers in p_provider_remaining but not in p_provider_tiers
   for v_provider, v_remaining in select * from jsonb_each_text(p_provider_remaining) loop
     insert into public.provider_quotas (user_id, provider, remaining, updated_at)
     values (v_user_id, v_provider, v_remaining::integer, now())
-    on conflict (user_id, provider) do update set
-      remaining = excluded.remaining, updated_at = now();
+    on conflict (user_id, provider) do nothing;
   end loop;
 
   return jsonb_build_object('sessions_synced', v_session_count, 'alerts_synced', v_alert_count);

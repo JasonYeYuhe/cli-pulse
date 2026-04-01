@@ -49,12 +49,16 @@ begin
         'today_usage', coalesce(sum(case when s.last_active_at::date = v_today then s.total_usage else 0 end), 0),
         'total_usage', coalesce(sum(case when s.last_active_at::date >= v_week_start then s.total_usage else 0 end), 0),
         'estimated_cost', coalesce(sum(case when s.last_active_at::date >= v_week_start then s.estimated_cost else 0 end), 0),
-        'remaining', pq.remaining
+        'remaining', pq.remaining,
+        'quota', pq.quota,
+        'plan_type', pq.plan_type,
+        'reset_time', pq.reset_time,
+        'tiers', coalesce(pq.tiers, '[]'::jsonb)
       ) as row_data
       from public.sessions s
       left join public.provider_quotas pq on pq.user_id = v_user_id and pq.provider = s.provider
       where s.user_id = v_user_id
-      group by s.provider, pq.remaining
+      group by s.provider, pq.remaining, pq.quota, pq.plan_type, pq.reset_time, pq.tiers
       order by sum(s.total_usage) desc
     ) sub
   );

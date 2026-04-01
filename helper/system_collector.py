@@ -318,36 +318,93 @@ def collect_alerts(sessions: list[CollectedSession], device_snapshot: DeviceSnap
 
 
 def estimate_provider_remaining(sessions: list[CollectedSession]) -> dict[str, int]:
-    defaults = {
-        "Codex": 500_000,
-        "Gemini": 300_000,
-        "Claude": 250_000,
-        "Cursor": 500_000,
-        "OpenCode": 300_000,
-        "Droid": 200_000,
-        "Antigravity": 200_000,
-        "Copilot": 500_000,
-        "z.ai": 200_000,
-        "MiniMax": 300_000,
-        "Augment": 300_000,
-        "JetBrains AI": 300_000,
-        "Kimi K2": 500_000,
-        "Amp": 300_000,
-        "Synthetic": 200_000,
-        "Warp": 300_000,
-        "Kilo": 200_000,
-        "OpenRouter": 200_000,
-        "Ollama": 999_999,
-        "Alibaba": 400_000,
-    }
-    usage: dict[str, int] = {}
-    for session in sessions:
-        usage[session.provider] = usage.get(session.provider, 0) + session.total_usage
+    """Legacy wrapper — returns flat remaining dict for backward compat."""
+    quotas = estimate_provider_quotas(sessions)
+    return {p: q["remaining"] for p, q in quotas.items()}
 
-    remaining: dict[str, int] = {}
-    for provider in defaults:
-        remaining[provider] = max(0, defaults[provider] - usage.get(provider, 0) * 5)
-    return remaining
+
+def estimate_provider_quotas(sessions: list[CollectedSession]) -> dict[str, dict]:
+    """Return per-provider quota info with sub-tiers for CodexBar-style bars.
+
+    Each value is a dict with:
+      quota, remaining, plan_type, reset_time, tiers: [{name, quota, remaining, reset_time}]
+    """
+    # Known plan limits (requests per reset period)
+    PROVIDER_PLANS: dict[str, dict] = {
+        "Claude": {
+            "plan_type": "Max",
+            "tiers": [
+                {"name": "Session", "quota": 45, "reset_hours": 5},
+                {"name": "Weekly", "quota": 1400, "reset_hours": 168},
+            ],
+        },
+        "Codex": {
+            "plan_type": "Plus",
+            "tiers": [
+                {"name": "Session", "quota": 500, "reset_hours": 4},
+                {"name": "Weekly", "quota": 3500, "reset_hours": 168},
+            ],
+        },
+        "Gemini": {
+            "plan_type": "Paid",
+            "tiers": [
+                {"name": "Pro", "quota": 1000, "reset_hours": 24},
+                {"name": "Flash", "quota": 1500, "reset_hours": 24},
+                {"name": "Flash Lite", "quota": 2000, "reset_hours": 24},
+            ],
+        },
+        "Cursor": {
+            "plan_type": "Pro",
+            "tiers": [{"name": "Fast", "quota": 500, "reset_hours": 720}],
+        },
+        "Copilot": {
+            "plan_type": "Pro",
+            "tiers": [{"name": "Default", "quota": 1000, "reset_hours": 720}],
+        },
+    }
+    # Generic fallback for unlisted providers
+    GENERIC = {"plan_type": "Free", "tiers": [{"name": "Default", "quota": 300, "reset_hours": 24}]}
+
+    # Aggregate requests per provider
+    usage_by_provider: dict[str, int] = {}
+    for s in sessions:
+        usage_by_provider[s.provider] = usage_by_provider.get(s.provider, 0) + s.requests
+
+    now = datetime.now(timezone.utc)
+    result: dict[str, dict] = {}
+
+    for provider, total_requests in usage_by_provider.items():
+        plan = PROVIDER_PLANS.get(provider, GENERIC)
+        tiers = []
+        top_quota = 0
+        top_remaining = 0
+
+        for t in plan["tiers"]:
+            quota = t["quota"]
+            reset_h = t["reset_hours"]
+            # Distribute usage proportionally across tiers
+            tier_usage = min(total_requests, quota)
+            remaining = max(0, quota - tier_usage)
+            # Next reset: round up to next boundary
+            reset_at = now + timedelta(hours=reset_h - (now.hour % max(1, reset_h)))
+            tiers.append({
+                "name": t["name"],
+                "quota": quota,
+                "remaining": remaining,
+                "reset_time": reset_at.isoformat(),
+            })
+            top_quota += quota
+            top_remaining += remaining
+
+        result[provider] = {
+            "quota": top_quota,
+            "remaining": top_remaining,
+            "plan_type": plan["plan_type"],
+            "reset_time": tiers[0]["reset_time"] if tiers else None,
+            "tiers": tiers,
+        }
+
+    return result
 
 
 def _process_rows() -> list[dict[str, str]]:

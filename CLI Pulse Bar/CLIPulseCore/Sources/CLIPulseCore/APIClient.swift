@@ -347,7 +347,19 @@ public actor APIClient {
     public func providers() async throws -> [ProviderUsage] {
         let json: [[String: Any]] = try await rpc("provider_summary", params: [:])
         return json.map { p in
-            ProviderUsage(
+            // Parse tiers array from API response
+            var tiers: [TierDTO] = []
+            if let tiersArray = p["tiers"] as? [[String: Any]] {
+                tiers = tiersArray.map { t in
+                    TierDTO(
+                        name: t["name"] as? String ?? "Default",
+                        quota: t["quota"] as? Int ?? 0,
+                        remaining: t["remaining"] as? Int ?? 0,
+                        reset_time: t["reset_time"] as? String
+                    )
+                }
+            }
+            return ProviderUsage(
                 provider: p["provider"] as? String ?? "",
                 today_usage: p["today_usage"] as? Int ?? 0,
                 week_usage: p["total_usage"] as? Int ?? 0,
@@ -355,8 +367,11 @@ public actor APIClient {
                 estimated_cost_week: (p["estimated_cost"] as? NSNumber)?.doubleValue ?? 0,
                 cost_status_today: "Estimated",
                 cost_status_week: "Estimated",
-                quota: nil,
+                quota: p["quota"] as? Int,
                 remaining: p["remaining"] as? Int,
+                plan_type: p["plan_type"] as? String,
+                reset_time: p["reset_time"] as? String,
+                tiers: tiers,
                 status_text: "Operational",
                 trend: [],
                 recent_sessions: [],

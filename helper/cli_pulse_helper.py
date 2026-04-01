@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from system_collector import CollectedAlert, collect_alerts, collect_device_snapshot, collect_sessions, estimate_provider_remaining
+from system_collector import CollectedAlert, collect_alerts, collect_device_snapshot, collect_sessions, estimate_provider_quotas, estimate_provider_remaining
 
 
 CONFIG_PATH = Path.home() / ".cli-pulse-helper.json"
@@ -173,12 +173,14 @@ def sync(_: argparse.Namespace) -> None:
         for item in collect_alerts(collected_sessions, device_snapshot)
     ]
 
+    provider_quotas = estimate_provider_quotas(collected_sessions)
     response = supabase_rpc("helper_sync", {
         "p_device_id": config.device_id,
         "p_helper_secret": config.helper_secret,
         "p_sessions": sessions,
         "p_alerts": alerts,
-        "p_provider_remaining": estimate_provider_remaining(collected_sessions),
+        "p_provider_remaining": {p: q["remaining"] for p, q in provider_quotas.items()},
+        "p_provider_tiers": provider_quotas,
     })
     print(f"synced {response.get('sessions_synced', 0)} sessions")
 

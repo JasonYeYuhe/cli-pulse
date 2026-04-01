@@ -303,6 +303,9 @@ public struct ProviderUsage: Codable, Identifiable, Sendable {
     public let cost_status_week: String
     public let quota: Int?
     public let remaining: Int?
+    public let plan_type: String?
+    public let reset_time: String?
+    public let tiers: [TierDTO]
     public let status_text: String
     public let trend: [UsagePoint]
     public let recent_sessions: [String]
@@ -325,7 +328,10 @@ public struct ProviderUsage: Codable, Identifiable, Sendable {
         provider: String, today_usage: Int, week_usage: Int,
         estimated_cost_today: Double, estimated_cost_week: Double,
         cost_status_today: String, cost_status_week: String,
-        quota: Int?, remaining: Int?, status_text: String,
+        quota: Int?, remaining: Int?,
+        plan_type: String? = nil, reset_time: String? = nil,
+        tiers: [TierDTO] = [],
+        status_text: String,
         trend: [UsagePoint], recent_sessions: [String], recent_errors: [String],
         metadata: ProviderMetadata? = nil
     ) {
@@ -338,11 +344,28 @@ public struct ProviderUsage: Codable, Identifiable, Sendable {
         self.cost_status_week = cost_status_week
         self.quota = quota
         self.remaining = remaining
+        self.plan_type = plan_type
+        self.reset_time = reset_time
+        self.tiers = tiers
         self.status_text = status_text
         self.trend = trend
         self.recent_sessions = recent_sessions
         self.recent_errors = recent_errors
         self.metadata = metadata
+    }
+}
+
+public struct TierDTO: Codable, Sendable {
+    public let name: String
+    public let quota: Int
+    public let remaining: Int
+    public let reset_time: String?
+
+    public init(name: String, quota: Int, remaining: Int, reset_time: String? = nil) {
+        self.name = name
+        self.quota = quota
+        self.remaining = remaining
+        self.reset_time = reset_time
     }
 }
 

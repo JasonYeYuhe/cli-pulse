@@ -283,6 +283,10 @@ create table public.provider_quotas (
   user_id uuid not null references public.profiles(id) on delete cascade,
   provider text not null,
   remaining integer not null default 0,
+  quota integer,
+  plan_type text,
+  reset_time timestamptz,
+  tiers jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now(),
   primary key (user_id, provider)
 );

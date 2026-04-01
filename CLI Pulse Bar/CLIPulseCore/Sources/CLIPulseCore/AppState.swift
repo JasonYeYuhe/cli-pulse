@@ -223,15 +223,27 @@ public final class AppState: ObservableObject {
     public func buildProviderDetails() {
         providerDetails = providerConfigs.sorted(by: { $0.sortOrder < $1.sortOrder }).compactMap { config in
             if let usage = providers.first(where: { $0.provider == config.kind.rawValue }) {
-                // Build tiers from usage data
+                // Build tiers from API tier data (CodexBar-style)
                 var tiers: [UsageTier] = []
-                if let quota = usage.quota {
+                if !usage.tiers.isEmpty {
+                    // Use per-tier data from helper sync
+                    tiers = usage.tiers.map { t in
+                        UsageTier(
+                            name: t.name,
+                            usage: t.quota - t.remaining,
+                            quota: t.quota,
+                            remaining: t.remaining,
+                            resetTime: t.reset_time
+                        )
+                    }
+                } else if let quota = usage.quota {
+                    // Fallback: single tier from top-level quota
                     tiers.append(UsageTier(
                         name: "Default",
                         usage: usage.today_usage,
                         quota: quota,
                         remaining: usage.remaining,
-                        resetTime: nil
+                        resetTime: usage.reset_time
                     ))
                 }
                 return ProviderDetail(
@@ -239,6 +251,8 @@ public final class AppState: ObservableObject {
                     config: config,
                     tiers: tiers,
                     operationalStatus: .operational,
+                    accountEmail: nil,
+                    planType: usage.plan_type,
                     sourceType: .auto
                 )
             }
