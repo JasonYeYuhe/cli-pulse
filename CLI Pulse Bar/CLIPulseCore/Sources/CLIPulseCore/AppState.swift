@@ -34,6 +34,7 @@ public final class AppState: ObservableObject {
     @Published public var tierLimitWarning: String?
     @Published public var lastRefresh: Date?
     @Published public var serverOnline = false
+    @Published public var isLocalMode = false  // true when showing local scan data (no cloud)
 
     // MARK: - Provider Management
     @Published public var providerConfigs: [ProviderConfig] = ProviderConfig.defaults()
@@ -247,6 +248,7 @@ public final class AppState: ObservableObject {
 
     public init() {
         self.api = APIClient()
+        subscriptionManager.apiClient = api
         loadProviderConfigs()
         // Forward SubscriptionManager objectWillChange so UI updates on tier changes
         subscriptionCancellable = subscriptionManager.objectWillChange.sink { [weak self] _ in
@@ -317,10 +319,8 @@ public final class AppState: ObservableObject {
             isAuthenticated = true
             otpSent = false
             otpEmail = ""
-            if isPaired {
-                startRefreshLoop()
-                await refreshAll()
-            }
+            startRefreshLoop()
+            await refreshAll()
         } catch {
             lastError = error.localizedDescription
         }
@@ -338,10 +338,8 @@ public final class AppState: ObservableObject {
             userEmail = response.user.email
             isPaired = response.paired
             isAuthenticated = true
-            if isPaired {
-                startRefreshLoop()
-                await refreshAll()
-            }
+            startRefreshLoop()
+            await refreshAll()
         } catch {
             lastError = error.localizedDescription
         }
@@ -365,10 +363,8 @@ public final class AppState: ObservableObject {
             userEmail = response.user.email
             isPaired = response.paired
             isAuthenticated = true
-            if isPaired {
-                startRefreshLoop()
-                await refreshAll()
-            }
+            startRefreshLoop()
+            await refreshAll()
         } catch {
             lastError = error.localizedDescription
         }
@@ -596,6 +592,7 @@ public final class AppState: ObservableObject {
         isDemoMode = false
         isAuthenticated = false
         isPaired = false
+        isLocalMode = false
         userName = ""
         userEmail = ""
         dashboard = nil
@@ -632,10 +629,8 @@ public final class AppState: ObservableObject {
             isPaired = response.paired
             isAuthenticated = true
             serverOnline = true
-            if isPaired {
-                startRefreshLoop()
-                await refreshAll()
-            }
+            startRefreshLoop()
+            await refreshAll()
         } catch {
             storedToken = ""
             isAuthenticated = false
@@ -646,7 +641,18 @@ public final class AppState: ObservableObject {
     // MARK: - Data Refresh
 
     public func refreshAll() async {
-        guard isAuthenticated, isPaired, !isDemoMode else { return }
+        guard isAuthenticated, !isDemoMode else { return }
+
+        // If not paired to cloud, use local scanning on macOS
+        #if os(macOS)
+        if !isPaired {
+            await refreshLocal()
+            return
+        }
+        #else
+        guard isPaired else { return }
+        #endif
+
         // Skip if a refresh is already in progress
         guard !isLoading else { return }
         isLoading = true
@@ -721,6 +727,63 @@ public final class AppState: ObservableObject {
         }
         isLoading = false
     }
+
+    // MARK: - Local Scanning (macOS only, no cloud needed)
+
+    #if os(macOS)
+    private func refreshLocal() async {
+        guard !isLoading else { return }
+        isLoading = true
+        isLocalMode = true
+        serverOnline = true
+        lastError = nil
+
+        let result = await Task.detached { LocalScanner.shared.scan() }.value
+
+        // Guard against sign-out during scan
+        guard isAuthenticated else { isLoading = false; return }
+
+        sessions = result.sessions
+        providers = result.providers
+        devices = [DeviceRecord(
+            id: "local",
+            name: ProcessInfo.processInfo.hostName,
+            type: "macOS",
+            system: "macOS \(ProcessInfo.processInfo.operatingSystemVersionString)",
+            status: "online",
+            last_sync_at: ISO8601DateFormatter().string(from: Date()),
+            helper_version: "local",
+            current_session_count: result.activeSessionCount,
+            cpu_usage: nil,
+            memory_usage: nil
+        )]
+        alerts = []
+
+        let breakdown = result.providers.map {
+            ProviderBreakdown(provider: $0.provider, usage: $0.today_usage, estimated_cost: $0.estimated_cost_today, cost_status: "normal", remaining: nil)
+        }
+        dashboard = DashboardSummary(
+            total_usage_today: result.totalUsage,
+            total_estimated_cost_today: result.totalCost,
+            cost_status: "normal",
+            total_requests_today: result.sessions.reduce(0) { $0 + $1.requests },
+            active_sessions: result.activeSessionCount,
+            online_devices: 1,
+            unresolved_alerts: 0,
+            provider_breakdown: breakdown,
+            top_projects: [],
+            trend: [],
+            recent_activity: [],
+            risk_signals: result.isEmpty ? ["No AI tools detected. Start a coding session to see data."] : [],
+            alert_summary: AlertSummaryDTO(critical: 0, warning: 0, info: 0)
+        )
+
+        lastRefresh = Date()
+        buildProviderDetails()
+        updateCostSummary()
+        isLoading = false
+    }
+    #endif
 
     private func updateCostSummary() {
         let todayByProvider = providers.map { ($0.provider, $0.estimated_cost_today) }
@@ -859,7 +922,7 @@ public final class AppState: ObservableObject {
 
     public func updateRefreshInterval(_ seconds: Int) {
         refreshInterval = seconds
-        if isAuthenticated, isPaired {
+        if isAuthenticated {
             startRefreshLoop()
         }
     }

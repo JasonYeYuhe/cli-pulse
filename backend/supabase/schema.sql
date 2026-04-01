@@ -9,6 +9,7 @@ create table public.profiles (
   name text not null default '',
   email text not null default '',
   paired boolean not null default false,
+  tier text not null default 'free',
   created_at timestamptz not null default now()
 );
 alter table public.profiles enable row level security;

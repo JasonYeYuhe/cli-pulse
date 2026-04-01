@@ -6,6 +6,14 @@ public enum SubscriptionTier: String, Codable, Sendable {
     case free = "free"
     case pro = "pro"
     case team = "team"
+
+    var tierRank: Int {
+        switch self {
+        case .free: return 0
+        case .pro: return 1
+        case .team: return 2
+        }
+    }
 }
 
 @MainActor
@@ -136,7 +144,23 @@ public final class SubscriptionManager: ObservableObject {
         }
 
         purchasedSubscriptions = activeSubs
+
+        // Check server-side tier override (admin grant via profiles.tier)
+        let serverTier = await fetchServerTier()
+        if serverTier.tierRank > highestTier.tierRank {
+            highestTier = serverTier
+        }
+
         currentTier = highestTier
+    }
+
+    /// Server-side tier override — set by admin in profiles.tier
+    public var apiClient: APIClient?
+
+    private func fetchServerTier() async -> SubscriptionTier {
+        guard let api = apiClient else { return .free }
+        let raw = await api.serverTier()
+        return SubscriptionTier(rawValue: raw) ?? .free
     }
 
     // MARK: - Transaction Listener

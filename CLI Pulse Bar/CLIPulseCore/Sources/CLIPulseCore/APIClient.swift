@@ -522,7 +522,7 @@ public actor APIClient {
         }
         return PairingInfo(
             code: code,
-            install_command: "python3 helper/cli_pulse_helper.py pair --pairing-code \(code)"
+            install_command: "curl -sfL https://raw.githubusercontent.com/JasonYeYuhe/cli-pulse/main/helper/cli_pulse_helper.py -o /tmp/cli_pulse_helper.py && curl -sfL https://raw.githubusercontent.com/JasonYeYuhe/cli-pulse/main/helper/system_collector.py -o /tmp/system_collector.py && python3 /tmp/cli_pulse_helper.py pair --pairing-code \(code)"
         )
     }
 
@@ -542,6 +542,20 @@ public actor APIClient {
         }
         // Revoke server-side token after account deletion
         await signOutServer()
+    }
+
+    // MARK: - Server Tier
+
+    public func serverTier() async -> String {
+        guard let uid = userId else { return "free" }
+        do {
+            let rows: [[String: Any]] = try await restGet(
+                "/rest/v1/profiles?id=eq.\(Self.sanitizeParam(uid))&select=tier"
+            )
+            return (rows.first?["tier"] as? String) ?? "free"
+        } catch {
+            return "free"
+        }
     }
 
     // MARK: - Health
