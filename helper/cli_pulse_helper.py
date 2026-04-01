@@ -44,8 +44,11 @@ def now_iso() -> str:
 
 def load_config() -> HelperConfig:
     if not CONFIG_PATH.exists():
-        raise SystemExit("helper is not paired yet")
-    return HelperConfig(**json.loads(CONFIG_PATH.read_text()))
+        raise SystemExit("helper is not paired yet — run 'pair' first")
+    data = json.loads(CONFIG_PATH.read_text())
+    # Accept only known fields (ignore legacy keys like 'server', 'access_token')
+    known = {f.name for f in HelperConfig.__dataclass_fields__.values()}
+    return HelperConfig(**{k: v for k, v in data.items() if k in known})
 
 
 def save_config(config: HelperConfig) -> None:
