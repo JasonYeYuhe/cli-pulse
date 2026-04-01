@@ -278,10 +278,11 @@ struct EnhancedProviderCard: View {
     }
 
     private func tierDetail(_ tier: UsageTier) -> String? {
-        guard let remaining = tier.remaining else { return nil }
-        var result = "\(CostFormatter.formatUsage(remaining)) remaining"
+        guard let remaining = tier.remaining, let quota = tier.quota, quota > 0 else { return nil }
+        let pctLeft = Int(100.0 * Double(remaining) / Double(quota))
+        var result = "\(pctLeft)% left"
         if let reset = tier.resetTime {
-            result += " · resets \(RelativeTime.format(reset))"
+            result += " · Resets \(RelativeTime.format(reset))"
         }
         return result
     }

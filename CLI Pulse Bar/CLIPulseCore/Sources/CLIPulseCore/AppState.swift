@@ -226,9 +226,10 @@ public final class AppState: ObservableObject {
                 // Build tiers from API tier data (CodexBar-style)
                 var tiers: [UsageTier] = []
                 if !usage.tiers.isEmpty {
-                    // Use per-tier data from helper sync
-                    tiers = usage.tiers.map { t in
-                        UsageTier(
+                    // Use per-tier data from helper sync (skip zero-quota tiers)
+                    tiers = usage.tiers.compactMap { t in
+                        guard t.quota > 0 else { return nil }
+                        return UsageTier(
                             name: t.name,
                             usage: t.quota - t.remaining,
                             quota: t.quota,
@@ -236,7 +237,7 @@ public final class AppState: ObservableObject {
                             resetTime: t.reset_time
                         )
                     }
-                } else if let quota = usage.quota {
+                } else if let quota = usage.quota, quota > 0 {
                     // Fallback: single tier from top-level quota
                     tiers.append(UsageTier(
                         name: "Default",

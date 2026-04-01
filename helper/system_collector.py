@@ -355,12 +355,7 @@ def estimate_provider_quotas(sessions: list[CollectedSession]) -> dict[str, dict
         except Exception as e:
             logging.debug(f"Real quota fetch failed for {provider}: {e}")
 
-        # Fallback: static estimate (won't show bars — just marks presence)
-        if provider not in result:
-            result[provider] = {
-                "quota": 0, "remaining": 0,
-                "plan_type": "Unknown", "reset_time": None, "tiers": [],
-            }
+        # No real data — skip (don't write fake quota data to DB)
 
     return result
 

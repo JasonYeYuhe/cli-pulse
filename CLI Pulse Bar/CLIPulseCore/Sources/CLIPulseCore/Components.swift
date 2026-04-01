@@ -448,10 +448,24 @@ public enum RelativeTime {
             return isoString
         }
         let interval = Date().timeIntervalSince(date)
-        if interval < 60 { return L10n.time.justNow }
-        let ago = L10n.time.ago
-        if interval < 3600 { return "\(Int(interval / 60))m \(ago)" }
-        if interval < 86400 { return "\(Int(interval / 3600))h \(ago)" }
-        return "\(Int(interval / 86400))d \(ago)"
+        if interval >= 0 {
+            // Past
+            if interval < 60 { return L10n.time.justNow }
+            let ago = L10n.time.ago
+            if interval < 3600 { return "\(Int(interval / 60))m \(ago)" }
+            if interval < 86400 { return "\(Int(interval / 3600))h \(ago)" }
+            return "\(Int(interval / 86400))d \(ago)"
+        } else {
+            // Future (for reset times)
+            let remaining = -interval
+            if remaining < 60 { return "in <1m" }
+            if remaining < 3600 { return "in \(Int(remaining / 60))m" }
+            let hours = Int(remaining / 3600)
+            let mins = Int(remaining.truncatingRemainder(dividingBy: 3600) / 60)
+            if remaining < 86400 { return mins > 0 ? "in \(hours)h \(mins)m" : "in \(hours)h" }
+            let days = Int(remaining / 86400)
+            let remHours = Int(remaining.truncatingRemainder(dividingBy: 86400) / 3600)
+            return remHours > 0 ? "in \(days)d \(remHours)h" : "in \(days)d"
+        }
     }
 }
