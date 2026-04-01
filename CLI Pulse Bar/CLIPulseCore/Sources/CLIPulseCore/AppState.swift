@@ -629,13 +629,15 @@ public final class AppState: ObservableObject {
             isPaired = response.paired
             isAuthenticated = true
             serverOnline = true
+            isLoading = false
+            await subscriptionManager.updateCurrentEntitlements()
             startRefreshLoop()
             await refreshAll()
         } catch {
             storedToken = ""
             isAuthenticated = false
+            isLoading = false
         }
-        isLoading = false
     }
 
     // MARK: - Data Refresh
