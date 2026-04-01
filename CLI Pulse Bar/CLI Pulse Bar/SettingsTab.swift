@@ -619,7 +619,7 @@ struct SettingsTab: View {
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text(String(state.storedToken.prefix(12)) + "...")
+                Text(state.storedToken.isEmpty ? "none" : "••••••••")
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(.quaternary)
             }

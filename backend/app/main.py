@@ -64,6 +64,12 @@ def create_app(store: SQLiteStore) -> FastAPI:
             raise HTTPException(status_code=401, detail="Invalid token")
         return token
 
+    def current_token_or_helper(token: str = Depends(bearer_token)) -> str:
+        """Accept either a user session token or a helper device token."""
+        if store.authenticate(token) or store.authenticate_helper(token):
+            return token
+        raise HTTPException(status_code=401, detail="Invalid token")
+
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
@@ -74,12 +80,19 @@ def create_app(store: SQLiteStore) -> FastAPI:
 
     @app.post("/v1/auth/sign-in", response_model=AuthResponseDTO)
     def sign_in(payload: AuthRequestDTO) -> AuthResponseDTO:
-        state = store.login(payload.email, payload.name)
+        state = store.login(payload.email, payload.password)
+        if state is None:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
         return AuthResponseDTO(access_token=state.token, user=state.user, paired=state.paired)
 
     @app.post("/v1/auth/create-account", response_model=AuthResponseDTO)
     def create_account(payload: AuthRequestDTO) -> AuthResponseDTO:
-        state = store.login(payload.email, payload.name)
+        try:
+            state = store.register(payload.email, payload.password, payload.name)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        if state is None:
+            raise HTTPException(status_code=409, detail="Email already registered")
         return AuthResponseDTO(access_token=state.token, user=state.user, paired=state.paired)
 
     @app.get("/v1/auth/me", response_model=AuthResponseDTO)
@@ -284,14 +297,14 @@ def create_app(store: SQLiteStore) -> FastAPI:
         return response
 
     @app.post("/v1/helper/heartbeat", response_model=SuccessDTO)
-    def helper_heartbeat(payload: HelperHeartbeatRequestDTO, token: str = Depends(current_token)) -> SuccessDTO:
+    def helper_heartbeat(payload: HelperHeartbeatRequestDTO, token: str = Depends(current_token_or_helper)) -> SuccessDTO:
         try:
             return store.helper_heartbeat(token, payload)
         except PermissionError as error:
             raise HTTPException(status_code=403, detail=str(error)) from error
 
     @app.post("/v1/helper/sync", response_model=SuccessDTO)
-    def helper_sync(payload: HelperSyncRequestDTO, token: str = Depends(current_token)) -> SuccessDTO:
+    def helper_sync(payload: HelperSyncRequestDTO, token: str = Depends(current_token_or_helper)) -> SuccessDTO:
         try:
             return store.helper_sync(token, payload)
         except PermissionError as error:

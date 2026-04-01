@@ -1,10 +1,15 @@
 -- ============================================================
 -- CLI Pulse — Helper RPC Functions
--- Called by the helper daemon via Supabase anon key + PostgREST
--- All functions use security definer to bypass RLS
+-- Called by the helper daemon via device-scoped helper tokens.
+--
+-- register_helper: security invoker — called by an authenticated user.
+-- helper_heartbeat / helper_sync: security definer — helpers call
+--   via anon key, so RLS would block them.  Internal auth is done
+--   by validating (device_id, helper_secret) inside the function.
 -- ============================================================
 
 -- Register a helper device via pairing code
+-- Called once during pairing; returns a device-scoped secret.
 create or replace function public.register_helper(
   p_pairing_code text,
   p_device_name text,
@@ -17,7 +22,9 @@ declare
   v_user_id uuid;
   v_device_id uuid;
   v_expires_at timestamptz;
+  v_helper_secret text;
 begin
+  -- Validate pairing code (caller must be authenticated or service role)
   select user_id, expires_at into v_user_id, v_expires_at
   from public.pairing_codes where code = p_pairing_code;
 
@@ -30,56 +37,61 @@ begin
     raise exception 'Pairing code has expired';
   end if;
 
-  insert into public.devices (user_id, name, type, system, helper_version, status)
-  values (v_user_id, p_device_name, p_device_type, p_system, p_helper_version, 'Online')
+  -- Generate a device-scoped secret
+  v_helper_secret := 'helper_' || encode(gen_random_bytes(32), 'hex');
+
+  insert into public.devices (user_id, name, type, system, helper_version, status, helper_secret)
+  values (v_user_id, p_device_name, p_device_type, p_system, p_helper_version, 'Online', v_helper_secret)
   returning id into v_device_id;
 
   update public.profiles set paired = true where id = v_user_id;
   delete from public.pairing_codes where code = p_pairing_code;
 
-  return jsonb_build_object('device_id', v_device_id, 'user_id', v_user_id);
+  return jsonb_build_object('device_id', v_device_id, 'helper_secret', v_helper_secret);
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security invoker;
 
--- Helper heartbeat
+-- Helper heartbeat — requires device secret
 create or replace function public.helper_heartbeat(
   p_device_id uuid,
-  p_user_id uuid,
+  p_helper_secret text,
   p_cpu_usage integer default 0,
   p_memory_usage integer default 0,
   p_active_session_count integer default 0
 )
 returns jsonb as $$
 declare
-  v_found boolean;
+  v_user_id uuid;
 begin
-  select true into v_found
-  from public.devices where id = p_device_id and user_id = p_user_id;
+  -- Authenticate via device secret
+  select user_id into v_user_id
+  from public.devices where id = p_device_id and helper_secret = p_helper_secret;
 
-  if not v_found then
+  if v_user_id is null then
     raise exception 'Device not found or unauthorized';
   end if;
 
   update public.devices set
     status = 'Online', cpu_usage = p_cpu_usage,
     memory_usage = p_memory_usage, last_seen_at = now()
-  where id = p_device_id and user_id = p_user_id;
+  where id = p_device_id and helper_secret = p_helper_secret;
 
   return jsonb_build_object('status', 'ok');
 end;
 $$ language plpgsql security definer;
 
 -- Helper sync — upsert sessions, alerts, provider quotas
+-- Requires device secret for authentication
 create or replace function public.helper_sync(
   p_device_id uuid,
-  p_user_id uuid,
+  p_helper_secret text,
   p_sessions jsonb default '[]'::jsonb,
   p_alerts jsonb default '[]'::jsonb,
   p_provider_remaining jsonb default '{}'::jsonb
 )
 returns jsonb as $$
 declare
-  v_found boolean;
+  v_user_id uuid;
   v_session jsonb;
   v_alert jsonb;
   v_provider text;
@@ -87,10 +99,11 @@ declare
   v_session_count integer := 0;
   v_alert_count integer := 0;
 begin
-  select true into v_found
-  from public.devices where id = p_device_id and user_id = p_user_id;
+  -- Authenticate via device secret
+  select user_id into v_user_id
+  from public.devices where id = p_device_id and helper_secret = p_helper_secret;
 
-  if not v_found then
+  if v_user_id is null then
     raise exception 'Device not found or unauthorized';
   end if;
 
@@ -100,7 +113,7 @@ begin
   for v_session in select * from jsonb_array_elements(p_sessions) loop
     insert into public.sessions (id, user_id, device_id, name, provider, project, status, total_usage, estimated_cost, requests, error_count, collection_confidence, started_at, last_active_at, synced_at)
     values (
-      v_session->>'id', p_user_id, p_device_id,
+      v_session->>'id', v_user_id, p_device_id,
       coalesce(v_session->>'name', ''), v_session->>'provider',
       coalesce(v_session->>'project', ''), coalesce(v_session->>'status', 'Running'),
       coalesce((v_session->>'total_usage')::integer, 0),
@@ -123,7 +136,7 @@ begin
   for v_alert in select * from jsonb_array_elements(p_alerts) loop
     insert into public.alerts (id, user_id, type, severity, title, message, related_project_id, related_project_name, related_session_id, related_session_name, related_provider, related_device_name, source_kind, source_id, grouping_key, suppression_key, created_at)
     values (
-      v_alert->>'id', p_user_id, v_alert->>'type',
+      v_alert->>'id', v_user_id, v_alert->>'type',
       coalesce(v_alert->>'severity', 'Info'), v_alert->>'title',
       coalesce(v_alert->>'message', ''),
       v_alert->>'related_project_id', v_alert->>'related_project_name',
@@ -142,7 +155,7 @@ begin
 
   for v_provider, v_remaining in select * from jsonb_each_text(p_provider_remaining) loop
     insert into public.provider_quotas (user_id, provider, remaining, updated_at)
-    values (p_user_id, v_provider, v_remaining::integer, now())
+    values (v_user_id, v_provider, v_remaining::integer, now())
     on conflict (user_id, provider) do update set
       remaining = excluded.remaining, updated_at = now();
   end loop;

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
+import secrets
 import sqlite3
 import threading
 from dataclasses import dataclass
@@ -171,6 +173,14 @@ class SessionState:
     paired: bool
 
 
+@dataclass
+class HelperSession:
+    """A device-scoped session with limited permissions (helper only)."""
+    helper_token: str
+    user_id: str
+    device_id: str
+
+
 # ── User-facing message templates (i18n) ──
 from .i18n import Msg
 
@@ -227,6 +237,24 @@ TIER_LIMITS: dict[SubscriptionTier, TierLimitsDTO] = {
 }
 
 
+_PBKDF2_ITERATIONS = 600_000
+
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_hex(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), _PBKDF2_ITERATIONS)
+    return f"{salt}${dk.hex()}"
+
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    try:
+        salt, dk_hex = stored_hash.split("$", 1)
+    except ValueError:
+        return False
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), _PBKDF2_ITERATIONS)
+    return secrets.compare_digest(dk.hex(), dk_hex)
+
+
 class SQLiteStore:
     def __init__(self, database_path: str) -> None:
         self.database_path = Path(database_path)
@@ -241,26 +269,27 @@ class SQLiteStore:
     # ── Demo account for App Store review ──
 
     DEMO_EMAIL = "demo@clipulse.app"
-    DEMO_TOKEN = "pulse_demo_appstore_review_2026"
 
     def _ensure_demo_account(self) -> None:
-        """Create or refresh the demo account used by App Store reviewers."""
+        """Create or refresh the demo account used by App Store reviewers.
+
+        Password is read from DEMO_ACCOUNT_PASSWORD env var.
+        If the env var is not set, the demo account is NOT created.
+        """
+        demo_password = os.environ.get("DEMO_ACCOUNT_PASSWORD")
+        if not demo_password:
+            return
         row = self.connection.execute(
             "SELECT id FROM users WHERE email = ?", (self.DEMO_EMAIL,)
         ).fetchone()
         if row is not None:
             return
-        state = self.login(self.DEMO_EMAIL, "Demo User")
+        state = self.register(self.DEMO_EMAIL, demo_password, "Demo User")
+        if state is None:
+            return
         with self.lock:
             self.connection.execute(
                 "UPDATE users SET paired = 1 WHERE id = ?", (state.user.id,)
-            )
-            self.connection.execute(
-                "DELETE FROM auth_tokens WHERE token = ?", (state.token,)
-            )
-            self.connection.execute(
-                "INSERT OR REPLACE INTO auth_tokens (token, user_id, created_at) VALUES (?, ?, ?)",
-                (self.DEMO_TOKEN, state.user.id, now_utc().isoformat()),
             )
             self.connection.commit()
 
@@ -282,66 +311,113 @@ class SQLiteStore:
             paired=bool(row["paired"]),
         )
 
-    def login(self, email: str, name: Optional[str]) -> SessionState:
+    def authenticate_helper(self, token: str) -> Optional[HelperSession]:
+        """Authenticate a helper device token. Returns None if invalid."""
+        row = self.connection.execute(
+            "SELECT device_id, user_id, helper_token FROM device_tokens WHERE helper_token = ?",
+            (token,),
+        ).fetchone()
+        if row is None:
+            return None
+        return HelperSession(
+            helper_token=row["helper_token"],
+            user_id=row["user_id"],
+            device_id=row["device_id"],
+        )
+
+    MIN_PASSWORD_LENGTH = 8
+
+    def register(self, email: str, password: str, name: Optional[str]) -> Optional[SessionState]:
+        """Create a new user account. Returns None if email already exists."""
+        if len(password) < self.MIN_PASSWORD_LENGTH:
+            raise ValueError(f"Password must be at least {self.MIN_PASSWORD_LENGTH} characters")
+        with self.lock:
+            existing = self.connection.execute(
+                "SELECT id FROM users WHERE email = ?", (email,)
+            ).fetchone()
+            if existing is not None:
+                return None
+
+            user_id = str(uuid4())
+            user_name = name or email.split("@")[0].capitalize()
+            pw_hash = hash_password(password)
+            self.connection.execute(
+                """
+                INSERT INTO users (
+                    id, email, name, password_hash, paired, settings_json,
+                    providers_json, sessions_json, devices_json, alerts_json,
+                    created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    user_id,
+                    email,
+                    user_name,
+                    pw_hash,
+                    0,
+                    self._encode_model(
+                        SettingsSnapshotDTO(
+                            notifications_enabled=True,
+                            push_policy=PushPolicy.warnings_and_critical,
+                            digest_notifications_enabled=True,
+                            digest_interval_minutes=15,
+                            usage_spike_threshold=70_000,
+                            project_budget_threshold_usd=0.25,
+                            session_too_long_threshold_minutes=180,
+                            offline_grace_period_minutes=5,
+                            repeated_failure_threshold=3,
+                            alert_cooldown_minutes=30,
+                            data_retention_days=30,
+                            login_method="Email + Password",
+                        )
+                    ),
+                    "[]",
+                    "[]",
+                    "[]",
+                    "[]",
+                    now_utc().isoformat(),
+                ),
+            )
+            now_iso = now_utc().isoformat()
+            self.connection.execute(
+                """
+                INSERT INTO subscriptions
+                    (user_id, tier, status, created_at, updated_at)
+                VALUES (?, 'free', 'active', ?, ?)
+                """,
+                (user_id, now_iso, now_iso),
+            )
+            self._seed_user_data(user_id)
+
+            token = f"pulse_{uuid4().hex}"
+            self.connection.execute(
+                "INSERT INTO auth_tokens (token, user_id, created_at) VALUES (?, ?, ?)",
+                (token, user_id, now_utc().isoformat()),
+            )
+            self.connection.commit()
+
+        return SessionState(
+            token=token,
+            user=UserDTO(id=user_id, name=user_name, email=email),
+            paired=False,
+        )
+
+    def login(self, email: str, password: str) -> Optional[SessionState]:
+        """Authenticate an existing user. Returns None on bad credentials."""
         with self.lock:
             user_row = self.connection.execute(
-                "SELECT id, name, email, paired FROM users WHERE email = ?",
+                "SELECT id, name, email, password_hash, paired FROM users WHERE email = ?",
                 (email,),
             ).fetchone()
 
             if user_row is None:
-                user_id = str(uuid4())
-                user_name = name or email.split("@")[0].capitalize()
-                self.connection.execute(
-                    """
-                    INSERT INTO users (
-                        id, email, name, paired, settings_json, providers_json,
-                        sessions_json, devices_json, alerts_json, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        user_id,
-                        email,
-                        user_name,
-                        0,
-                        self._encode_model(
-                            SettingsSnapshotDTO(
-                                notifications_enabled=True,
-                                push_policy=PushPolicy.warnings_and_critical,
-                                digest_notifications_enabled=True,
-                                digest_interval_minutes=15,
-                                usage_spike_threshold=70_000,
-                                project_budget_threshold_usd=0.25,
-                                session_too_long_threshold_minutes=180,
-                                offline_grace_period_minutes=5,
-                                repeated_failure_threshold=3,
-                                alert_cooldown_minutes=30,
-                                data_retention_days=30,
-                                login_method="Email + Password",
-                            )
-                        ),
-                        "[]",
-                        "[]",
-                        "[]",
-                        "[]",
-                        now_utc().isoformat(),
-                    ),
-                )
-                now_iso = now_utc().isoformat()
-                self.connection.execute(
-                    """
-                    INSERT INTO subscriptions
-                        (user_id, tier, status, created_at, updated_at)
-                    VALUES (?, 'free', 'active', ?, ?)
-                    """,
-                    (user_id, now_iso, now_iso),
-                )
-                self._seed_user_data(user_id)
-                paired = False
-            else:
-                user_id = user_row["id"]
-                user_name = user_row["name"]
-                paired = bool(user_row["paired"])
+                return None
+            if not verify_password(password, user_row["password_hash"]):
+                return None
+
+            user_id = user_row["id"]
+            user_name = user_row["name"]
+            paired = bool(user_row["paired"])
 
             token = f"pulse_{uuid4().hex}"
             self.connection.execute(
@@ -603,43 +679,37 @@ class SQLiteStore:
         return AlertActionResponseDTO(alerts=alerts)
 
     def register_helper(self, payload: HelperRegisterRequestDTO) -> Optional[HelperRegisterResponseDTO]:
-        row = self.connection.execute(
-            "SELECT user_id, expires_at FROM pairing_codes WHERE code = ?",
-            (payload.pairing_code,),
-        ).fetchone()
-        if row is None:
-            return None
-        if datetime.fromisoformat(row["expires_at"]) < now_utc():
-            return None
-
-        user_id = row["user_id"]
-        device_id = f"device_{payload.device_name.lower().replace(' ', '-')}_{payload.helper_version.replace('.', '-')}"
+        device_id = f"device_{uuid4().hex[:16]}"
+        helper_token = f"helper_{uuid4().hex}"
 
         with self.lock:
+            # Validate + delete pairing code atomically to prevent TOCTOU race
+            row = self.connection.execute(
+                "SELECT user_id, expires_at FROM pairing_codes WHERE code = ?",
+                (payload.pairing_code,),
+            ).fetchone()
+            if row is None:
+                return None
+            if datetime.fromisoformat(row["expires_at"]) < now_utc():
+                self.connection.execute(
+                    "DELETE FROM pairing_codes WHERE code = ?", (payload.pairing_code,)
+                )
+                self.connection.commit()
+                return None
+
+            user_id = row["user_id"]
+            self.connection.execute(
+                "DELETE FROM pairing_codes WHERE code = ?", (payload.pairing_code,)
+            )
             self.connection.execute("UPDATE users SET paired = 1 WHERE id = ?", (user_id,))
             self.connection.execute(
                 """
-                INSERT INTO device_tokens (device_id, user_id, created_at, last_seen)
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT(device_id) DO UPDATE SET user_id = excluded.user_id, last_seen = excluded.last_seen
+                INSERT INTO device_tokens (device_id, user_id, helper_token, created_at, last_seen)
+                VALUES (?, ?, ?, ?, ?)
                 """,
-                (device_id, user_id, now_utc().isoformat(), now_utc().isoformat()),
+                (device_id, user_id, helper_token, now_utc().isoformat(), now_utc().isoformat()),
             )
             self.connection.commit()
-
-        state = self._session_for_user(user_id)
-        if state is None:
-            token = f"pulse_{uuid4().hex}"
-            with self.lock:
-                self.connection.execute(
-                    "INSERT INTO auth_tokens (token, user_id, created_at) VALUES (?, ?, ?)",
-                    (token, user_id, now_utc().isoformat()),
-                )
-                self.connection.commit()
-            state = self.authenticate(token)
-
-        if state is None:
-            raise PermissionError("Failed to create session for paired device")
         devices = self._load_models(user_id, "devices_json", DeviceRecordDTO)
         existing = next((item for item in devices if item.id == device_id), None)
         if existing is None:
@@ -664,14 +734,32 @@ class SQLiteStore:
             )
             self._save_models(user_id, "devices_json", devices)
 
-        return HelperRegisterResponseDTO(device_id=device_id, access_token=state.token)
+        return HelperRegisterResponseDTO(device_id=device_id, access_token=helper_token)
+
+    def _require_helper_or_session(self, token: str, device_id: str) -> str:
+        """Authenticate a helper or user token and return the user_id.
+
+        For helper tokens: validates the token belongs to the specified device.
+        For user tokens: validates the device belongs to the user.
+        """
+        helper = self.authenticate_helper(token)
+        if helper is not None:
+            if helper.device_id != device_id:
+                raise PermissionError("Device does not match helper token")
+            return helper.user_id
+
+        state = self.authenticate(token)
+        if state is not None:
+            if not self._device_belongs_to_user(device_id, state.user.id):
+                raise PermissionError("Device does not belong to token")
+            return state.user.id
+
+        raise PermissionError("Invalid token")
 
     def helper_heartbeat(self, token: str, payload: HelperHeartbeatRequestDTO) -> SuccessDTO:
-        state = self._require_session(token)
-        if not self._device_belongs_to_user(payload.device_id, state.user.id):
-            raise PermissionError("Device does not belong to token")
+        user_id = self._require_helper_or_session(token, payload.device_id)
 
-        devices = self._load_models(state.user.id, "devices_json", DeviceRecordDTO)
+        devices = self._load_models(user_id, "devices_json", DeviceRecordDTO)
         for device in devices:
             if device.id == payload.device_id:
                 device.status = DeviceStatus.online
@@ -687,9 +775,9 @@ class SQLiteStore:
                 )
                 device.heartbeat_timeline = device.heartbeat_timeline[-MAX_HEARTBEAT_TIMELINE:]
                 break
-        self._save_models(state.user.id, "devices_json", devices)
-        self._apply_helper_offline_rules(state.user.id)
-        self._apply_session_failure_rules(state.user.id)
+        self._save_models(user_id, "devices_json", devices)
+        self._apply_helper_offline_rules(user_id)
+        self._apply_session_failure_rules(user_id)
 
         with self.lock:
             self.connection.execute(
@@ -701,11 +789,9 @@ class SQLiteStore:
         return SuccessDTO()
 
     def helper_sync(self, token: str, payload: HelperSyncRequestDTO) -> SuccessDTO:
-        state = self._require_session(token)
-        if not self._device_belongs_to_user(payload.device_id, state.user.id):
-            raise PermissionError("Device does not belong to token")
+        user_id = self._require_helper_or_session(token, payload.device_id)
 
-        devices = self._load_models(state.user.id, "devices_json", DeviceRecordDTO)
+        devices = self._load_models(user_id, "devices_json", DeviceRecordDTO)
         device_name = next((item.name for item in devices if item.id == payload.device_id), payload.device_id)
 
         synced_sessions: list[SessionRecordDTO] = []
@@ -735,10 +821,10 @@ class SQLiteStore:
                 )
             )
 
-        existing_sessions = [item for item in self._load_models(state.user.id, "sessions_json", SessionRecordDTO) if item.device_name != device_name]
-        self._save_models(state.user.id, "sessions_json", synced_sessions + existing_sessions)
+        existing_sessions = [item for item in self._load_models(user_id, "sessions_json", SessionRecordDTO) if item.device_name != device_name]
+        self._save_models(user_id, "sessions_json", synced_sessions + existing_sessions)
 
-        providers = self._load_models(state.user.id, "providers_json", ProviderUsageDTO)
+        providers = self._load_models(user_id, "providers_json", ProviderUsageDTO)
         provider_totals: dict[ProviderKind, int] = {kind: 0 for kind in ProviderKind}
         for item in payload.sessions:
             provider_totals[item.provider] = provider_totals.get(item.provider, 0) + item.total_usage
@@ -751,9 +837,9 @@ class SQLiteStore:
             provider.estimated_cost_week, provider.cost_status_week = self._resolve_cost(provider.provider, provider.week_usage)
             provider.recent_session_names = [item.name for item in synced_sessions if item.provider == provider.provider][:MAX_RECENT_SESSION_NAMES]
             provider.metadata = PROVIDER_METADATA.get(provider.provider)
-        self._save_models(state.user.id, "providers_json", providers)
+        self._save_models(user_id, "providers_json", providers)
 
-        alerts = self._load_models(state.user.id, "alerts_json", AlertRecordDTO)
+        alerts = self._load_models(user_id, "alerts_json", AlertRecordDTO)
         alert_ids = {item.id for item in alerts}
         for item in payload.alerts:
             if item.id not in alert_ids:
@@ -776,7 +862,7 @@ class SQLiteStore:
                         related_device_name=item.related_device_name,
                     )
                 )
-        self._save_models(state.user.id, "alerts_json", alerts)
+        self._save_models(user_id, "alerts_json", alerts)
 
         for device in devices:
             if device.id == payload.device_id:
@@ -785,15 +871,15 @@ class SQLiteStore:
                 device.current_session_count = len(synced_sessions)
                 device.last_sync_at = now_utc()
                 break
-        self._save_models(state.user.id, "devices_json", devices)
-        self._apply_helper_offline_rules(state.user.id)
-        self._apply_usage_spike_rules(state.user.id)
-        self._apply_session_failure_rules(state.user.id)
-        self._apply_session_duration_rules(state.user.id)
-        self._apply_project_budget_rules(state.user.id)
-        self._apply_cost_spike_rules(state.user.id)
-        self._apply_error_rate_spike_rules(state.user.id)
-        self._apply_quota_critical_rules(state.user.id)
+        self._save_models(user_id, "devices_json", devices)
+        self._apply_helper_offline_rules(user_id)
+        self._apply_usage_spike_rules(user_id)
+        self._apply_session_failure_rules(user_id)
+        self._apply_session_duration_rules(user_id)
+        self._apply_project_budget_rules(user_id)
+        self._apply_cost_spike_rules(user_id)
+        self._apply_error_rate_spike_rules(user_id)
+        self._apply_quota_critical_rules(user_id)
 
         return SuccessDTO()
 
@@ -871,6 +957,7 @@ class SQLiteStore:
                     id TEXT PRIMARY KEY,
                     email TEXT NOT NULL UNIQUE,
                     name TEXT NOT NULL,
+                    password_hash TEXT NOT NULL DEFAULT '',
                     paired INTEGER NOT NULL DEFAULT 0,
                     settings_json TEXT NOT NULL,
                     providers_json TEXT NOT NULL,
@@ -896,6 +983,7 @@ class SQLiteStore:
                 CREATE TABLE IF NOT EXISTS device_tokens (
                     device_id TEXT PRIMARY KEY,
                     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    helper_token TEXT UNIQUE,
                     created_at TEXT NOT NULL,
                     last_seen TEXT NOT NULL
                 );
@@ -913,6 +1001,13 @@ class SQLiteStore:
                     apple_product_id TEXT,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS verified_transactions (
+                    transaction_id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    product_id TEXT NOT NULL,
+                    verified_at TEXT NOT NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS teams (
@@ -1105,41 +1200,131 @@ class SQLiteStore:
     def verify_apple_receipt(self, token: str, receipt_data: str) -> SubscriptionDTO:
         """Verify an Apple StoreKit 2 JWS transaction and update subscription.
 
-        In a full implementation this would:
-        1. Decode the JWS (JSON Web Signature) payload
-        2. Verify the signature against Apple's certificate chain
-        3. Extract productId and transactionId
-        4. Map productId to a subscription tier
+        Performs:
+        1. JWS structural validation (header.payload.signature)
+        2. Signature verification via the x5c certificate chain
+        3. Certificate chain validation against Apple's root CA
+        4. Product ID mapping to subscription tier
 
-        For now we perform basic structure validation and decode the
-        product ID from the JWS payload if possible.
+        Set CLI_PULSE_SKIP_JWS_VERIFY=1 only for local development/testing.
         """
         import base64
+
+        import jwt
+        from cryptography.x509 import load_der_x509_certificate
 
         state = self._require_session(token)
 
         if not receipt_data or not isinstance(receipt_data, str):
             raise ValueError("receipt_data must be a non-empty string")
 
-        # StoreKit 2 sends a JWS (three base64url segments separated by dots)
         parts = receipt_data.split(".")
         if len(parts) != 3:
             raise ValueError("Invalid JWS format — expected header.payload.signature")
 
-        try:
-            # Decode the payload (second segment) to extract product info
-            padded = parts[1] + "=" * (-len(parts[1]) % 4)
-            payload = json.loads(base64.urlsafe_b64decode(padded))
-        except Exception as exc:
-            raise ValueError(f"Failed to decode JWS payload: {exc}") from exc
+        skip_verify = os.environ.get("CLI_PULSE_SKIP_JWS_VERIFY") == "1"
+
+        if skip_verify:
+            # Dev/test mode: decode without signature verification
+            try:
+                padded = parts[1] + "=" * (-len(parts[1]) % 4)
+                payload = json.loads(base64.urlsafe_b64decode(padded))
+            except Exception as exc:
+                raise ValueError(f"Failed to decode JWS payload: {exc}") from exc
+        else:
+            # Production: verify JWS signature AND full x5c chain to Apple Root CA
+            from cryptography.hazmat.primitives.asymmetric import ec, utils as asym_utils
+            from cryptography.hazmat.primitives.hashes import SHA256
+            from cryptography.x509 import load_der_x509_certificate
+            from datetime import timezone
+
+            try:
+                unverified_header = jwt.get_unverified_header(receipt_data)
+            except jwt.exceptions.DecodeError as exc:
+                raise ValueError(f"Invalid JWS header: {exc}") from exc
+
+            x5c = unverified_header.get("x5c")
+            if not x5c or not isinstance(x5c, list) or len(x5c) < 2:
+                raise ValueError("JWS header missing x5c certificate chain (need leaf + intermediate)")
+
+            # Parse all certs in the chain
+            try:
+                certs = [load_der_x509_certificate(base64.b64decode(c)) for c in x5c]
+            except Exception as exc:
+                raise ValueError(f"Failed to parse x5c certificates: {exc}") from exc
+
+            # Verify chain: each cert[i] must be signed by cert[i+1]
+            now_dt = datetime.now(timezone.utc)
+            for i, cert in enumerate(certs):
+                # Check validity period
+                if now_dt < cert.not_valid_before_utc or now_dt > cert.not_valid_after_utc:
+                    raise ValueError(f"Certificate {i} is not within its validity period")
+
+                if i < len(certs) - 1:
+                    # Verify cert[i] was signed by cert[i+1]
+                    issuer_pub = certs[i + 1].public_key()
+                    try:
+                        issuer_pub.verify(
+                            cert.signature,
+                            cert.tbs_certificate_bytes,
+                            ec.ECDSA(cert.signature_hash_algorithm),
+                        )
+                    except Exception:
+                        raise ValueError(f"Certificate chain verification failed at depth {i}")
+
+            # Verify the root (last cert) is Apple Root CA - G3
+            # SHA-256 fingerprint of Apple Root CA - G3
+            root_cert = certs[-1]
+            root_fingerprint = root_cert.fingerprint(SHA256()).hex()
+            apple_root_g3_fingerprint = (
+                "b0b1730ecbc7ff4505142c49f1295e6eda6bcaed7e2c68c5"
+                "be91b5a11001f024"
+            )
+            if root_fingerprint != apple_root_g3_fingerprint:
+                raise ValueError("Certificate chain does not terminate at Apple Root CA")
+
+            # Use the leaf cert's public key to verify the JWS signature
+            public_key = certs[0].public_key()
+            alg = unverified_header.get("alg", "ES256")
+            try:
+                payload = jwt.decode(
+                    receipt_data,
+                    public_key,
+                    algorithms=[alg],
+                    options={"verify_exp": False, "verify_aud": False},
+                )
+            except jwt.exceptions.InvalidSignatureError:
+                raise ValueError("JWS signature verification failed")
+            except jwt.exceptions.DecodeError as exc:
+                raise ValueError(f"JWS decode error: {exc}") from exc
 
         product_id = payload.get("productId") or payload.get("product_id", "")
         transaction_id = str(payload.get("transactionId") or payload.get("transaction_id", ""))
         original_transaction_id = str(payload.get("originalTransactionId") or payload.get("original_transaction_id", transaction_id))
 
+        if not transaction_id:
+            raise ValueError("Receipt missing transactionId")
+
         tier = self.APPLE_PRODUCT_TIER_MAP.get(product_id)
         if tier is None:
             raise ValueError(f"Unknown Apple product ID: {product_id}")
+
+        # Atomic replay protection: check + insert inside the lock
+        with self.lock:
+            existing = self.connection.execute(
+                "SELECT user_id FROM verified_transactions WHERE transaction_id = ?",
+                (transaction_id,),
+            ).fetchone()
+            if existing is not None:
+                if existing["user_id"] != state.user.id:
+                    raise ValueError("Transaction already claimed by another account")
+                return self.get_subscription(token)
+
+            self.connection.execute(
+                "INSERT INTO verified_transactions (transaction_id, user_id, product_id, verified_at) VALUES (?, ?, ?, ?)",
+                (transaction_id, state.user.id, product_id, now_utc().isoformat()),
+            )
+            self.connection.commit()
 
         return self.update_subscription(
             token,

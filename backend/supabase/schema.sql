@@ -84,6 +84,7 @@ create table public.devices (
   status text not null default 'Offline',
   cpu_usage integer not null default 0,
   memory_usage integer not null default 0,
+  helper_secret text,
   last_seen_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
@@ -105,9 +106,6 @@ alter table public.pairing_codes enable row level security;
 
 create policy "Users can manage own pairing codes"
   on public.pairing_codes for all using (auth.uid() = user_id);
--- Helper registration needs to read pairing codes by code (service role)
-create policy "Service can read pairing codes"
-  on public.pairing_codes for select using (true);
 
 -- ── Sessions ──
 create table public.sessions (
@@ -189,9 +187,8 @@ alter table public.subscriptions enable row level security;
 
 create policy "Users can view own subscription"
   on public.subscriptions for select using (auth.uid() = user_id);
--- Only service role can modify subscriptions (via Apple receipt verification)
-create policy "Service can manage subscriptions"
-  on public.subscriptions for all using (true);
+-- Service role (backend) manages subscriptions via Apple receipt verification.
+-- No public write policy — only service_role key can update subscriptions.
 
 -- Auto-create free subscription on profile creation
 create or replace function public.handle_new_subscription()

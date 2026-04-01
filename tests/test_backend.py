@@ -42,7 +42,7 @@ def _recent_iso(hours_ago: int = 1) -> str:
 
 def auth_headers(client: TestClient) -> dict[str, str]:
     response = client.post(
-        "/v1/auth/sign-in",
+        "/v1/auth/create-account",
         json={"email": "jason@example.com", "password": "password123"},
     )
     assert response.status_code == 200
@@ -418,7 +418,7 @@ def test_apple_receipt_verify_rejects_invalid(client: TestClient) -> None:
     )
     assert response.status_code == 400  # Invalid JWS format
 
-    # Valid JWS structure but unknown product
+    # Valid JWS structure but unknown product (dev mode to skip sig verify)
     import base64, json as _json
     header = base64.urlsafe_b64encode(b'{"alg":"ES256"}').rstrip(b"=").decode()
     payload = base64.urlsafe_b64encode(
@@ -427,26 +427,52 @@ def test_apple_receipt_verify_rejects_invalid(client: TestClient) -> None:
     sig = base64.urlsafe_b64encode(b"fakesig").rstrip(b"=").decode()
     jws = f"{header}.{payload}.{sig}"
 
-    response = client.post(
-        "/v1/subscription/verify",
-        headers=headers,
-        json={"receipt_data": jws},
-    )
+    with patch.dict("os.environ", {"CLI_PULSE_SKIP_JWS_VERIFY": "1"}):
+        response = client.post(
+            "/v1/subscription/verify",
+            headers=headers,
+            json={"receipt_data": jws},
+        )
     assert response.status_code == 400  # Unknown product ID
 
-    # Valid JWS with known product should upgrade
+    # Valid JWS with known product should upgrade (dev mode)
     payload_pro = base64.urlsafe_b64encode(
         _json.dumps({"productId": "clipulse_pro_monthly", "transactionId": "txn_456"}).encode()
     ).rstrip(b"=").decode()
     jws_pro = f"{header}.{payload_pro}.{sig}"
 
-    response = client.post(
-        "/v1/subscription/verify",
-        headers=headers,
-        json={"receipt_data": jws_pro},
-    )
+    with patch.dict("os.environ", {"CLI_PULSE_SKIP_JWS_VERIFY": "1"}):
+        response = client.post(
+            "/v1/subscription/verify",
+            headers=headers,
+            json={"receipt_data": jws_pro},
+        )
     assert response.status_code == 200
     assert response.json()["tier"] == "pro"
+
+
+def test_apple_receipt_rejects_fake_jws_in_production(client: TestClient) -> None:
+    """Without CLI_PULSE_SKIP_JWS_VERIFY, a fake JWS signature must be rejected."""
+    headers = auth_headers(client)
+    import base64, json as _json
+
+    header = base64.urlsafe_b64encode(b'{"alg":"ES256"}').rstrip(b"=").decode()
+    payload = base64.urlsafe_b64encode(
+        _json.dumps({"productId": "clipulse_pro_monthly", "transactionId": "txn_999"}).encode()
+    ).rstrip(b"=").decode()
+    sig = base64.urlsafe_b64encode(b"fakesig").rstrip(b"=").decode()
+    jws = f"{header}.{payload}.{sig}"
+
+    # Ensure skip is NOT set
+    with patch.dict("os.environ", {}, clear=False):
+        import os as _os
+        _os.environ.pop("CLI_PULSE_SKIP_JWS_VERIFY", None)
+        response = client.post(
+            "/v1/subscription/verify",
+            headers=headers,
+            json={"receipt_data": jws},
+        )
+    assert response.status_code == 400  # Missing x5c or invalid signature
 
 
 def test_team_requires_team_tier(client: TestClient) -> None:
@@ -500,7 +526,7 @@ def test_team_lifecycle(client: TestClient) -> None:
 
     # Create second user and accept invite
     second_user_response = client.post(
-        "/v1/auth/sign-in",
+        "/v1/auth/create-account",
         json={"email": "teammate@example.com", "password": "password123"},
     )
     assert second_user_response.status_code == 200
@@ -832,3 +858,65 @@ def test_collect_all_graceful_degradation() -> None:
     assert result.helper_version == HELPER_VERSION
     # Device snapshot should still work
     assert isinstance(result.device, DeviceSnapshot)
+
+
+# ── Negative auth tests (P0-1) ──────────────────────────────────────────
+
+
+def test_sign_in_wrong_password_returns_401(client: TestClient) -> None:
+    """Login with wrong password must be rejected."""
+    client.post(
+        "/v1/auth/create-account",
+        json={"email": "user@example.com", "password": "correct_pw"},
+    )
+    response = client.post(
+        "/v1/auth/sign-in",
+        json={"email": "user@example.com", "password": "wrong_pw"},
+    )
+    assert response.status_code == 401
+
+
+def test_sign_in_nonexistent_email_returns_401(client: TestClient) -> None:
+    """Login with unknown email must be rejected."""
+    response = client.post(
+        "/v1/auth/sign-in",
+        json={"email": "nobody@example.com", "password": "whatever"},
+    )
+    assert response.status_code == 401
+
+
+def test_create_duplicate_account_returns_409(client: TestClient) -> None:
+    """Registering an already-used email must fail."""
+    client.post(
+        "/v1/auth/create-account",
+        json={"email": "dup@example.com", "password": "password123"},
+    )
+    response = client.post(
+        "/v1/auth/create-account",
+        json={"email": "dup@example.com", "password": "password456"},
+    )
+    assert response.status_code == 409
+
+
+def test_short_password_rejected(client: TestClient) -> None:
+    """Passwords shorter than 8 characters must be rejected."""
+    response = client.post(
+        "/v1/auth/create-account",
+        json={"email": "short@example.com", "password": "abc"},
+    )
+    assert response.status_code == 400
+    assert "at least" in response.json()["detail"]
+
+
+def test_sign_in_after_create_account_works(client: TestClient) -> None:
+    """Login after registration with correct password must succeed."""
+    client.post(
+        "/v1/auth/create-account",
+        json={"email": "flow@example.com", "password": "secret123"},
+    )
+    response = client.post(
+        "/v1/auth/sign-in",
+        json={"email": "flow@example.com", "password": "secret123"},
+    )
+    assert response.status_code == 200
+    assert "access_token" in response.json()
