@@ -46,16 +46,18 @@ Do not assume the public GitHub repository should contain full source.
 
 ## Git Rules
 
-- Do **not** push product source changes to the public `origin` repo unless the
-  task is explicitly about public website/distribution content only.
-- Use a private repository for source development.
-- Treat the public repo as distribution-facing unless explicitly told otherwise.
-- Before any push, check whether the target remote is public or private.
+- `origin` is the private source repository.
+- `public` is the public distribution repository.
+- Do **not** push product source changes to `public` unless the task is
+  explicitly about public website/distribution content only.
+- Treat the public repo as distribution-facing unless explicitly told
+  otherwise.
+- Before any push, check whether the target remote is `origin` or `public`.
 
 ## Current Repo Reality
 
-- `origin` currently points to the public `cli-pulse` GitHub repo.
-- A private source repo should be used for ongoing development.
+- `origin` points to the private `cli-pulse-private` repo.
+- `public` points to the public `cli-pulse` repo.
 - Public GitHub Pages and GitHub Releases may still be used for:
   - website pages
   - legal pages

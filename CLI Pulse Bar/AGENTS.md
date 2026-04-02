@@ -10,8 +10,9 @@ Before making changes here, read:
 
 Important:
 
-- `origin` may be a public distribution repo
-- do not push app source to a public remote by default
+- `origin` is the private source repo
+- `public` is the public distribution repo
+- do not push app source to `public` by default
 - validate shared code with:
 
 ```bash
