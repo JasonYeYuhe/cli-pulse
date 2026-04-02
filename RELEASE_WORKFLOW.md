@@ -88,6 +88,13 @@ export NOTARYTOOL_KEYCHAIN_PROFILE="cli-pulse-notary"
 
 `cli-pulse-notary` is the default profile name expected by the release script.
 
+Current validated local values for this workspace:
+
+```bash
+export DEVELOPER_ID_APPLICATION="Developer ID Application: Yuhe Ye (KHMK6Q3L3K)"
+export NOTARYTOOL_KEYCHAIN_PROFILE="cli-pulse-notary"
+```
+
 Create the notary profile once:
 
 ```bash
@@ -102,6 +109,12 @@ Build a notarized DMG:
 ```bash
 cd "CLI Pulse Bar"
 ./scripts/build-release.sh --notarize
+```
+
+Current output path:
+
+```bash
+~/Library/Caches/CLI-Pulse-Bar-release/CLI-Pulse-Bar-vX.Y.Z.dmg
 ```
 
 If the machine only has `Apple Development` and not `Developer ID Application`,

@@ -57,6 +57,18 @@ Do not assume the public GitHub repository should contain full source.
 - Public releases/tags are expected to point to distribution-only commits, not
   source commits.
 
+## Branching Rule
+
+- Treat private `main` as the integration branch.
+- Start normal feature work from private `main`, not from older task branches.
+- Use one task branch per unit of work, for example:
+  - `codex/onboarding-pairing-ux`
+  - `codex/provider-fix-gemini`
+  - `codex/release-1-1-4`
+- Do not stack unrelated work onto `codex/provider-sync-repo-cleanup` or other
+  long-lived branches unless the intent is to ship those changes together.
+- Keep public distribution work isolated from app/helper/backend feature work.
+
 ## Current Repo Reality
 
 - `origin` points to the private `cli-pulse-private` repo.
