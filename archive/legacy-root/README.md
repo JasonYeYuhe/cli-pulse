@@ -15,6 +15,9 @@ Archived here:
   - Review process notes.
 - `gemini-review-feedback.md`
   - Review process notes.
+- `CLI_Pulse_Bar_Review_Feedback.md`
+  - Internal architecture and review notes, not part of the active product
+    path.
 - `invitation.html`
   - Legacy static page not referenced by the current app.
 

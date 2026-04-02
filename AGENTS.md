@@ -122,5 +122,7 @@ swift test --package-path "CLI Pulse Bar/CLIPulseCore"
 1. Read this file first.
 2. Read `/Users/jason/Documents/cli pulse/README.md`.
 3. Read `/Users/jason/Documents/cli pulse/REPO_VISIBILITY_STRATEGY.md`.
-4. Treat the app/helper/backend logic as private product IP.
-5. Do not publish source changes to the public repo by default.
+4. Read `/Users/jason/Documents/cli pulse/RELEASE_WORKFLOW.md` before doing
+   release or distribution work.
+5. Treat the app/helper/backend logic as private product IP.
+6. Do not publish source changes to the public repo by default.

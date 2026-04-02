@@ -71,3 +71,4 @@ swift test --package-path "CLI Pulse Bar/CLIPulseCore"
   `helper/`.
 - If you are looking for the live backend contract, start in
   `backend/supabase/`.
+- If you are preparing a release, read `RELEASE_WORKFLOW.md`.

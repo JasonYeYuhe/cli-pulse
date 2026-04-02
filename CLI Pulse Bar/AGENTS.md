@@ -7,6 +7,7 @@ Before making changes here, read:
 - `/Users/jason/Documents/cli pulse/AGENTS.md`
 - `/Users/jason/Documents/cli pulse/README.md`
 - `/Users/jason/Documents/cli pulse/REPO_VISIBILITY_STRATEGY.md`
+- `/Users/jason/Documents/cli pulse/RELEASE_WORKFLOW.md`
 
 Important:
 
