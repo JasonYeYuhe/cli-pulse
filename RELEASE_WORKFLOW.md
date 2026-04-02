@@ -68,6 +68,41 @@ Recommended output naming:
 
 - `CLI-Pulse-Bar-vX.Y.Z.dmg`
 
+### Signing and notarization prerequisites
+
+For a DMG that opens without the extra Gatekeeper override flow, this machine
+must have:
+
+- a `Developer ID Application` certificate installed in Keychain
+- notarization credentials configured for `notarytool`
+
+Recommended setup:
+
+```bash
+export DEVELOPER_ID_APPLICATION="Developer ID Application: Your Name (TEAMID)"
+export NOTARYTOOL_KEYCHAIN_PROFILE="cli-pulse-notary"
+```
+
+Create the notary profile once:
+
+```bash
+xcrun notarytool store-credentials "cli-pulse-notary" \
+  --apple-id "YOUR_APPLE_ID" \
+  --team-id "YOUR_TEAM_ID" \
+  --password "APP_SPECIFIC_PASSWORD"
+```
+
+Build a notarized DMG:
+
+```bash
+cd "CLI Pulse Bar"
+./scripts/build-release.sh --notarize
+```
+
+If the machine only has `Apple Development` and not `Developer ID Application`,
+outside-App-Store distribution will still trigger Gatekeeper warnings. Do not
+publish that build as the "fixed" public release.
+
 ### 4. Prepare public-facing content
 
 Update public-facing content only if needed:
@@ -88,6 +123,15 @@ Use the public repo only for distribution steps:
 2. Create or update the public release notes.
 3. Create the release tag on the public distribution history.
 4. Upload the DMG asset to the public GitHub Release.
+
+Example:
+
+```bash
+gh release create "vX.Y.Z" "CLI-Pulse-Bar-vX.Y.Z.dmg#CLI-Pulse-Bar-vX.Y.Z.dmg" \
+  --repo JasonYeYuhe/cli-pulse \
+  --title "CLI Pulse vX.Y.Z" \
+  --notes-file /tmp/cli-pulse-release-notes.md
+```
 
 Important:
 

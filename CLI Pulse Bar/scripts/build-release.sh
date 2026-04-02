@@ -26,6 +26,34 @@ if [[ "${1:-}" == "--notarize" ]]; then
     NOTARIZE=true
 fi
 
+DEVELOPER_ID_APPLICATION="${DEVELOPER_ID_APPLICATION:-}"
+NOTARYTOOL_KEYCHAIN_PROFILE="${NOTARYTOOL_KEYCHAIN_PROFILE:-}"
+
+if [[ -z "$DEVELOPER_ID_APPLICATION" ]]; then
+    DEVELOPER_ID_APPLICATION=$(security find-identity -v -p codesigning 2>/dev/null | sed -n 's/.*"\\(Developer ID Application:.*\\)"/\\1/p' | head -n 1)
+fi
+
+USE_DEVELOPER_ID=false
+if [[ -n "$DEVELOPER_ID_APPLICATION" ]]; then
+    USE_DEVELOPER_ID=true
+fi
+
+if [[ "$NOTARIZE" == true && "$USE_DEVELOPER_ID" != true ]]; then
+    echo "ERROR: --notarize requested but no Developer ID Application certificate was found."
+    echo "Install a certificate like:"
+    echo "  Developer ID Application: <Your Name> (<TEAM_ID>)"
+    exit 1
+fi
+
+if [[ "$NOTARIZE" == true && -z "$NOTARYTOOL_KEYCHAIN_PROFILE" && ( -z "${APPLE_ID:-}" || -z "${APPLE_TEAM_ID:-}" || -z "${APPLE_APP_PASSWORD:-}" ) ]]; then
+    echo "ERROR: --notarize requested but notarytool credentials are not configured."
+    echo "Set one of:"
+    echo "  NOTARYTOOL_KEYCHAIN_PROFILE=<profile>"
+    echo "or:"
+    echo "  APPLE_ID / APPLE_TEAM_ID / APPLE_APP_PASSWORD"
+    exit 1
+fi
+
 echo "================================================"
 echo "  CLI Pulse Bar - Release Build v${VERSION}"
 echo "================================================"
@@ -68,10 +96,19 @@ else
     exit 1
 fi
 
-# Ad-hoc sign
-echo "[4/6] Code signing (ad-hoc)..."
+# Sign app
+if [[ "$USE_DEVELOPER_ID" == true ]]; then
+    echo "[4/6] Code signing (Developer ID)..."
+else
+    echo "[4/6] Code signing (ad-hoc)..."
+fi
 xattr -cr "$EXPORT_PATH/$APP_NAME.app"
-codesign --force --deep --sign - "$EXPORT_PATH/$APP_NAME.app"
+if [[ "$USE_DEVELOPER_ID" == true ]]; then
+    codesign --force --deep --options runtime --timestamp --sign "$DEVELOPER_ID_APPLICATION" "$EXPORT_PATH/$APP_NAME.app"
+else
+    codesign --force --deep --sign - "$EXPORT_PATH/$APP_NAME.app"
+fi
+codesign --verify --deep --strict "$EXPORT_PATH/$APP_NAME.app"
 echo "  Signed successfully"
 
 # Create DMG
@@ -90,31 +127,32 @@ hdiutil create \
     -quiet
 
 rm -rf "$DMG_STAGING"
+
+if [[ "$USE_DEVELOPER_ID" == true ]]; then
+    xattr -cr "$DMG_FINAL"
+    codesign --force --sign "$DEVELOPER_ID_APPLICATION" --timestamp "$DMG_FINAL"
+fi
+
 echo "  DMG created: $DMG_FINAL"
 
 # Notarize (optional)
 if [[ "$NOTARIZE" == true ]]; then
     echo "[6/6] Notarizing..."
-    echo ""
-    echo "  To notarize, you need an Apple Developer account."
-    echo "  Set these environment variables:"
-    echo "    APPLE_ID=your@email.com"
-    echo "    APPLE_TEAM_ID=YOUR_TEAM_ID"
-    echo "    APPLE_APP_PASSWORD=app-specific-password"
-    echo ""
-
-    if [[ -n "${APPLE_ID:-}" && -n "${APPLE_TEAM_ID:-}" && -n "${APPLE_APP_PASSWORD:-}" ]]; then
+    if [[ -n "$NOTARYTOOL_KEYCHAIN_PROFILE" ]]; then
+        xcrun notarytool submit "$DMG_FINAL" \
+            --keychain-profile "$NOTARYTOOL_KEYCHAIN_PROFILE" \
+            --wait
+    else
         xcrun notarytool submit "$DMG_FINAL" \
             --apple-id "$APPLE_ID" \
             --team-id "$APPLE_TEAM_ID" \
             --password "$APPLE_APP_PASSWORD" \
             --wait
-
-        xcrun stapler staple "$DMG_FINAL"
-        echo "  Notarization complete!"
-    else
-        echo "  Skipping - environment variables not set"
     fi
+
+    xcrun stapler staple "$DMG_FINAL"
+    xcrun stapler validate "$DMG_FINAL"
+    echo "  Notarization complete!"
 else
     echo "[6/6] Skipping notarization (use --notarize to enable)"
 fi
