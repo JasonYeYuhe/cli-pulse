@@ -3,48 +3,51 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A10001 /* CLIPulseBarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10001; };
-		A10006 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10006; };
-		A10007 /* OverviewTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10007; };
-		A10008 /* ProvidersTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10008; };
-		A10009 /* SessionsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10009; };
-		A10010 /* AlertsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10010; };
-		A10011 /* SettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10011; };
-		A10012 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10012; };
-		A20001 /* CLIPulseApp_iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20001; };
-		A20006 /* iOSMainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20002; };
-		A20007 /* iOSLoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20003; };
-		A20008 /* iOSOverviewTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20004; };
-		A20009 /* iOSProvidersTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20005; };
-		A20010 /* iOSSessionsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20006; };
-		A20011 /* iOSAlertsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20007; };
-		A20012 /* iOSSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20008; };
-		A20013 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B20009; };
-		A30001 /* CLIPulseApp_Watch.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30001; };
-		A30002 /* WatchMainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30002; };
-		A30003 /* WatchLoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30003; };
-		A30004 /* WatchOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30004; };
-		A30005 /* WatchProvidersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30005; };
-		A30006 /* WatchSessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30006; };
-		A30007 /* WatchAlertsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30007; };
-		A30009 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30011; };
-		A30008 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B30008; };
-		A40001 /* CLIPulseWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40001; };
-		A40002 /* WidgetDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40002; };
-		A40003 /* UsageOverviewWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40003; };
-		A40004 /* ProviderUsageWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40004; };
-		A40005 /* LockScreenWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40005; };
-		A40006 /* WidgetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40006; };
-		A40007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B40007; };
-		A40010 /* CLI Pulse Widgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C40001; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		A50001 /* CLI Pulse Watch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = C30001; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		PKG00004 /* CLIPulseCore in Frameworks */ = {isa = PBXBuildFile; productRef = PKG00002; };
-		PKG00005 /* CLIPulseCore in Frameworks */ = {isa = PBXBuildFile; productRef = PKG00003; };
-		PKG00007 /* CLIPulseCore in Frameworks */ = {isa = PBXBuildFile; productRef = PKG00006; };
+		96A0197E2F7D031400C09EBE /* (null) in Frameworks */ = {isa = PBXBuildFile; };
+		96A0197F2F7D031400C09EBE /* CLIPulseCore in Frameworks */ = {isa = PBXBuildFile; productRef = PKG00006 /* CLIPulseCore */; };
+		A10001 /* CLIPulseBarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10001 /* CLIPulseBarApp.swift */; };
+		A10006 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10006 /* MenuBarView.swift */; };
+		A10007 /* OverviewTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10007 /* OverviewTab.swift */; };
+		A10008 /* ProvidersTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10008 /* ProvidersTab.swift */; };
+		A10009 /* SessionsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10009 /* SessionsTab.swift */; };
+		A10010 /* AlertsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10010 /* AlertsTab.swift */; };
+		A10011 /* SettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10011 /* SettingsTab.swift */; };
+		A10020 /* ProviderConfigEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10020 /* ProviderConfigEditor.swift */; };
+		A10012 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10012 /* Assets.xcassets */; };
+		A20001 /* CLIPulseApp_iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20001 /* CLIPulseApp_iOS.swift */; };
+		A20006 /* iOSMainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20002 /* iOSMainView.swift */; };
+		A20007 /* iOSLoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20003 /* iOSLoginView.swift */; };
+		A20008 /* iOSOverviewTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20004 /* iOSOverviewTab.swift */; };
+		A20009 /* iOSProvidersTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20005 /* iOSProvidersTab.swift */; };
+		A20010 /* iOSSessionsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20006 /* iOSSessionsTab.swift */; };
+		A20011 /* iOSAlertsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20007 /* iOSAlertsTab.swift */; };
+		A20012 /* iOSSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20008 /* iOSSettingsTab.swift */; };
+		A20013 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B20009 /* Assets.xcassets */; };
+		A30001 /* CLIPulseApp_Watch.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30001 /* CLIPulseApp_Watch.swift */; };
+		A30002 /* WatchMainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30002 /* WatchMainView.swift */; };
+		A30003 /* WatchLoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30003 /* WatchLoginView.swift */; };
+		A30004 /* WatchOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30004 /* WatchOverviewView.swift */; };
+		A30005 /* WatchProvidersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30005 /* WatchProvidersView.swift */; };
+		A30006 /* WatchSessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30006 /* WatchSessionsView.swift */; };
+		A30007 /* WatchAlertsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30007 /* WatchAlertsView.swift */; };
+		A30008 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B30008 /* Assets.xcassets */; };
+		A30009 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30011 /* WatchSessionManager.swift */; };
+		A40001 /* CLIPulseWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40001 /* CLIPulseWidgets.swift */; };
+		A40002 /* WidgetDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40002 /* WidgetDataProvider.swift */; };
+		A40003 /* UsageOverviewWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40003 /* UsageOverviewWidget.swift */; };
+		A40004 /* ProviderUsageWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40004 /* ProviderUsageWidget.swift */; };
+		A40005 /* LockScreenWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40005 /* LockScreenWidget.swift */; };
+		A40006 /* WidgetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40006 /* WidgetTheme.swift */; };
+		A40007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B40007 /* Assets.xcassets */; };
+		A40010 /* CLI Pulse Widgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C40001 /* CLI Pulse Widgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A50001 /* CLI Pulse Watch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = C30001 /* CLI Pulse Watch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		PKG00004 /* CLIPulseCore in Frameworks */ = {isa = PBXBuildFile; productRef = PKG00002 /* CLIPulseCore */; };
+		PKG00005 /* CLIPulseCore in Frameworks */ = {isa = PBXBuildFile; productRef = PKG00003 /* CLIPulseCore */; };
+		PKG00007 /* CLIPulseCore in Frameworks */ = {isa = PBXBuildFile; productRef = PKG00006 /* CLIPulseCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -97,6 +100,7 @@
 		B10009 /* SessionsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsTab.swift; sourceTree = "<group>"; };
 		B10010 /* AlertsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertsTab.swift; sourceTree = "<group>"; };
 		B10011 /* SettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTab.swift; sourceTree = "<group>"; };
+		B10020 /* ProviderConfigEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderConfigEditor.swift; sourceTree = "<group>"; };
 		B10012 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B10013 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B10014 /* CLI_Pulse_Bar.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CLI_Pulse_Bar.entitlements; sourceTree = "<group>"; };
@@ -118,10 +122,10 @@
 		B30005 /* WatchProvidersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProvidersView.swift; sourceTree = "<group>"; };
 		B30006 /* WatchSessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionsView.swift; sourceTree = "<group>"; };
 		B30007 /* WatchAlertsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAlertsView.swift; sourceTree = "<group>"; };
-		B30011 /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
 		B30008 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B30009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B30010 /* CLI_Pulse_Watch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CLI_Pulse_Watch.entitlements; sourceTree = "<group>"; };
+		B30011 /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
 		B40001 /* CLIPulseWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIPulseWidgets.swift; sourceTree = "<group>"; };
 		B40002 /* WidgetDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataProvider.swift; sourceTree = "<group>"; };
 		B40003 /* UsageOverviewWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageOverviewWidget.swift; sourceTree = "<group>"; };
@@ -158,7 +162,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				PKG00007 /* CLIPulseCore in Frameworks */,
+				96A0197F2F7D031400C09EBE /* CLIPulseCore in Frameworks */,
+				96A0197E2F7D031400C09EBE /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -194,11 +199,23 @@
 				B10009 /* SessionsTab.swift */,
 				B10010 /* AlertsTab.swift */,
 				B10011 /* SettingsTab.swift */,
+				B10020 /* ProviderConfigEditor.swift */,
 				B10012 /* Assets.xcassets */,
 				B10013 /* Info.plist */,
 				B10014 /* CLI_Pulse_Bar.entitlements */,
 			);
 			path = "CLI Pulse Bar";
+			sourceTree = "<group>";
+		};
+		E10003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C10001 /* CLI Pulse Bar.app */,
+				C20001 /* CLI Pulse.app */,
+				C30001 /* CLI Pulse Watch.app */,
+				C40001 /* CLI Pulse Widgets.appex */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 		E20001 /* CLI Pulse Bar iOS */ = {
@@ -253,23 +270,12 @@
 			path = "CLI Pulse Widgets";
 			sourceTree = "<group>";
 		};
-		E10003 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				C10001 /* CLI Pulse Bar.app */,
-				C20001 /* CLI Pulse.app */,
-				C30001 /* CLI Pulse Watch.app */,
-				C40001 /* CLI Pulse Widgets.appex */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
 		F10001 /* CLI Pulse Bar */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = G10003;
+			buildConfigurationList = G10003 /* Build configuration list for PBXNativeTarget "CLI Pulse Bar" */;
 			buildPhases = (
 				F10002 /* Sources */,
 				D10001 /* Frameworks */,
@@ -289,7 +295,7 @@
 		};
 		F20001 /* CLI Pulse iOS */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = G20003;
+			buildConfigurationList = G20003 /* Build configuration list for PBXNativeTarget "CLI Pulse iOS" */;
 			buildPhases = (
 				F20002 /* Sources */,
 				D20001 /* Frameworks */,
@@ -313,7 +319,7 @@
 		};
 		F30001 /* CLI Pulse Watch */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = G30003;
+			buildConfigurationList = G30003 /* Build configuration list for PBXNativeTarget "CLI Pulse Watch" */;
 			buildPhases = (
 				F30002 /* Sources */,
 				D30001 /* Frameworks */,
@@ -333,7 +339,7 @@
 		};
 		F40001 /* CLI Pulse Widgets */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = G40003;
+			buildConfigurationList = G40003 /* Build configuration list for PBXNativeTarget "CLI Pulse Widgets" */;
 			buildPhases = (
 				F40002 /* Sources */,
 				D40001 /* Frameworks */,
@@ -356,7 +362,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					F10001 = {
 						CreatedOnToolsVersion = 15.0;
@@ -372,7 +378,7 @@
 					};
 				};
 			};
-			buildConfigurationList = G10001;
+			buildConfigurationList = G10001 /* Build configuration list for PBXProject "CLI Pulse Bar" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -443,6 +449,7 @@
 				A10009 /* SessionsTab.swift in Sources */,
 				A10010 /* AlertsTab.swift in Sources */,
 				A10011 /* SettingsTab.swift in Sources */,
+				A10020 /* ProviderConfigEditor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -514,18 +521,45 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = KHMK6Q3L3K;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -540,14 +574,41 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = KHMK6Q3L3K;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -560,15 +621,15 @@
 				CODE_SIGN_ENTITLEMENTS = "CLI Pulse Bar/CLI_Pulse_Bar.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 14;
-				DEVELOPMENT_TEAM = KHMK6Q3L3K;
+				CURRENT_PROJECT_VERSION = 16;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "CLI Pulse Bar/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "yyh.CLI-Pulse";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -584,15 +645,15 @@
 				CODE_SIGN_ENTITLEMENTS = "CLI Pulse Bar/CLI_Pulse_Bar.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 14;
-				DEVELOPMENT_TEAM = KHMK6Q3L3K;
+				CURRENT_PROJECT_VERSION = 16;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "CLI Pulse Bar/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "yyh.CLI-Pulse";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -607,8 +668,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "CLI Pulse Bar iOS/CLI_Pulse_iOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
-				DEVELOPMENT_TEAM = KHMK6Q3L3K;
+				CURRENT_PROJECT_VERSION = 16;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "CLI Pulse Bar iOS/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -616,7 +676,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "yyh.CLI-Pulse";
 				PRODUCT_NAME = "CLI Pulse";
 				SDKROOT = iphoneos;
@@ -635,8 +695,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "CLI Pulse Bar iOS/CLI_Pulse_iOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
-				DEVELOPMENT_TEAM = KHMK6Q3L3K;
+				CURRENT_PROJECT_VERSION = 16;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "CLI Pulse Bar iOS/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -644,7 +703,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "yyh.CLI-Pulse";
 				PRODUCT_NAME = "CLI Pulse";
 				SDKROOT = iphoneos;
@@ -664,15 +723,14 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "CLI Pulse Bar Watch/CLI_Pulse_Watch.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
-				DEVELOPMENT_TEAM = KHMK6Q3L3K;
+				CURRENT_PROJECT_VERSION = 16;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "CLI Pulse Bar Watch/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "yyh.CLI-Pulse.watchkitapp";
 				PRODUCT_NAME = "CLI Pulse Watch";
 				SDKROOT = watchos;
@@ -692,15 +750,14 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "CLI Pulse Bar Watch/CLI_Pulse_Watch.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
-				DEVELOPMENT_TEAM = KHMK6Q3L3K;
+				CURRENT_PROJECT_VERSION = 16;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "CLI Pulse Bar Watch/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "yyh.CLI-Pulse.watchkitapp";
 				PRODUCT_NAME = "CLI Pulse Watch";
 				SDKROOT = watchos;
@@ -721,8 +778,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = "CLI Pulse Widgets/CLI_Pulse_Widgets.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
-				DEVELOPMENT_TEAM = KHMK6Q3L3K;
+				CURRENT_PROJECT_VERSION = 16;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "CLI Pulse Widgets/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -731,7 +787,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "yyh.CLI-Pulse.widgets";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -750,8 +806,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = "CLI Pulse Widgets/CLI_Pulse_Widgets.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
-				DEVELOPMENT_TEAM = KHMK6Q3L3K;
+				CURRENT_PROJECT_VERSION = 16;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "CLI Pulse Widgets/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -760,7 +815,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "yyh.CLI-Pulse.widgets";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -776,7 +831,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		G10001 /* Build configuration list for PBXProject */ = {
+		G10001 /* Build configuration list for PBXProject "CLI Pulse Bar" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				G10002 /* Debug */,
@@ -785,7 +840,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		G10003 /* Build configuration list for PBXNativeTarget */ = {
+		G10003 /* Build configuration list for PBXNativeTarget "CLI Pulse Bar" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				G10005 /* Debug */,
@@ -794,7 +849,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		G20003 /* Build configuration list for PBXNativeTarget */ = {
+		G20003 /* Build configuration list for PBXNativeTarget "CLI Pulse iOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				G20001 /* Debug */,
@@ -803,7 +858,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		G30003 /* Build configuration list for PBXNativeTarget */ = {
+		G30003 /* Build configuration list for PBXNativeTarget "CLI Pulse Watch" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				G30001 /* Debug */,
@@ -812,7 +867,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		G40003 /* Build configuration list for PBXNativeTarget */ = {
+		G40003 /* Build configuration list for PBXNativeTarget "CLI Pulse Widgets" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				G40001 /* Debug */,
@@ -844,7 +899,6 @@
 			productName = CLIPulseCore;
 		};
 /* End XCSwiftPackageProductDependency section */
-
 	};
 	rootObject = H10001 /* Project object */;
 }

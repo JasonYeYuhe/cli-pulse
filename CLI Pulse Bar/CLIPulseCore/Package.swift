@@ -23,5 +23,9 @@ let package = Package(
                 .process("Resources")
             ]
         ),
+        .testTarget(
+            name: "CLIPulseCoreTests",
+            dependencies: ["CLIPulseCore"]
+        ),
     ]
 )

@@ -17,15 +17,13 @@ final class ClaudeStrategyTests: XCTestCase {
         XCTAssertEqual(result.usage.quota, 100)
         XCTAssertEqual(result.usage.remaining, 55) // 100 - 45
         XCTAssertEqual(result.usage.plan_type, "Pro")
-        XCTAssertEqual(result.usage.tiers.count, 4) // 5h, weekly, opus, sonnet
+        XCTAssertEqual(result.usage.tiers.count, 3) // 5h + weekly + sonnet only
         XCTAssertEqual(result.usage.tiers[0].name, "5h Window")
         XCTAssertEqual(result.usage.tiers[0].remaining, 55)
         XCTAssertEqual(result.usage.tiers[1].name, "Weekly")
         XCTAssertEqual(result.usage.tiers[1].remaining, 40)
-        XCTAssertEqual(result.usage.tiers[2].name, "Opus (Weekly)")
-        XCTAssertEqual(result.usage.tiers[2].remaining, 25)
-        XCTAssertEqual(result.usage.tiers[3].name, "Sonnet (Weekly)")
-        XCTAssertEqual(result.usage.tiers[3].remaining, 45)
+        XCTAssertEqual(result.usage.tiers[2].name, "Sonnet only")
+        XCTAssertEqual(result.usage.tiers[2].remaining, 45)
         XCTAssertEqual(result.dataKind, .quota)
     }
 
@@ -41,10 +39,8 @@ final class ClaudeStrategyTests: XCTestCase {
         let extra = ClaudeExtraUsage(isEnabled: true, monthlyLimit: 5000.0, usedCredits: 1234.56, currency: "USD")
         let snapshot = ClaudeSnapshot(sessionUsed: 20, extraUsage: extra, sourceLabel: "oauth")
         let result = ClaudeResultBuilder.build(from: snapshot)
-        let extraTier = result.usage.tiers.first { $0.name == "Extra Usage" }
-        XCTAssertNotNil(extraTier)
-        XCTAssertGreaterThan(extraTier!.quota, 0)
-        XCTAssertGreaterThan(extraTier!.remaining, 0)
+        XCTAssertEqual(result.usage.tiers.count, 1)
+        XCTAssertEqual(result.usage.tiers.first?.name, "5h Window")
     }
 
     func testResultBuilderPlanTypes() {
@@ -53,6 +49,44 @@ final class ClaudeStrategyTests: XCTestCase {
             let result = ClaudeResultBuilder.build(from: snapshot)
             XCTAssertEqual(result.usage.plan_type, expected, "tier '\(tier ?? "nil")' should map to '\(expected)'")
         }
+    }
+
+    func testResetFormattingRoundsUpLikeCodexBar() {
+        let future = Date().addingTimeInterval((3 * 3600) + (34 * 60) + 5)
+        let iso = ISO8601DateFormatter().string(from: future)
+        XCTAssertEqual(RelativeTime.formatReset(iso), "in 3h 35m")
+    }
+
+    func testCanonicalWeeklyResetMatchesClaudeFriday11PM() throws {
+        let formatter = ISO8601DateFormatter()
+        let reference = try XCTUnwrap(formatter.date(from: "2026-04-02T08:34:00Z")) // Thu 5:34 PM JST
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+
+        let reset = try XCTUnwrap(ClaudeHelperContract.canonicalWeeklyReset(after: reference, calendar: calendar))
+        XCTAssertEqual(formatter.string(from: reset), "2026-04-03T14:00:00Z") // Fri 11:00 PM JST
+    }
+
+    func testNormalizeWeeklyResetPrefersCanonicalWhenSnapshotLooksBogus() {
+        let formatter = ISO8601DateFormatter()
+        let reference = formatter.date(from: "2026-04-02T08:34:00Z")!
+        let normalized = ClaudeHelperContract.normalizeWeeklyReset(
+            "2026-04-09T00:00:00Z",
+            reference: reference
+        )
+        XCTAssertEqual(normalized, "2026-04-03T14:00:00Z")
+    }
+
+    func testNormalizeSessionResetDropsPastReset() {
+        let formatter = ISO8601DateFormatter()
+        let reference = formatter.date(from: "2026-04-02T08:38:58Z")!
+        XCTAssertNil(
+            ClaudeHelperContract.normalizeSessionReset(
+                "2026-04-02T08:00:00Z",
+                reference: reference
+            )
+        )
     }
 
     // MARK: - ClaudeCredentials

@@ -6,10 +6,12 @@ struct MenuBarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if !state.isAuthenticated || !state.isPaired {
+            if !state.isAuthenticated {
                 notConnectedView
-            } else {
+            } else if state.isPaired || state.isLocalMode {
                 connectedView
+            } else {
+                notConnectedView
             }
         }
         .frame(width: 380, height: 520)

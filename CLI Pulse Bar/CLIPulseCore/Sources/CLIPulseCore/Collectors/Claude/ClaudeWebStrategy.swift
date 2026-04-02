@@ -98,12 +98,13 @@ public struct ClaudeWebStrategy: ClaudeSourceStrategy, Sendable {
     /// Read session key from helper-written file.
     /// Path: ~/.clipulse/claude_session.json
     static func findSessionKeyFromFile() -> String? {
-        let path = (ClaudeCredentials.realHomeDir as NSString)
-            .appendingPathComponent(".clipulse/claude_session.json")
-        guard let data = FileManager.default.contents(atPath: path),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let key = json["sessionKey"] as? String, !key.isEmpty else { return nil }
-        return key
+        for path in ClaudeHelperContract.sessionKeyCandidatePaths {
+            guard let data = FileManager.default.contents(atPath: path),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let key = json["sessionKey"] as? String, !key.isEmpty else { continue }
+            return key
+        }
+        return nil
     }
 
     /// Read a complete pre-fetched snapshot from the helper.
@@ -131,40 +132,8 @@ public struct ClaudeWebStrategy: ClaudeSourceStrategy, Sendable {
     /// Read snapshot from the canonical path (`ClaudeHelperContract.snapshotPath`).
     /// Rejects snapshots older than 10 minutes (live freshness).
     static func readHelperSnapshot() -> ClaudeSnapshot? {
-        let path = ClaudeHelperContract.snapshotPath  // single source of truth
-        guard let data = FileManager.default.contents(atPath: path),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
-
-        // Check freshness: reject snapshots older than 10 minutes (live)
-        if let fetchedAt = json["fetched_at"] as? String,
-           let date = ISO8601DateFormatter().date(from: fetchedAt),
-           Date().timeIntervalSince(date) > ClaudeHelperContract.maxSnapshotAge {
-            return nil
-        }
-
-        var extra: ClaudeExtraUsage? = nil
-        if let e = json["extra_usage"] as? [String: Any] {
-            let isEnabled = e["is_enabled"] as? Bool ?? false
-            if isEnabled {
-                extra = ClaudeExtraUsage(
-                    isEnabled: true,
-                    monthlyLimit: (e["monthly_limit"] as? NSNumber)?.doubleValue,
-                    usedCredits: (e["used_credits"] as? NSNumber)?.doubleValue,
-                    currency: e["currency"] as? String
-                )
-            }
-        }
-
-        return ClaudeSnapshot(
-            sessionUsed: json["session_used"] as? Int,
-            weeklyUsed: json["weekly_used"] as? Int,
-            opusUsed: json["opus_used"] as? Int,
-            sonnetUsed: json["sonnet_used"] as? Int,
-            sessionReset: json["session_reset"] as? String,
-            weeklyReset: json["weekly_reset"] as? String,
-            extraUsage: extra,
-            rateLimitTier: json["rate_limit_tier"] as? String,
-            accountEmail: json["account_email"] as? String,
+        ClaudeHelperContract.readSnapshot(
+            maxAge: ClaudeHelperContract.maxSnapshotAge,
             sourceLabel: "helper-web"
         )
     }

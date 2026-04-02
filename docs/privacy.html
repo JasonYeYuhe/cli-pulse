@@ -8,7 +8,7 @@
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
        background:#f5f5f7;color:#1d1d1f;line-height:1.7}
-  .container{max-width:680px;margin:48px auto;padding:0 24px}
+  .container{max-width:760px;margin:48px auto;padding:0 24px}
   h1{font-size:2rem;font-weight:700;margin-bottom:4px}
   .date{color:#86868b;font-size:.95rem;margin-bottom:32px}
   h2{font-size:1.2rem;font-weight:600;margin:28px 0 10px}
@@ -23,78 +23,96 @@
 <body>
 <div class="container">
   <h1>Privacy Policy</h1>
-  <p class="date">CLI Pulse &mdash; Last Updated: March 28, 2026</p>
+  <p class="date">CLI Pulse &mdash; Last Updated: April 2, 2026</p>
 
   <h2>Overview</h2>
-  <p>CLI Pulse ("the App") is a developer tool that monitors usage across cloud CLI providers (AWS, GCP, Azure, etc.). This privacy policy explains how we collect, use, and protect your information.</p>
+  <p>CLI Pulse is a developer tool for monitoring usage, quotas, and activity across supported AI coding and CLI providers such as Codex, Claude, Gemini, and other integrations added over time.</p>
+  <p>This Privacy Policy explains what information we collect, how we use it, where it is stored, and what choices you have.</p>
 
   <h2>Information We Collect</h2>
 
   <p><strong>Account Information</strong></p>
   <ul>
-    <li>Email address (used for authentication and account identification)</li>
-    <li>Device name and platform (used for multi-device sync)</li>
+    <li>Email address</li>
+    <li>Authentication identifiers required to sign you in</li>
+    <li>Account profile information returned by the authentication provider</li>
+  </ul>
+  <p>Depending on the sign-in method you use, authentication may be handled through email sign-in, password sign-in, one-time code verification, or Sign in with Apple.</p>
+
+  <p><strong>Device and Sync Information</strong></p>
+  <ul>
+    <li>Device name, device type, and platform</li>
+    <li>Helper registration metadata</li>
+    <li>Pairing and cloud sync state</li>
+    <li>Last-seen timestamps and helper version</li>
   </ul>
 
-  <p><strong>Usage Data</strong></p>
+  <p><strong>Usage and App Data</strong></p>
   <ul>
-    <li>Cloud CLI provider usage metrics (API call counts, token usage, cost estimates)</li>
-    <li>Provider configuration preferences (which providers are enabled)</li>
-    <li>App settings and preferences</li>
+    <li>Provider usage summaries, quota percentages, reset times, and related metadata</li>
+    <li>Session summaries and alert state</li>
+    <li>App settings and provider enablement preferences</li>
+    <li>Subscription status and entitlement information</li>
   </ul>
 
-  <p><strong>Subscription Information</strong></p>
-  <ul>
-    <li>Subscription tier and status (managed by Apple via StoreKit)</li>
-    <li>We do not directly collect or store payment information &mdash; all transactions are processed by Apple</li>
-  </ul>
+  <p><strong>Local Provider Detection Data</strong></p>
+  <p>On a Mac, the helper may inspect local process state, CLI configuration, browser cookies, Keychain items, or other locally available provider session artifacts in order to detect supported provider usage and quota information.</p>
+  <p>This local inspection happens on your device. CLI Pulse is designed to sync the resulting usage metadata, not raw secrets such as passwords, browser cookies, API keys, or refresh tokens.</p>
 
   <h2>How We Use Your Information</h2>
   <ul>
-    <li><strong>Service delivery:</strong> To display your CLI usage metrics and alerts</li>
-    <li><strong>Multi-device sync:</strong> To synchronize data across your registered devices</li>
-    <li><strong>Notifications:</strong> To send usage alerts and quota warnings (when enabled)</li>
-    <li><strong>Subscription management:</strong> To enforce tier-based feature limits</li>
+    <li><strong>Authentication:</strong> To sign you in and maintain your account</li>
+    <li><strong>Service delivery:</strong> To display usage, quota, cost, and alert information inside the app</li>
+    <li><strong>Cloud Sync:</strong> To sync data across your devices when enabled</li>
+    <li><strong>Device management:</strong> To register and manage helper-connected devices</li>
+    <li><strong>Subscriptions:</strong> To restore and enforce subscription entitlements</li>
+    <li><strong>Support and reliability:</strong> To improve debugging and product support</li>
   </ul>
 
-  <h2>Data Storage and Retention</h2>
+  <h2>Data Storage</h2>
+  <p>CLI Pulse uses a combination of local device storage and hosted backend services.</p>
   <ul>
-    <li>Usage data is stored on your self-hosted backend server</li>
-    <li>Data retention periods depend on your subscription tier:
-      <ul>
-        <li>Free: 7 days</li>
-        <li>Pro: 90 days</li>
-        <li>Team: 365 days</li>
-      </ul>
-    </li>
-    <li>Data older than your retention period is automatically deleted</li>
+    <li>Some data is stored locally on your device, including helper state and local snapshots used for provider fallback behavior</li>
+    <li>Cloud-synced account, device, session, provider, and settings data may be stored in backend infrastructure operated for CLI Pulse</li>
+    <li>Authentication and database services may be provided through Supabase</li>
+  </ul>
+
+  <h2>Data Retention</h2>
+  <ul>
+    <li>Local snapshots and helper state remain on your device until removed, overwritten, or unpaired</li>
+    <li>Cloud-synced data may be retained as needed to provide account history, dashboards, alerts, and subscription functionality</li>
+    <li>Retention behavior may change as product tiers and sync features evolve</li>
   </ul>
 
   <h2>Data Sharing</h2>
-  <p>We do <strong>not</strong> sell, rent, or share your personal information with third parties. Your usage data remains on your own infrastructure.</p>
+  <p>We do not sell your personal information.</p>
+  <p>We may share data only with the service providers necessary to operate CLI Pulse, such as authentication, database, hosting, analytics, notification, and subscription infrastructure providers.</p>
 
   <h2>Third-Party Services</h2>
   <ul>
-    <li><strong>Apple StoreKit:</strong> Processes in-app subscriptions. See <a href="https://www.apple.com/privacy/">Apple's Privacy Policy</a>.</li>
-    <li><strong>GitHub OAuth:</strong> Used for authentication. See <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's Privacy Policy</a>.</li>
+    <li><strong>Supabase:</strong> Authentication and backend data services</li>
+    <li><strong>Apple:</strong> Sign in with Apple and in-app subscription billing through StoreKit</li>
+    <li><strong>Static hosting providers:</strong> Public product pages and legal document hosting</li>
   </ul>
+  <p>Supported provider usage data may be derived from local sessions or APIs associated with third-party products such as Anthropic, OpenAI, Google, or other provider services you use. CLI Pulse does not claim ownership over those services or their policies.</p>
 
-  <h2>Your Rights</h2>
+  <h2>Your Choices and Rights</h2>
   <ul>
-    <li>View all data associated with your account within the app</li>
-    <li>Delete your account and associated data by signing out and removing your backend data</li>
-    <li>Disable notifications at any time</li>
-    <li>Hide personal information (email) in the app UI</li>
+    <li>View data associated with your account inside the app</li>
+    <li>Sign out of the app</li>
+    <li>Disconnect or unpair helper-connected devices</li>
+    <li>Disable notifications at the operating system level</li>
+    <li>Request account deletion from within the app where supported</li>
   </ul>
 
   <h2>Children's Privacy</h2>
-  <p>CLI Pulse is not intended for use by children under the age of 13. We do not knowingly collect information from children.</p>
+  <p>CLI Pulse is not intended for children under 13, and we do not knowingly collect personal information from children.</p>
 
   <h2>Changes to This Policy</h2>
-  <p>We may update this privacy policy from time to time. Changes will be posted to this page with an updated revision date.</p>
+  <p>We may update this Privacy Policy from time to time. When we do, we will update the revision date on this page.</p>
 
   <h2>Contact</h2>
-  <p>If you have questions about this privacy policy, please contact us at <a href="mailto:clipulse.support@gmail.com">clipulse.support@gmail.com</a> or open an issue at <a href="https://github.com/jasonyeyuhe/cli-pulse/issues">GitHub</a>.</p>
+  <p>If you have questions about this Privacy Policy, contact us at <a href="mailto:clipulse.support@gmail.com">clipulse.support@gmail.com</a> or open an issue at <a href="https://github.com/jasonyeyuhe/cli-pulse/issues">GitHub</a>.</p>
 
   <div class="footer">
     <p>&copy; 2026 CLI Pulse. All rights reserved.</p>

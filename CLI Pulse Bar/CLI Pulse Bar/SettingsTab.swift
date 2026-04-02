@@ -14,12 +14,14 @@ struct SettingsTab: View {
     enum SettingsSection: String, CaseIterable {
         case general = "General"
         case display = "Display"
+        case providers = "Providers"
         case advanced = "Advanced"
 
         var label: String {
             switch self {
             case .general: return L10n.settings.general
             case .display: return L10n.settings.display
+            case .providers: return "Providers"
             case .advanced: return L10n.settings.advanced
             }
         }
@@ -138,6 +140,8 @@ struct SettingsTab: View {
                     generalSection
                 case .display:
                     displaySection
+                case .providers:
+                    providerSettingsSection
                 case .advanced:
                     advancedSection
                 }
@@ -150,70 +154,43 @@ struct SettingsTab: View {
 
     // MARK: - Pairing
 
+    @State private var showSetupGuide = false
+    @State private var editingProviderKind: ProviderKind?
+
     private var pairingSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader(title: L10n.settings.connection, icon: "link")
 
-            Text("Connect a CLI helper to start monitoring your AI usage.")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+            // Current mode indicator
+            if state.isPaired {
+                modeIndicator(icon: "cloud.fill", text: "Cloud Mode — syncing across all devices", color: PulseTheme.accent)
+            } else if state.isLocalMode {
+                modeIndicator(icon: "desktopcomputer", text: "Local Mode — detecting AI tools on this Mac", color: .green)
+                Text("Want multi-device sync, history, and iOS access? Set up cloud pairing below.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+            } else {
+                modeIndicator(icon: "questionmark.circle", text: "Not Connected", color: .orange)
+            }
 
-            if let info = state.pairingInfo {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Your pairing code:")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
+            if !state.isPaired {
+                // How It Works card
+                howItWorksCard
 
-                    HStack {
-                        Text(info.code)
-                            .font(.system(size: 18, weight: .bold, design: .monospaced))
-                            .foregroundStyle(PulseTheme.accent)
-                            .textSelection(.enabled)
-                        Spacer()
-                        Button {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(info.code, forType: .string)
-                        } label: {
-                            Image(systemName: "doc.on.doc")
-                                .font(.system(size: 11))
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(PulseTheme.accent)
-                    }
-                    .padding(8)
-                    .background(PulseTheme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                Divider()
 
-                    Text("Run on your machine:")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-
-                    HStack {
-                        Text(info.install_command)
-                            .font(.system(size: 9, design: .monospaced))
-                            .textSelection(.enabled)
-                            .lineLimit(2)
-                        Spacer()
-                        Button {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(info.install_command, forType: .string)
-                        } label: {
-                            Image(systemName: "doc.on.doc")
-                                .font(.system(size: 11))
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(PulseTheme.accent)
-                    }
-                    .padding(8)
-                    .background(PulseTheme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-
+                // Setup guide
+                if let info = state.pairingInfo {
+                    setupStepsView(info: info)
+                } else {
                     Button {
-                        Task { await state.checkPairingStatus() }
+                        Task { await state.generatePairingCode() }
                     } label: {
                         HStack {
                             if state.isLoading { ProgressView().controlSize(.small) }
-                            Text("I've paired — check status")
+                            Image(systemName: "link.badge.plus")
+                                .font(.system(size: 10))
+                            Text("Set Up Cloud Sync")
                                 .font(.system(size: 11, weight: .semibold))
                         }
                         .frame(maxWidth: .infinity)
@@ -223,23 +200,6 @@ struct SettingsTab: View {
                     .tint(PulseTheme.accent)
                     .disabled(state.isLoading)
                 }
-            } else {
-                Button {
-                    Task { await state.generatePairingCode() }
-                } label: {
-                    HStack {
-                        if state.isLoading { ProgressView().controlSize(.small) }
-                        Image(systemName: "link.badge.plus")
-                            .font(.system(size: 10))
-                        Text("Generate Pairing Code")
-                            .font(.system(size: 11, weight: .semibold))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(PulseTheme.accent)
-                .disabled(state.isLoading)
             }
 
             if let error = state.pairingError {
@@ -248,6 +208,175 @@ struct SettingsTab: View {
                     .foregroundStyle(.red)
             }
         }
+    }
+
+    private func modeIndicator(icon: String, text: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundStyle(color)
+            Text(text)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(color)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+
+    private var howItWorksCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("How CLI Pulse Works")
+                .font(.system(size: 11, weight: .bold))
+
+            VStack(alignment: .leading, spacing: 6) {
+                howItWorksRow(icon: "desktopcomputer", title: "Local Mode (current)", desc: "Detects AI tools running on this Mac automatically. No setup needed.")
+                howItWorksRow(icon: "cloud", title: "Cloud Sync (optional)", desc: "A small helper script runs on your Mac/Linux and syncs data to the cloud. View from any device including iPhone.")
+            }
+        }
+        .padding(10)
+        .background(PulseTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func howItWorksRow(icon: String, title: String, desc: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundStyle(PulseTheme.accent)
+                .frame(width: 16)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 10, weight: .semibold))
+                Text(desc)
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func setupStepsView(info: PairingInfo) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Cloud Sync Setup")
+                .font(.system(size: 12, weight: .bold))
+
+            // Step 1
+            setupStep(number: 1, title: "Open Terminal", desc: "Press ⌘+Space, type \"Terminal\", press Enter") {
+                EmptyView()
+            }
+
+            // Step 2
+            setupStep(number: 2, title: "Copy & paste this command", desc: "It downloads the helper and pairs this account") {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(info.install_command)
+                            .font(.system(size: 8.5, design: .monospaced))
+                            .textSelection(.enabled)
+                            .lineLimit(3)
+                        Spacer(minLength: 4)
+                        copyButton(text: info.install_command)
+                    }
+                    .padding(8)
+                    .background(Color.black.opacity(0.3))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+            }
+
+            // Step 3
+            setupStep(number: 3, title: "Start the helper daemon", desc: "Keeps running in the background to sync data every 2 minutes") {
+                HStack {
+                    Text("python3 /tmp/cli_pulse_helper.py daemon")
+                        .font(.system(size: 9, design: .monospaced))
+                        .textSelection(.enabled)
+                    Spacer(minLength: 4)
+                    copyButton(text: "python3 /tmp/cli_pulse_helper.py daemon")
+                }
+                .padding(8)
+                .background(Color.black.opacity(0.3))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+
+            // Step 4
+            setupStep(number: 4, title: "Verify connection", desc: "Click below to check if the helper is sending data") {
+                EmptyView()
+            }
+
+            // Pairing code display
+            HStack {
+                Text("Your code:")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                Text(info.code)
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .foregroundStyle(PulseTheme.accent)
+                Spacer()
+                copyButton(text: info.code)
+            }
+            .padding(8)
+            .background(PulseTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+
+            Button {
+                Task { await state.checkPairingStatus() }
+            } label: {
+                HStack {
+                    if state.isLoading { ProgressView().controlSize(.small) }
+                    Image(systemName: "checkmark.circle")
+                        .font(.system(size: 10))
+                    Text("I've paired — check status")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(PulseTheme.accent)
+            .disabled(state.isLoading)
+        }
+        .padding(10)
+        .background(PulseTheme.cardBackground.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(PulseTheme.accent.opacity(0.2), lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private func setupStep<Content: View>(number: Int, title: String, desc: String, @ViewBuilder content: () -> Content) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text("\(number)")
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .frame(width: 20, height: 20)
+                .background(PulseTheme.accent)
+                .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold))
+                Text(desc)
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                content()
+            }
+        }
+    }
+
+    private func copyButton(text: String) -> some View {
+        Button {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+        } label: {
+            Image(systemName: "doc.on.doc")
+                .font(.system(size: 10))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(PulseTheme.accent)
+        .help("Copy to clipboard")
     }
 
     private var accountCard: some View {
@@ -578,6 +707,72 @@ struct SettingsTab: View {
         }
     }
 
+    // MARK: - Provider Settings
+
+    private var providerSettingsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader(title: "Provider Configuration", icon: "cpu")
+
+            Text("Configure data source, credentials, and display for each provider.")
+                .font(.system(size: 9))
+                .foregroundStyle(.tertiary)
+
+            ForEach(state.providerConfigs) { config in
+                providerSettingsRow(config: config)
+            }
+        }
+        .sheet(item: $editingProviderKind) { kind in
+            ProviderConfigEditor(kind: kind, state: state, onDismiss: { editingProviderKind = nil })
+                .frame(width: 340, height: 380)
+        }
+    }
+
+    private func providerSettingsRow(config: ProviderConfig) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: config.kind.iconName)
+                .font(.system(size: 10))
+                .foregroundStyle(PulseTheme.providerColor(config.kind.rawValue))
+                .frame(width: 16)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(config.kind.rawValue)
+                    .font(.system(size: 10, weight: .medium))
+                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text("Source: \(config.sourceMode.rawValue)")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.quaternary)
+                    if config.hasCredentials {
+                        Text("Key set")
+                            .font(.system(size: 7, weight: .medium))
+                            .foregroundStyle(.green)
+                            .padding(.horizontal, 3)
+                            .padding(.vertical, 1)
+                            .background(Color.green.opacity(0.1))
+                            .clipShape(Capsule())
+                    }
+                    if let label = config.accountLabel, !label.isEmpty {
+                        Text(label)
+                            .font(.system(size: 8))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+            Spacer()
+            Button {
+                editingProviderKind = config.kind
+            } label: {
+                Image(systemName: "gear")
+                    .font(.system(size: 10))
+                    .foregroundStyle(PulseTheme.accent)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 3)
+        .padding(.horizontal, 6)
+        .background(PulseTheme.cardBackground.opacity(0.3))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+
     // MARK: - Advanced
 
     private var advancedSection: some View {
@@ -590,10 +785,8 @@ struct SettingsTab: View {
             }
             .toggleStyle(.switch)
             .controlSize(.small)
-            .onChange(of: launchAtLogin) { oldValue, newValue in
-                if oldValue != newValue {
-                    LaunchAtLogin.toggle()
-                }
+            .onChange(of: launchAtLogin) { _ in
+                LaunchAtLogin.toggle()
             }
 
             Divider()
