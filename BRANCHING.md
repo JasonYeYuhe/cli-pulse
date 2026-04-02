@@ -27,28 +27,32 @@ Distribution-only work goes to `public`.
 - Should stay stable enough to branch from
 - Should not be used for day-to-day direct edits
 
-### `codex/<task-name>`
+### `<task-name>`
 
 - Normal feature or fix branch
 - One branch per task
 - Examples:
-  - `codex/onboarding-pairing-ux`
-  - `codex/provider-fix-gemini`
-  - `codex/volcano-engine-support`
-  - `codex/release-1-1-4`
+  - `onboarding-pairing-ux`
+  - `provider-fix-gemini`
+  - `volcano-engine-support`
+  - `release-1-1-4`
 
 ## Current Special Branches
 
 These already exist and should not become catch-all branches for unrelated work:
 
-- `codex/provider-sync-repo-cleanup`
+- `provider-sync-repo-cleanup`
   - repo cleanup
   - visibility split
   - release and notarization workflow
-- `codex/onboarding-pairing-ux`
+- `onboarding-pairing-ux`
   - onboarding and cloud sync setup UX
 
 If a new task is unrelated to those scopes, create a new branch.
+
+Existing older branches may still use the historical `codex/` prefix. That is
+fine. Do not rename active branches just for naming cleanup. The new default is
+simply to create task-named branches without the `codex/` prefix.
 
 ## Standard Workflow For A New Task
 
@@ -58,7 +62,7 @@ Always do this before starting a fresh task:
 cd "/Users/jason/Documents/cli pulse"
 git checkout main
 git pull origin main
-git checkout -b codex/<task-name>
+git checkout -b <task-name>
 ```
 
 Example:
@@ -66,7 +70,7 @@ Example:
 ```bash
 git checkout main
 git pull origin main
-git checkout -b codex/volcano-engine-support
+git checkout -b volcano-engine-support
 ```
 
 ## AI Branch Decision Policy
@@ -104,9 +108,9 @@ Put the task into one of these buckets:
 
 Example:
 
-- already on `codex/onboarding-pairing-ux`
+- already on `onboarding-pairing-ux`
 - user asks for another onboarding wording fix
-- result: stay on `codex/onboarding-pairing-ux`
+- result: stay on `onboarding-pairing-ux`
 
 #### Create a new branch from private `main` if any are true
 
@@ -117,15 +121,15 @@ Example:
 
 Example:
 
-- current branch: `codex/onboarding-pairing-ux`
+- current branch: `onboarding-pairing-ux`
 - new task: add Volcano Engine support
-- result: create `codex/volcano-engine-support` from updated private `main`
+- result: create `volcano-engine-support` from updated private `main`
 
 #### Use a release branch only for release work
 
 Use a dedicated branch such as:
 
-- `codex/release-1-1-4`
+- `release-1-1-4`
 
 Only for:
 
@@ -158,8 +162,7 @@ If the user gives a new task without mentioning branches, the AI should:
 
 1. inspect the current branch
 2. decide whether the task matches that branch
-3. if it does not match, create a new `codex/<task-name>` branch from private
-   `main`
+3. if it does not match, create a new task-named branch from private `main`
 4. tell the user briefly what it decided and why
 
 The AI should not silently continue unrelated work on an old feature branch.
@@ -181,12 +184,12 @@ Check where you actually are:
 git branch --show-current
 ```
 
-If it prints a task branch such as `codex/onboarding-pairing-ux`, you are not on
-`main`, even if a UI shows `main <- codex/onboarding-pairing-ux`.
+If it prints a task branch such as `onboarding-pairing-ux`, you are not on
+`main`, even if a UI shows `main <- onboarding-pairing-ux`.
 
 That UI means:
 
-- current working branch = `codex/onboarding-pairing-ux`
+- current working branch = `onboarding-pairing-ux`
 - base branch = `main`
 
 It does **not** mean your HEAD is on `main`.
@@ -196,7 +199,7 @@ To reset correctly for a new task:
 ```bash
 git checkout main
 git pull origin main
-git checkout -b codex/<new-task>
+git checkout -b <new-task>
 ```
 
 ## When Not To Branch From `main`

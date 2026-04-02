@@ -62,16 +62,16 @@ Do not assume the public GitHub repository should contain full source.
 - Treat private `main` as the integration branch.
 - Start normal feature work from private `main`, not from older task branches.
 - Use one task branch per unit of work, for example:
-  - `codex/onboarding-pairing-ux`
-  - `codex/provider-fix-gemini`
-  - `codex/release-1-1-4`
-- Do not stack unrelated work onto `codex/provider-sync-repo-cleanup` or other
+  - `onboarding-pairing-ux`
+  - `provider-fix-gemini`
+  - `release-1-1-4`
+- Do not stack unrelated work onto `provider-sync-repo-cleanup` or other
   long-lived branches unless the intent is to ship those changes together.
 - Keep public distribution work isolated from app/helper/backend feature work.
 - If the user gives a new task without specifying a branch, inspect the current
   branch and decide:
   - same task family as current branch: reuse it
-  - unrelated task: create a new `codex/<task-name>` branch from private `main`
+  - unrelated task: create a new task-named branch from private `main`
   - release work: use a release branch
   - public docs/distribution work: use the `public` workflow only
 - Prefer opening a new branch over silently mixing unrelated work into an old
