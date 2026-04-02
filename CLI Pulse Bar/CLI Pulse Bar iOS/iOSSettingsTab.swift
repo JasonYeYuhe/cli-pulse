@@ -36,6 +36,42 @@ struct iOSSettingsTab: View {
                         .padding(.vertical, 4)
                     }
 
+                    // Sync Setup Guide (shown when not synced)
+                    if !state.isPaired {
+                        Section {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "cloud")
+                                        .font(.title3)
+                                        .foregroundStyle(PulseTheme.accent)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(L10n.onboarding.howItWorks)
+                                            .font(.headline)
+                                        Text(L10n.onboarding.cloudSyncDesc)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+
+                                Divider()
+
+                                Text(L10n.onboarding.setupStepsTitle)
+                                    .font(.subheadline.weight(.semibold))
+
+                                iOSSetupStepRow(number: 1, icon: "desktopcomputer", text: L10n.onboarding.step1Mac)
+                                iOSSetupStepRow(number: 2, icon: "terminal", text: L10n.onboarding.step2Helper)
+                                iOSSetupStepRow(number: 3, icon: "iphone", text: L10n.onboarding.step3Phone)
+
+                                Text(L10n.onboarding.notBluetooth)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding(.vertical, 4)
+                        } header: {
+                            Text(L10n.settings.connection)
+                        }
+                    }
+
                     // Subscription
                     Section(L10n.settings.subscription) {
                         HStack {
@@ -348,5 +384,32 @@ struct ProviderManagementView: View {
         }
         .navigationTitle(L10n.settings.manageProviders)
         .environment(\.editMode, .constant(.active))
+    }
+}
+
+// MARK: - Setup Step Row
+
+struct iOSSetupStepRow: View {
+    let number: Int
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text("\(number)")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .background(PulseTheme.accent)
+                .clipShape(Circle())
+
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundStyle(PulseTheme.accent)
+                .frame(width: 20)
+
+            Text(text)
+                .font(.subheadline)
+        }
     }
 }

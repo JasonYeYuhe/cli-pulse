@@ -356,6 +356,29 @@ public enum L10n {
         public static var ide: String { tr("badge.ide") }
     }
 
+    // MARK: - Onboarding / Sync Setup
+
+    public enum onboarding {
+        public static var howItWorks: String { tr("onboarding.how_it_works") }
+        public static var cloudSyncTitle: String { tr("onboarding.cloud_sync_title") }
+        public static var cloudSyncDesc: String { tr("onboarding.cloud_sync_desc") }
+        public static var notBluetooth: String { tr("onboarding.not_bluetooth") }
+        public static var setupStepsTitle: String { tr("onboarding.setup_steps_title") }
+        public static var step1Mac: String { tr("onboarding.step1_mac") }
+        public static var step2Helper: String { tr("onboarding.step2_helper") }
+        public static var step3Phone: String { tr("onboarding.step3_phone") }
+        public static var localModeTitle: String { tr("onboarding.local_mode_title") }
+        public static var localModeDesc: String { tr("onboarding.local_mode_desc") }
+        public static var cloudModeTitle: String { tr("onboarding.cloud_mode_title") }
+        public static var cloudModeDesc: String { tr("onboarding.cloud_mode_desc") }
+        public static var iosWaiting: String { tr("onboarding.ios_waiting") }
+        public static var iosWaitingDesc: String { tr("onboarding.ios_waiting_desc") }
+        public static var checkSync: String { tr("onboarding.check_sync") }
+        public static var setUpSync: String { tr("onboarding.set_up_sync") }
+        public static var syncedMode: String { tr("onboarding.synced_mode") }
+        public static var notSyncedHint: String { tr("onboarding.not_synced_hint") }
+    }
+
     // MARK: - Common
 
     public enum common {

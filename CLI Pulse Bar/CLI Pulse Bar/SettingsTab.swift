@@ -163,10 +163,10 @@ struct SettingsTab: View {
 
             // Current mode indicator
             if state.isPaired {
-                modeIndicator(icon: "cloud.fill", text: "Cloud Mode — syncing across all devices", color: PulseTheme.accent)
+                modeIndicator(icon: "cloud.fill", text: L10n.onboarding.syncedMode, color: PulseTheme.accent)
             } else if state.isLocalMode {
-                modeIndicator(icon: "desktopcomputer", text: "Local Mode — detecting AI tools on this Mac", color: .green)
-                Text("Want multi-device sync, history, and iOS access? Set up cloud pairing below.")
+                modeIndicator(icon: "desktopcomputer", text: L10n.onboarding.localModeDesc, color: .green)
+                Text(L10n.onboarding.notSyncedHint)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
             } else {
@@ -190,7 +190,7 @@ struct SettingsTab: View {
                             if state.isLoading { ProgressView().controlSize(.small) }
                             Image(systemName: "link.badge.plus")
                                 .font(.system(size: 10))
-                            Text("Set Up Cloud Sync")
+                            Text(L10n.onboarding.setUpSync)
                                 .font(.system(size: 11, weight: .semibold))
                         }
                         .frame(maxWidth: .infinity)
@@ -227,12 +227,12 @@ struct SettingsTab: View {
 
     private var howItWorksCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("How CLI Pulse Works")
+            Text(L10n.onboarding.howItWorks)
                 .font(.system(size: 11, weight: .bold))
 
             VStack(alignment: .leading, spacing: 6) {
-                howItWorksRow(icon: "desktopcomputer", title: "Local Mode (current)", desc: "Detects AI tools running on this Mac automatically. No setup needed.")
-                howItWorksRow(icon: "cloud", title: "Cloud Sync (optional)", desc: "A small helper script runs on your Mac/Linux and syncs data to the cloud. View from any device including iPhone.")
+                howItWorksRow(icon: "desktopcomputer", title: L10n.onboarding.localModeTitle, desc: L10n.onboarding.localModeDesc)
+                howItWorksRow(icon: "cloud", title: L10n.onboarding.cloudModeTitle, desc: L10n.onboarding.cloudModeDesc)
             }
         }
         .padding(10)
@@ -259,7 +259,7 @@ struct SettingsTab: View {
 
     private func setupStepsView(info: PairingInfo) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Cloud Sync Setup")
+            Text(L10n.onboarding.setupStepsTitle)
                 .font(.system(size: 12, weight: .bold))
 
             // Step 1
@@ -325,7 +325,7 @@ struct SettingsTab: View {
                     if state.isLoading { ProgressView().controlSize(.small) }
                     Image(systemName: "checkmark.circle")
                         .font(.system(size: 10))
-                    Text("I've paired — check status")
+                    Text(L10n.onboarding.checkSync)
                         .font(.system(size: 11, weight: .semibold))
                 }
                 .frame(maxWidth: .infinity)

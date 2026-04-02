@@ -13,7 +13,7 @@
 "dashboard.server_online" = "서버 온라인";
 "dashboard.server_offline" = "서버 오프라인";
 "dashboard.no_data" = "데이터 없음";
-"dashboard.connect_helper" = "모니터링을 시작하려면 도우미 기기를 연결하세요";
+"dashboard.connect_helper" = "Mac에서 도우미를 설정하여 동기화를 시작하세요";
 "dashboard.usage_today" = "오늘 사용량";
 "dashboard.cost_today" = "오늘 비용";
 "dashboard.est_cost" = "예상 비용";
@@ -41,7 +41,7 @@
 "providers.tracked" = "추적 중";
 "providers.no_providers" = "공급자 없음";
 "providers.no_data" = "공급자 데이터 없음";
-"providers.empty_hint" = "도우미 동기화 후 공급자 데이터가 표시됩니다";
+"providers.empty_hint" = "Mac에서 도우미가 실행되면 공급자 데이터가 표시됩니다";
 "providers.all_hidden" = "모든 공급자가 숨겨짐";
 "providers.show_all_hint" = "\"모두 보기\"를 탭하여 비활성 공급자 표시";
 "providers.this_week" = "이번 주";
@@ -89,9 +89,9 @@
 "settings.status" = "상태";
 "settings.connected" = "연결됨";
 "settings.disconnected" = "연결 안 됨";
-"settings.paired" = "페어링됨";
-"settings.not_paired" = "미페어링";
-"settings.connection" = "연결";
+"settings.paired" = "동기화됨";
+"settings.not_paired" = "미동기화";
+"settings.connection" = "동기화 상태";
 "settings.refresh_cadence" = "새로고침 주기";
 "settings.refresh_interval" = "새로고침 간격";
 "settings.subscription" = "구독";
@@ -279,3 +279,23 @@
 "badge.local" = "로컬";
 "badge.aggregator" = "통합";
 "badge.ide" = "IDE";
+
+/* ── 온보딩 / 동기화 설정 ── */
+"onboarding.how_it_works" = "CLI Pulse 작동 방식";
+"onboarding.cloud_sync_title" = "클라우드 동기화";
+"onboarding.cloud_sync_desc" = "도우미 스크립트가 Mac에서 실행되어 AI 도구 사용 데이터를 클라우드에 동기화합니다. 이 iPhone을 포함한 모든 기기에서 데이터를 볼 수 있습니다.";
+"onboarding.not_bluetooth" = "블루투스 또는 직접 기기 페어링이 아닙니다.";
+"onboarding.setup_steps_title" = "시작하기";
+"onboarding.step1_mac" = "Mac 앱에서 로그인";
+"onboarding.step2_helper" = "터미널에서 도우미 스크립트 실행";
+"onboarding.step3_phone" = "데이터가 자동으로 여기에 표시됩니다";
+"onboarding.local_mode_title" = "로컬 모드";
+"onboarding.local_mode_desc" = "이 Mac에서 실행 중인 AI 도구를 감지합니다. 클라우드 설정 불필요.";
+"onboarding.cloud_mode_title" = "클라우드 동기화 (선택사항)";
+"onboarding.cloud_mode_desc" = "도우미 스크립트가 데이터를 클라우드에 동기화하여 iPhone을 포함한 모든 기기에서 볼 수 있습니다.";
+"onboarding.ios_waiting" = "데이터 대기 중";
+"onboarding.ios_waiting_desc" = "Mac에서 도우미가 실행되면 사용 데이터가 여기에 표시됩니다.";
+"onboarding.check_sync" = "동기화 상태 확인";
+"onboarding.set_up_sync" = "클라우드 동기화 설정";
+"onboarding.synced_mode" = "클라우드 동기화 — 기기 간 데이터 동기화 중";
+"onboarding.not_synced_hint" = "Mac에서 도우미를 설정하여 다중 기기 동기화, 기록 및 iPhone 접근을 활성화하세요.";

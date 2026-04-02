@@ -12,8 +12,8 @@
 "dashboard.updated" = "Actualizado %@";
 "dashboard.server_online" = "Servidor en línea";
 "dashboard.server_offline" = "Servidor fuera de línea";
-"dashboard.no_data" = "Sin datos";
-"dashboard.connect_helper" = "Conecte un dispositivo auxiliar para comenzar a monitorear";
+"dashboard.no_data" = "Sin datos aún";
+"dashboard.connect_helper" = "Configure el auxiliar en su Mac para comenzar a sincronizar";
 "dashboard.usage_today" = "Uso hoy";
 "dashboard.cost_today" = "Costo hoy";
 "dashboard.est_cost" = "Costo est.";
@@ -41,7 +41,7 @@
 "providers.tracked" = "rastreados";
 "providers.no_providers" = "Sin proveedores";
 "providers.no_data" = "Sin datos de proveedores";
-"providers.empty_hint" = "Los datos aparecen después de sincronizar el auxiliar";
+"providers.empty_hint" = "Los datos aparecen cuando el auxiliar está ejecutándose en su Mac";
 "providers.all_hidden" = "Todos los proveedores ocultos";
 "providers.show_all_hint" = "Toque \"Mostrar todo\" para ver proveedores deshabilitados";
 "providers.this_week" = "Esta semana";
@@ -89,9 +89,9 @@
 "settings.status" = "Estado";
 "settings.connected" = "Conectado";
 "settings.disconnected" = "Desconectado";
-"settings.paired" = "Emparejado";
-"settings.not_paired" = "No emparejado";
-"settings.connection" = "Conexión";
+"settings.paired" = "Sincronizado";
+"settings.not_paired" = "No sincronizado";
+"settings.connection" = "Estado de sincronización";
 "settings.refresh_cadence" = "Frecuencia de actualización";
 "settings.refresh_interval" = "Intervalo de actualización";
 "settings.subscription" = "Suscripción";
@@ -279,3 +279,23 @@
 "badge.local" = "LOCAL";
 "badge.aggregator" = "AGREGADOR";
 "badge.ide" = "IDE";
+
+/* ── Incorporación / Configuración de sincronización ── */
+"onboarding.how_it_works" = "Cómo funciona CLI Pulse";
+"onboarding.cloud_sync_title" = "Sincronización en la nube";
+"onboarding.cloud_sync_desc" = "Un script auxiliar se ejecuta en su Mac y sincroniza los datos de uso de herramientas de IA a la nube. Cualquier dispositivo, incluyendo este iPhone, puede ver los datos.";
+"onboarding.not_bluetooth" = "Esto no es Bluetooth ni emparejamiento directo de dispositivos.";
+"onboarding.setup_steps_title" = "Primeros pasos";
+"onboarding.step1_mac" = "Inicie sesión en la aplicación de Mac";
+"onboarding.step2_helper" = "Ejecute el script auxiliar en Terminal";
+"onboarding.step3_phone" = "Los datos aparecerán aquí automáticamente";
+"onboarding.local_mode_title" = "Modo local";
+"onboarding.local_mode_desc" = "Detecta herramientas de IA ejecutándose en este Mac. Sin configuración en la nube.";
+"onboarding.cloud_mode_title" = "Sincronización en la nube (opcional)";
+"onboarding.cloud_mode_desc" = "Un script auxiliar sincroniza datos a la nube para verlos desde cualquier dispositivo, incluyendo iPhone.";
+"onboarding.ios_waiting" = "Esperando datos";
+"onboarding.ios_waiting_desc" = "Cuando el auxiliar esté ejecutándose en su Mac, los datos de uso aparecerán aquí.";
+"onboarding.check_sync" = "Verificar estado de sincronización";
+"onboarding.set_up_sync" = "Configurar sincronización en la nube";
+"onboarding.synced_mode" = "Sincronización en la nube — datos sincronizando entre dispositivos";
+"onboarding.not_synced_hint" = "Configure el auxiliar en su Mac para sincronización multidispositivo, historial y acceso desde iPhone.";

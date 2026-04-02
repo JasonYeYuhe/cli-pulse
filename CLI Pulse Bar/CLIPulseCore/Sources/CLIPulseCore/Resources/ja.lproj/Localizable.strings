@@ -13,7 +13,7 @@
 "dashboard.server_online" = "サーバーオンライン";
 "dashboard.server_offline" = "サーバーオフライン";
 "dashboard.no_data" = "データなし";
-"dashboard.connect_helper" = "ヘルパーデバイスを接続して監視を開始";
+"dashboard.connect_helper" = "Macでヘルパーをセットアップして同期を開始";
 "dashboard.usage_today" = "本日の使用量";
 "dashboard.cost_today" = "本日のコスト";
 "dashboard.est_cost" = "推定コスト";
@@ -41,7 +41,7 @@
 "providers.tracked" = "追跡中";
 "providers.no_providers" = "プロバイダーなし";
 "providers.no_data" = "プロバイダーデータなし";
-"providers.empty_hint" = "ヘルパー同期後にプロバイダーデータが表示されます";
+"providers.empty_hint" = "Macでヘルパーを実行するとプロバイダーデータが表示されます";
 "providers.all_hidden" = "すべてのプロバイダーが非表示";
 "providers.show_all_hint" = "「すべて表示」をタップして無効なプロバイダーを表示";
 "providers.this_week" = "今週";
@@ -89,9 +89,9 @@
 "settings.status" = "ステータス";
 "settings.connected" = "接続済み";
 "settings.disconnected" = "未接続";
-"settings.paired" = "ペアリング済み";
-"settings.not_paired" = "未ペアリング";
-"settings.connection" = "接続";
+"settings.paired" = "同期済み";
+"settings.not_paired" = "未同期";
+"settings.connection" = "同期ステータス";
 "settings.refresh_cadence" = "更新頻度";
 "settings.refresh_interval" = "更新間隔";
 "settings.subscription" = "サブスクリプション";
@@ -279,3 +279,23 @@
 "badge.local" = "ローカル";
 "badge.aggregator" = "アグリゲーター";
 "badge.ide" = "IDE";
+
+/* ── オンボーディング / 同期セットアップ ── */
+"onboarding.how_it_works" = "CLI Pulse の仕組み";
+"onboarding.cloud_sync_title" = "クラウド同期";
+"onboarding.cloud_sync_desc" = "ヘルパースクリプトがMacで実行され、AIツールの使用データをクラウドに同期します。この iPhone を含むすべてのデバイスでデータを閲覧できます。";
+"onboarding.not_bluetooth" = "Bluetooth やデバイスの直接ペアリングではありません。";
+"onboarding.setup_steps_title" = "はじめに";
+"onboarding.step1_mac" = "Mac アプリでサインイン";
+"onboarding.step2_helper" = "ターミナルでヘルパースクリプトを実行";
+"onboarding.step3_phone" = "データが自動的にここに表示されます";
+"onboarding.local_mode_title" = "ローカルモード";
+"onboarding.local_mode_desc" = "この Mac で実行中のAIツールを検出します。クラウド設定は不要です。";
+"onboarding.cloud_mode_title" = "クラウド同期（オプション）";
+"onboarding.cloud_mode_desc" = "ヘルパースクリプトがデータをクラウドに同期し、iPhoneを含むすべてのデバイスで閲覧できます。";
+"onboarding.ios_waiting" = "データ待機中";
+"onboarding.ios_waiting_desc" = "Macでヘルパーが実行されると、使用データがここに表示されます。";
+"onboarding.check_sync" = "同期ステータスを確認";
+"onboarding.set_up_sync" = "クラウド同期をセットアップ";
+"onboarding.synced_mode" = "クラウド同期 — デバイス間でデータ同期中";
+"onboarding.not_synced_hint" = "Macでヘルパーをセットアップして、マルチデバイス同期、履歴、iPhoneアクセスを有効にしましょう。";

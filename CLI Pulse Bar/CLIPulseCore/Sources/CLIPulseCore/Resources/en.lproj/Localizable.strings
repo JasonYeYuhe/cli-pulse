@@ -12,8 +12,8 @@
 "dashboard.updated" = "Updated %@";
 "dashboard.server_online" = "Server Online";
 "dashboard.server_offline" = "Server Offline";
-"dashboard.no_data" = "No Data";
-"dashboard.connect_helper" = "Connect a helper device to start monitoring";
+"dashboard.no_data" = "No Data Yet";
+"dashboard.connect_helper" = "Set up the helper on your Mac to start syncing";
 "dashboard.usage_today" = "Usage Today";
 "dashboard.cost_today" = "Cost Today";
 "dashboard.est_cost" = "Est. Cost";
@@ -41,7 +41,7 @@
 "providers.tracked" = "tracked";
 "providers.no_providers" = "No Providers";
 "providers.no_data" = "No provider data";
-"providers.empty_hint" = "Provider data appears after helper syncs";
+"providers.empty_hint" = "Provider data appears once the helper is running on your Mac";
 "providers.all_hidden" = "All providers hidden";
 "providers.show_all_hint" = "Tap \"Show All\" to see disabled providers";
 "providers.this_week" = "This Week";
@@ -89,9 +89,9 @@
 "settings.status" = "Status";
 "settings.connected" = "Connected";
 "settings.disconnected" = "Disconnected";
-"settings.paired" = "Paired";
-"settings.not_paired" = "Not Paired";
-"settings.connection" = "Connection";
+"settings.paired" = "Synced";
+"settings.not_paired" = "Not Synced";
+"settings.connection" = "Sync Status";
 "settings.refresh_cadence" = "Refresh Cadence";
 "settings.refresh_interval" = "Refresh Interval";
 "settings.subscription" = "Subscription";
@@ -279,3 +279,23 @@
 "badge.local" = "LOCAL";
 "badge.aggregator" = "AGGREGATOR";
 "badge.ide" = "IDE";
+
+/* ── Onboarding / Sync Setup ── */
+"onboarding.how_it_works" = "How CLI Pulse Works";
+"onboarding.cloud_sync_title" = "Cloud Sync";
+"onboarding.cloud_sync_desc" = "A helper script runs on your Mac and syncs AI tool usage to the cloud. Then any device — including this iPhone — can display the data.";
+"onboarding.not_bluetooth" = "This is not Bluetooth or direct device pairing.";
+"onboarding.setup_steps_title" = "Getting Started";
+"onboarding.step1_mac" = "Sign in on the Mac app";
+"onboarding.step2_helper" = "Run the helper script in Terminal";
+"onboarding.step3_phone" = "Data appears here automatically";
+"onboarding.local_mode_title" = "Local Mode";
+"onboarding.local_mode_desc" = "Detects AI tools running on this Mac. No cloud setup needed.";
+"onboarding.cloud_mode_title" = "Cloud Sync (Optional)";
+"onboarding.cloud_mode_desc" = "A helper script syncs data to the cloud so you can view from any device, including iPhone.";
+"onboarding.ios_waiting" = "Waiting for data";
+"onboarding.ios_waiting_desc" = "Once the helper is running on your Mac, usage data will appear here.";
+"onboarding.check_sync" = "Check Sync Status";
+"onboarding.set_up_sync" = "Set Up Cloud Sync";
+"onboarding.synced_mode" = "Cloud Sync — data syncing across devices";
+"onboarding.not_synced_hint" = "Set up the helper on your Mac for multi-device sync, history, and iPhone access.";

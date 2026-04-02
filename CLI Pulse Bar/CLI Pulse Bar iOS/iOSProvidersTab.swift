@@ -23,12 +23,19 @@ struct iOSProvidersTab: View {
                     }
 
                     if visibleDetails.isEmpty && state.providers.isEmpty {
-                        ContentUnavailableView {
-                            Label(L10n.providers.noProviders, systemImage: "cpu")
-                        } description: {
-                            Text(L10n.providers.emptyHint)
+                        if !state.isPaired {
+                            iOSSyncOnboardingCard()
+                                .environmentObject(state)
+                                .padding(.horizontal)
+                                .padding(.vertical, 20)
+                        } else {
+                            ContentUnavailableView {
+                                Label(L10n.providers.noProviders, systemImage: "cpu")
+                            } description: {
+                                Text(L10n.providers.emptyHint)
+                            }
+                            .padding(.vertical, 40)
                         }
-                        .padding(.vertical, 40)
                     } else if isIPad {
                         // iPad: two-column grid
                         LazyVGrid(columns: [
