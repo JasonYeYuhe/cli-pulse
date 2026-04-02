@@ -53,16 +53,36 @@ Do not assume the public GitHub repository should contain full source.
 - Treat the public repo as distribution-facing unless explicitly told
   otherwise.
 - Before any push, check whether the target remote is `origin` or `public`.
+- The public `main` branch has been rewritten to distribution-only history.
+- Public releases/tags are expected to point to distribution-only commits, not
+  source commits.
 
 ## Current Repo Reality
 
 - `origin` points to the private `cli-pulse-private` repo.
 - `public` points to the public `cli-pulse` repo.
-- Public GitHub Pages and GitHub Releases may still be used for:
+- Public GitHub Pages and GitHub Releases are still used for:
   - website pages
   - legal pages
   - macOS release downloads
   - support links
+- Public repo contents are intentionally minimal:
+  - `.gitignore`
+  - `README.md`
+  - `PRIVACY.md`
+  - `TERMS.md`
+  - `docs/`
+
+## Public Release Workflow
+
+If a task is specifically about the public repo, keep it distribution-only.
+
+- Update website/legal/support content only.
+- Upload notarized macOS artifacts to GitHub Releases in `public`.
+- Do not add app source, helper source, backend code, tests, fixtures, or
+  internal notes to `public`.
+- If a release tag must be recreated, ensure it is recreated on a
+  distribution-only commit.
 
 ## Active vs Archived
 

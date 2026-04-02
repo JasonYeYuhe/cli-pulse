@@ -1,6 +1,6 @@
 # CLI Pulse Repo Visibility Strategy
 
-**Status:** local planning document  
+**Status:** active repository policy  
 **Last Updated:** April 2, 2026
 
 ## Recommendation
@@ -130,17 +130,51 @@ Contains:
 - release downloads
 - public changelog and support info
 
-## Immediate Action Plan
+## Current State
 
-1. Keep the newly pushed public feature branch deleted.
-2. Do not open PRs from private product work into the public source repo.
-3. Create a new private GitHub repository for ongoing development.
-4. Push the full current source history to the private repository.
-5. Decide whether the current public repo should:
-   - be converted to a minimal distribution repo, or
-   - be archived and replaced by a new public distribution repo
-6. Remove product source from the public repo's future default branch state.
-7. Keep only website, legal, and download-facing assets public.
+This migration is complete:
+
+1. `origin` now points to the private source repository:
+   - `JasonYeYuhe/cli-pulse-private`
+2. `public` now points to the public distribution repository:
+   - `JasonYeYuhe/cli-pulse`
+3. The public `main` branch has been rewritten to contain only
+   distribution-facing files.
+4. Public release tags were recreated on the distribution-only history so that
+   GitHub-generated source archives no longer expose product code.
+5. GitHub Pages continues to publish from `public/main:/docs`.
+
+## Public Repo Allowed Contents
+
+The public repository should contain only:
+
+- `README.md`
+- `PRIVACY.md`
+- `TERMS.md`
+- `docs/`
+- release assets such as notarized DMGs
+
+The public repository should not contain:
+
+- `CLI Pulse Bar/`
+- `helper/`
+- `backend/`
+- `archive/`
+- `tests/`
+- internal prompts, research notes, or AI handoff files
+- provider integration logic or fixtures
+
+## Ongoing Operating Rule
+
+- Do all product development against `origin` only.
+- Use `public` only for distribution tasks:
+  - GitHub Pages updates
+  - legal page updates
+  - support/contact page updates
+  - release asset uploads
+  - public changelog or release-note changes
+- Never merge private product branches into `public`.
+- Never create public tags from source-bearing commits.
 
 ## Practical Boundary Rule
 
