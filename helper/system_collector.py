@@ -361,7 +361,17 @@ def estimate_provider_quotas(sessions: list[CollectedSession]) -> dict[str, dict
 
 
 def _fetch_claude_usage() -> dict | None:
-    """Read Claude plan info from macOS Keychain."""
+    """Fetch Claude usage via OAuth API → CLI fallback → plan-only fallback.
+
+    Also writes ~/.clipulse/claude_snapshot.json for the sandboxed app's
+    local collector (ClaudeWebStrategy) to use as fallback when OAuth fails.
+    """
+    token = None
+    refresh_token = None
+    plan_type = None
+    tier_raw = ""
+
+    # Step 1: Read OAuth token + plan from Keychain
     try:
         proc = subprocess.run(
             ["security", "find-generic-password", "-s", "Claude Code-credentials", "-w"],
@@ -369,75 +379,317 @@ def _fetch_claude_usage() -> dict | None:
         )
         if proc.returncode == 0 and proc.stdout.strip():
             data = _json.loads(proc.stdout.strip())
-            oauth = data.get("claudeAiOauth", {})
-            plan_type = (oauth.get("subscriptionType") or "free").capitalize()
-            # Anthropic doesn't expose usage API for CLI OAuth tokens yet
-            # Return plan type so the card shows it, but no bars
-            return {
-                "quota": 0, "remaining": 0,
-                "plan_type": plan_type,
-                "reset_time": None, "tiers": [],
+            # Support both camelCase and snake_case credential formats
+            oauth = data.get("claudeAiOauth", {}) or data.get("claude_ai_oauth", {})
+            token = oauth.get("accessToken") or oauth.get("access_token")
+            refresh_token = oauth.get("refreshToken") or oauth.get("refresh_token")
+            tier_raw = (oauth.get("rateLimitTier") or oauth.get("rate_limit_tier") or "").lower()
+            sub_type = (oauth.get("subscriptionType") or "").lower()
+            plan_type = _infer_claude_plan(tier_raw, sub_type)
+            # Check token expiry and refresh if needed
+            exp_ms = oauth.get("expiresAt") or oauth.get("expires_at") or 0
+            if isinstance(exp_ms, (int, float)) and exp_ms > 1e12:
+                exp_ms = exp_ms / 1000
+            if exp_ms and datetime.now(timezone.utc).timestamp() > exp_ms:
+                logger.debug("Claude OAuth token expired, attempting refresh")
+                refreshed = _refresh_claude_token(refresh_token)
+                if refreshed:
+                    token = refreshed
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
+        logger.debug(f"Keychain read failed: {e}")
+
+    # Step 2: Try OAuth usage API if we have a valid token
+    if token and token.startswith("sk-ant-oat"):
+        api_result = _fetch_claude_oauth_api(token, plan_type)
+        if api_result:
+            _write_claude_snapshot(api_result, tier_raw, "oauth")
+            return api_result
+
+    # Step 3: Try `claude /usage` CLI fallback
+    cli_result = _fetch_claude_cli(plan_type)
+    if cli_result:
+        _write_claude_snapshot(cli_result, tier_raw, "cli")
+        return cli_result
+
+    # Step 4: Plan-only fallback (no bars, just badge)
+    if plan_type:
+        return {
+            "quota": 0, "remaining": 0,
+            "plan_type": plan_type,
+            "reset_time": None, "tiers": [],
+        }
+    return None
+
+
+def _refresh_claude_token(refresh_token: str | None) -> str | None:
+    """Try to refresh an expired Claude OAuth token using the refresh_token.
+
+    Returns the new access_token on success, None on failure.
+    Does NOT update the keychain (Claude CLI owns keychain writes).
+    """
+    if not refresh_token:
+        return None
+    # Try known Anthropic OAuth token endpoints
+    endpoints = [
+        "https://api.anthropic.com/v1/oauth/token",
+        "https://console.anthropic.com/v1/oauth/token",
+    ]
+    for endpoint in endpoints:
+        try:
+            body = _json.dumps({
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token,
+            }).encode()
+            req = urllib.request.Request(
+                endpoint,
+                data=body,
+                headers={
+                    "Content-Type": "application/json",
+                    "User-Agent": "CLI-Pulse-Helper/0.2",
+                },
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = _json.loads(resp.read())
+            new_token = data.get("access_token", "")
+            if new_token and new_token.startswith("sk-ant-oat"):
+                logger.debug(f"Claude token refresh succeeded via {endpoint}")
+                return new_token
+        except Exception as e:
+            logger.debug(f"Claude token refresh failed via {endpoint}: {e}")
+    return None
+
+
+def _write_claude_snapshot(result: dict, tier_raw: str, source: str) -> None:
+    """Write ~/.clipulse/claude_snapshot.json for the app's local collector.
+
+    The sandboxed macOS app reads this file via ClaudeWebStrategy as a
+    fallback when OAuth/CLI strategies are unavailable.
+    Schema matches ClaudeHelperContract.swift.
+    """
+    try:
+        clipulse_dir = Path.home() / ".clipulse"
+        clipulse_dir.mkdir(parents=True, exist_ok=True)
+
+        # Convert tier-based result back into snapshot format
+        tiers = result.get("tiers", [])
+        tier_map = {t["name"]: t for t in tiers}
+
+        def _used_pct(name: str) -> int | None:
+            t = tier_map.get(name)
+            if t is None:
+                return None
+            return max(0, t["quota"] - t["remaining"])
+
+        snapshot = {
+            "session_used": _used_pct("5h Window"),
+            "weekly_used": _used_pct("Weekly"),
+            "opus_used": _used_pct("Opus (Weekly)"),
+            "sonnet_used": _used_pct("Sonnet (Weekly)"),
+            "session_reset": tier_map.get("5h Window", {}).get("reset_time"),
+            "weekly_reset": tier_map.get("Weekly", {}).get("reset_time"),
+            "rate_limit_tier": tier_raw or None,
+            "account_email": None,
+            "extra_usage": None,
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+            "source": source,
+        }
+
+        # Handle extra usage tier
+        extra = tier_map.get("Extra Usage")
+        if extra:
+            scale = 100_000
+            snapshot["extra_usage"] = {
+                "is_enabled": True,
+                "monthly_limit": extra["quota"] / scale,
+                "used_credits": (extra["quota"] - extra["remaining"]) / scale,
+                "currency": "USD",
             }
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
+
+        snapshot_path = clipulse_dir / "claude_snapshot.json"
+        snapshot_path.write_text(_json.dumps(snapshot, indent=2))
+        logger.debug(f"Wrote Claude snapshot to {snapshot_path}")
+    except Exception as e:
+        logger.debug(f"Failed to write Claude snapshot: {e}")
+
+
+def _infer_claude_plan(tier: str, sub_type: str) -> str:
+    """Infer Claude plan display name from rate_limit_tier or subscriptionType."""
+    for label, keyword in [("Max", "max"), ("Pro", "pro"), ("Team", "team"),
+                           ("Enterprise", "enterprise"), ("Free", "free")]:
+        if keyword in tier or keyword in sub_type:
+            return label
+    return sub_type.capitalize() if sub_type else "Unknown"
+
+
+def _fetch_claude_oauth_api(token: str, plan_type: str | None) -> dict | None:
+    """Call Anthropic OAuth usage API and parse into tiers."""
+    try:
+        req = urllib.request.Request(
+            "https://api.anthropic.com/api/oauth/usage",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "anthropic-beta": "oauth-2025-04-20",
+                "User-Agent": "CLI-Pulse-Helper/0.2",
+                "Accept": "application/json",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = _json.loads(resp.read())
+        return _parse_claude_api_response(data, plan_type)
+    except Exception as e:
+        logger.debug(f"Claude OAuth API failed: {e}")
+        return None
+
+
+def _fetch_claude_cli(plan_type: str | None) -> dict | None:
+    """Run Claude CLI to get usage data.
+
+    Note: Claude Code v2.x removed `/usage` slash command.
+    This function is kept as a fallback for environments where
+    a compatible CLI version is available.
+    """
+    import shutil
+    # Search common Claude CLI locations beyond PATH
+    binary = shutil.which("claude")
+    if not binary:
+        for candidate in [
+            str(Path.home() / ".local" / "bin" / "claude"),
+            "/usr/local/bin/claude",
+            str(Path.home() / ".npm-global" / "bin" / "claude"),
+        ]:
+            if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                binary = candidate
+                break
+    if not binary:
+        return None
+    # Claude Code v2.x: `/usage` is not a valid command.
+    # Keep this path for future compatibility but don't expect it to work.
+    try:
+        proc = subprocess.run(
+            [binary, "/usage"],
+            capture_output=True, text=True, timeout=15,
+            env={**os.environ, "NO_COLOR": "1"},
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            result = _parse_claude_usage_output(proc.stdout)
+            if result:
+                if plan_type:
+                    result["plan_type"] = plan_type
+                return result
+    except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+        logger.debug(f"Claude CLI fallback failed: {e}")
     return None
 
 
 def _parse_claude_usage_output(output: str) -> dict | None:
-    """Parse `claude usage` CLI output into tier data."""
+    """Parse `claude /usage` CLI output into tier data.
+
+    Uses quota=100 / remaining=100-percent model (percentage-based) to match
+    the OAuth API and the local Swift collector.
+    """
     tiers = []
-    for line in output.splitlines():
-        line = line.strip()
-        # Look for patterns like "Current session: 15% used (resets in 3h 20m)"
-        # or "Current week: 8% used"
-        if "session" in line.lower() and "%" in line:
+    lines = output.splitlines()
+    # Track section context: "session" or "week" or "opus" etc.
+    section = None
+    reset_for_section: dict[str, str | None] = {}
+
+    for line in lines:
+        stripped = line.strip().lower()
+        if "session" in stripped:
+            section = "session"
+        elif "week" in stripped and "opus" in stripped:
+            section = "opus"
+        elif "week" in stripped and "sonnet" in stripped:
+            section = "sonnet"
+        elif "week" in stripped:
+            section = "week"
+
+        if "%" in line:
             pct = _extract_percent(line)
-            if pct is not None:
-                quota = 45  # Opus session limit
-                used = int(quota * pct / 100)
-                reset = _extract_reset_time(line)
-                tiers.append({"name": "Session", "quota": quota, "remaining": max(0, quota - used), "reset_time": reset})
-        elif "week" in line.lower() and "%" in line:
-            pct = _extract_percent(line)
-            if pct is not None:
-                quota = 1400
-                used = int(quota * pct / 100)
-                reset = _extract_reset_time(line)
-                tiers.append({"name": "Weekly", "quota": quota, "remaining": max(0, quota - used), "reset_time": reset})
+            if pct is not None and section:
+                # pct might be "used" or "left" — CLI uses "X% left"
+                # _extract_percent returns the raw number; determine semantics
+                low = line.strip().lower()
+                if "left" in low or "remaining" in low:
+                    used = 100 - pct
+                else:
+                    used = pct
+                name_map = {"session": "5h Window", "week": "Weekly",
+                            "opus": "Opus (Weekly)", "sonnet": "Sonnet (Weekly)"}
+                name = name_map.get(section, section)
+                # Avoid duplicate tier names
+                if not any(t["name"] == name for t in tiers):
+                    tiers.append({"name": name, "quota": 100, "remaining": max(0, 100 - used), "reset_time": None})
+
+        if section and "reset" in line.strip().lower():
+            reset = _extract_reset_time(line)
+            if reset:
+                reset_for_section[section] = reset
+
+    # Attach reset times to matching tiers
+    name_to_section = {"5h Window": "session", "Weekly": "week",
+                       "Opus (Weekly)": "opus", "Sonnet (Weekly)": "sonnet"}
+    for tier in tiers:
+        sec = name_to_section.get(tier["name"])
+        if sec and sec in reset_for_section:
+            tier["reset_time"] = reset_for_section[sec]
 
     if not tiers:
         return None
+
+    primary = tiers[0]
     return {
-        "quota": tiers[0]["quota"],
-        "remaining": tiers[0]["remaining"],
+        "quota": primary["quota"],
+        "remaining": primary["remaining"],
         "plan_type": "Max",
-        "reset_time": tiers[0]["reset_time"],
+        "reset_time": primary.get("reset_time"),
         "tiers": tiers,
     }
 
 
-def _parse_claude_api_response(data: dict) -> dict | None:
-    """Parse Anthropic OAuth usage API response."""
+def _parse_claude_api_response(data: dict, plan_type: str | None = None) -> dict | None:
+    """Parse Anthropic OAuth usage API response.
+
+    The API returns utilization percentages (0-100) per window, not absolute values.
+    We normalize to quota=100, remaining=100-utilization to match the local collector.
+    """
     tiers = []
-    if "five_hour" in data:
-        fh = data["five_hour"]
-        quota = fh.get("limit", 45)
-        remaining = fh.get("remaining", quota)
-        reset = fh.get("resets_at")
-        tiers.append({"name": "Session", "quota": quota, "remaining": remaining, "reset_time": reset})
-    if "seven_day" in data:
-        sd = data["seven_day"]
-        quota = sd.get("limit", 1400)
-        remaining = sd.get("remaining", quota)
-        reset = sd.get("resets_at")
-        tiers.append({"name": "Weekly", "quota": quota, "remaining": remaining, "reset_time": reset})
+
+    def _add_window(key: str, name: str, reset_key: str = "resets_at"):
+        w = data.get(key)
+        if isinstance(w, dict):
+            util = w.get("utilization", 0)
+            reset = w.get(reset_key)
+            tiers.append({"name": name, "quota": 100, "remaining": max(0, 100 - int(util)), "reset_time": reset})
+
+    _add_window("five_hour", "5h Window")
+    _add_window("seven_day", "Weekly")
+    _add_window("seven_day_opus", "Opus (Weekly)")
+    _add_window("seven_day_sonnet", "Sonnet (Weekly)")
+
+    # Extra usage / overage credits
+    eu = data.get("extra_usage")
+    if isinstance(eu, dict) and eu.get("is_enabled"):
+        limit = eu.get("monthly_limit", 0)
+        used = eu.get("used_credits", 0)
+        if limit and limit > 0:
+            scale = 100_000
+            tiers.append({
+                "name": "Extra Usage",
+                "quota": int(limit * scale),
+                "remaining": int(max(0, limit - used) * scale),
+                "reset_time": None,
+            })
+
     if not tiers:
         return None
+
+    primary = tiers[0]
     return {
-        "quota": tiers[0]["quota"],
-        "remaining": tiers[0]["remaining"],
-        "plan_type": "Max",
-        "reset_time": tiers[0].get("reset_time"),
+        "quota": primary["quota"],
+        "remaining": primary["remaining"],
+        "plan_type": plan_type or "Max",
+        "reset_time": primary.get("reset_time"),
         "tiers": tiers,
     }
 

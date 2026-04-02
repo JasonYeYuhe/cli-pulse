@@ -41,6 +41,9 @@ public final class AppState: ObservableObject {
     @Published public var providerDetails: [ProviderDetail] = []
     @Published public var costSummary: CostSummary = CostSummary()
 
+    /// Providers that had cloud data supplemented with local collector data in the last refresh.
+    public var locallySupplementedProviders: Set<String> = []
+
     // MARK: - Refresh Task Tracking
     private var refreshTask: Task<Void, Never>?
     private static let refreshTokenKeychainKey = "cli_pulse_refresh_token"
@@ -201,15 +204,29 @@ public final class AppState: ObservableObject {
         saveProviderConfigs()
     }
 
-    private func saveProviderConfigs() {
+    public func saveProviderConfigs() {
+        // Save non-sensitive fields to UserDefaults (apiKey/manualCookieHeader excluded via CodingKeys)
         if let data = try? JSONEncoder().encode(providerConfigs) {
             UserDefaults.standard.set(data, forKey: "cli_pulse_provider_configs")
         }
+        // Save secrets to Keychain
+        for config in providerConfigs {
+            config.saveSecrets()
+        }
     }
 
+    private static let secretsMigratedKey = "cli_pulse_provider_secrets_migrated"
+
     private func loadProviderConfigs() {
-        if let data = UserDefaults.standard.data(forKey: "cli_pulse_provider_configs"),
-           let configs = try? JSONDecoder().decode([ProviderConfig].self, from: data) {
+        guard let data = UserDefaults.standard.data(forKey: "cli_pulse_provider_configs") else { return }
+
+        // Migrate legacy secrets from UserDefaults JSON → Keychain (one-time)
+        if !UserDefaults.standard.bool(forKey: Self.secretsMigratedKey) {
+            migrateLegacySecrets(from: data)
+            UserDefaults.standard.set(true, forKey: Self.secretsMigratedKey)
+        }
+
+        if let configs = try? JSONDecoder().decode([ProviderConfig].self, from: data) {
             providerConfigs = configs
             // Add any new providers not in saved config
             let existingKinds = Set(configs.map(\.kind))
@@ -217,6 +234,32 @@ public final class AppState: ObservableObject {
             for kind in newProviders {
                 providerConfigs.append(ProviderConfig(kind: kind, isEnabled: true, sortOrder: providerConfigs.count))
             }
+        }
+        // Hydrate secrets from Keychain (includes any just-migrated values)
+        for i in providerConfigs.indices {
+            providerConfigs[i].loadSecrets()
+        }
+    }
+
+    /// One-time migration: extract apiKey/manualCookieHeader from legacy
+    /// UserDefaults JSON and move them to Keychain.
+    private func migrateLegacySecrets(from data: Data) {
+        guard let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
+        for entry in array {
+            guard let kindRaw = entry["kind"] as? String,
+                  let kind = ProviderKind(rawValue: kindRaw) else { continue }
+            if let apiKey = entry["apiKey"] as? String, !apiKey.isEmpty {
+                KeychainHelper.save(key: "cli_pulse_provider_\(kind.rawValue)_apiKey", value: apiKey)
+            }
+            if let cookie = entry["manualCookieHeader"] as? String, !cookie.isEmpty {
+                KeychainHelper.save(key: "cli_pulse_provider_\(kind.rawValue)_cookie", value: cookie)
+            }
+        }
+        // Re-save configs without secrets to strip them from UserDefaults
+        // (The next saveProviderConfigs() call will also do this, but be explicit)
+        if let configs = try? JSONDecoder().decode([ProviderConfig].self, from: data),
+           let cleanData = try? JSONEncoder().encode(configs) {
+            UserDefaults.standard.set(cleanData, forKey: "cli_pulse_provider_configs")
         }
     }
 
@@ -247,14 +290,24 @@ public final class AppState: ObservableObject {
                         resetTime: usage.reset_time
                     ))
                 }
+                let effectiveSource: SourceType
+                if config.sourceMode != .auto {
+                    effectiveSource = config.sourceMode
+                } else if isLocalMode {
+                    effectiveSource = .local
+                } else if locallySupplementedProviders.contains(usage.provider) {
+                    effectiveSource = .merged
+                } else {
+                    effectiveSource = .api
+                }
                 return ProviderDetail(
                     provider: usage,
                     config: config,
                     tiers: tiers,
                     operationalStatus: .operational,
-                    accountEmail: nil,
+                    accountEmail: config.accountLabel,
                     planType: usage.plan_type,
-                    sourceType: .auto
+                    sourceType: effectiveSource
                 )
             }
             return nil
@@ -700,9 +753,23 @@ public final class AppState: ObservableObject {
             // Guard against sign-out during in-flight requests
             guard isAuthenticated else { isLoading = false; return }
             dashboard = dash
-            providers = provs
             sessions = sess
             devices = devs
+
+            // On macOS, run local collectors to supplement cloud data where
+            // the backend doesn't return quota/tier information for a provider.
+            #if os(macOS)
+            let localResults = await runCollectors()
+            let (merged, supplemented) = Self.mergeCloudWithLocal(cloud: provs, local: localResults)
+            providers = merged
+            locallySupplementedProviders = supplemented
+
+            // Runtime diagnostic: dump before/after merge state for verification
+            Self.dumpMergeDiagnostic(cloud: provs, local: localResults, merged: merged)
+            #else
+            providers = provs
+            locallySupplementedProviders = []
+            #endif
 
             // Check tier limits and surface warnings
             let maxDevices = subscriptionManager.maxDevices
@@ -736,7 +803,6 @@ public final class AppState: ObservableObject {
             updateCostSummary()
             publishWidgetData()
         } catch let error as APIError where error == .tokenExpired {
-            // Token expired and refresh failed — force sign out
             signOut()
             lastError = error.localizedDescription
         } catch {
@@ -745,7 +811,113 @@ public final class AppState: ObservableObject {
         isLoading = false
     }
 
-    // MARK: - Local Scanning (macOS only, no cloud needed)
+    // MARK: - Cloud + Local Merge
+
+    #if os(macOS)
+    /// Merge cloud provider data with local collector results.
+    ///
+    /// **Richness rule**: the source with more tiers wins for quota/tier fields.
+    /// This ensures a local collector returning 4-5 detailed tiers (5h Window,
+    /// Weekly, Opus, Sonnet, Extra Usage) is not overridden by a cloud source
+    /// with only 1-2 coarse tiers or a bare top-level quota.
+    ///
+    /// - If local tiers are strictly richer (more tiers), use local quota data.
+    /// - If cloud has no quota AND no tiers, use local data (original rule).
+    /// - If cloud tiers >= local tiers, keep cloud data (backward-compatible).
+    /// - statusOnly results are never merged into cloud data.
+    /// - Providers not in cloud are added from local.
+    ///
+    /// Returns (merged providers, set of provider names that were locally supplemented).
+    nonisolated static func mergeCloudWithLocal(cloud: [ProviderUsage], local: [CollectorResult]) -> ([ProviderUsage], Set<String>) {
+        var merged: [String: ProviderUsage] = [:]
+        for p in cloud { merged[p.provider] = p }
+        var supplemented: Set<String> = []
+
+        for result in local {
+            // Skip statusOnly (e.g. Ollama model listing) — not useful to overlay on cloud data
+            guard result.dataKind == .quota || result.dataKind == .credits else { continue }
+
+            let name = result.usage.provider
+            if let existing = merged[name] {
+                let cloudHasQuota = existing.quota != nil && (existing.quota ?? 0) > 0
+                let cloudHasTiers = !existing.tiers.isEmpty
+                let cloudIsEmpty = !cloudHasQuota && !cloudHasTiers
+                // Richness: local wins if it has strictly more tiers than cloud
+                let localIsRicher = result.usage.tiers.count > existing.tiers.count
+
+                if cloudIsEmpty || localIsRicher {
+                    // Cloud is incomplete OR local has richer tier data — use local quota/tiers
+                    merged[name] = ProviderUsage(
+                        provider: existing.provider,
+                        today_usage: existing.today_usage > 0 ? existing.today_usage : result.usage.today_usage,
+                        week_usage: existing.week_usage > 0 ? existing.week_usage : result.usage.week_usage,
+                        estimated_cost_today: existing.estimated_cost_today,
+                        estimated_cost_week: existing.estimated_cost_week,
+                        cost_status_today: existing.cost_status_today,
+                        cost_status_week: existing.cost_status_week,
+                        quota: result.usage.quota,
+                        remaining: result.usage.remaining,
+                        plan_type: result.usage.plan_type ?? existing.plan_type,
+                        reset_time: result.usage.reset_time ?? existing.reset_time,
+                        tiers: result.usage.tiers,
+                        status_text: result.usage.status_text,
+                        trend: existing.trend,
+                        recent_sessions: existing.recent_sessions,
+                        recent_errors: existing.recent_errors,
+                        metadata: existing.metadata ?? result.usage.metadata
+                    )
+                    supplemented.insert(name)
+                }
+                // If cloud tiers >= local tiers, keep cloud data as-is
+            } else {
+                // Provider not in cloud results — add local-only data
+                merged[name] = result.usage
+                supplemented.insert(name)
+            }
+        }
+
+        return (merged.values.sorted { $0.today_usage > $1.today_usage }, supplemented)
+    }
+
+    /// Dump merge diagnostic to /tmp for runtime verification.
+    nonisolated static func dumpMergeDiagnostic(cloud: [ProviderUsage], local: [CollectorResult], merged: [ProviderUsage]) {
+        func snapshot(_ p: ProviderUsage) -> [String: Any] {
+            [
+                "provider": p.provider,
+                "quota": p.quota as Any,
+                "remaining": p.remaining as Any,
+                "tiers_count": p.tiers.count,
+                "tiers": p.tiers.map { ["name": $0.name, "quota": $0.quota, "remaining": $0.remaining, "reset_time": $0.reset_time as Any] },
+                "plan_type": p.plan_type as Any,
+                "reset_time": p.reset_time as Any,
+                "today_usage": p.today_usage,
+            ]
+        }
+        let diag: [String: Any] = [
+            "timestamp": ISO8601DateFormatter().string(from: Date()),
+            "cloud": cloud.map(snapshot),
+            "local_collectors": local.map { [
+                "provider": $0.usage.provider,
+                "data_kind": String(describing: $0.dataKind),
+                "usage": snapshot($0.usage),
+            ] },
+            "merged": merged.map(snapshot),
+        ]
+        if let data = try? JSONSerialization.data(withJSONObject: diag, options: [.prettyPrinted, .sortedKeys]),
+           let str = String(data: data, encoding: .utf8) {
+            try? str.write(toFile: NSTemporaryDirectory() + "clipulse_merge_diagnostic.json", atomically: true, encoding: .utf8)
+        }
+    }
+    #endif
+
+    // MARK: - Local Mode (macOS only, no cloud needed)
+    //
+    // Two-phase local refresh:
+    //   1. Run provider-native collectors for providers with credentials configured.
+    //      These return real quota/credits/tier data.
+    //   2. Run LocalScanner for process detection (sessions + estimated usage).
+    //      Scanner results fill in providers that don't have a collector.
+    // Collector results take precedence; scanner results are used as fallback.
 
     #if os(macOS)
     private func refreshLocal() async {
@@ -755,13 +927,30 @@ public final class AppState: ObservableObject {
         serverOnline = true
         lastError = nil
 
-        let result = await Task.detached { LocalScanner.shared.scan() }.value
+        // Phase 1: Run provider-native collectors concurrently
+        let collectorResults = await runCollectors()
 
-        // Guard against sign-out during scan
+        // Phase 2: Run process detection via LocalScanner
+        let scanResult = await Task.detached { LocalScanner.shared.scan() }.value
+
+        // Guard against sign-out during async work
         guard isAuthenticated else { isLoading = false; return }
 
-        sessions = result.sessions
-        providers = result.providers
+        // Merge: collector results override scanner results for the same provider.
+        // Scanner sessions are always preserved (collectors don't produce sessions).
+        sessions = scanResult.sessions
+
+        var mergedProviders: [String: ProviderUsage] = [:]
+        // Start with scanner results as baseline
+        for p in scanResult.providers {
+            mergedProviders[p.provider] = p
+        }
+        // Overlay collector results (real quota data takes precedence)
+        for result in collectorResults {
+            mergedProviders[result.usage.provider] = result.usage
+        }
+        providers = mergedProviders.values.sorted { $0.today_usage > $1.today_usage }
+
         devices = [DeviceRecord(
             id: "local",
             name: ProcessInfo.processInfo.hostName,
@@ -770,28 +959,34 @@ public final class AppState: ObservableObject {
             status: "online",
             last_sync_at: ISO8601DateFormatter().string(from: Date()),
             helper_version: "local",
-            current_session_count: result.activeSessionCount,
+            current_session_count: scanResult.activeSessionCount,
             cpu_usage: nil,
             memory_usage: nil
         )]
         alerts = []
 
-        let breakdown = result.providers.map {
-            ProviderBreakdown(provider: $0.provider, usage: $0.today_usage, estimated_cost: $0.estimated_cost_today, cost_status: "normal", remaining: nil)
+        let totalUsage = providers.reduce(0) { $0 + $1.today_usage }
+        let totalCost = providers.reduce(0) { $0 + $1.estimated_cost_today }
+
+        let breakdown = providers.map {
+            ProviderBreakdown(provider: $0.provider, usage: $0.today_usage,
+                              estimated_cost: $0.estimated_cost_today,
+                              cost_status: $0.cost_status_today, remaining: $0.remaining)
         }
         dashboard = DashboardSummary(
-            total_usage_today: result.totalUsage,
-            total_estimated_cost_today: result.totalCost,
-            cost_status: "normal",
-            total_requests_today: result.sessions.reduce(0) { $0 + $1.requests },
-            active_sessions: result.activeSessionCount,
+            total_usage_today: totalUsage,
+            total_estimated_cost_today: totalCost,
+            cost_status: "Estimated",
+            total_requests_today: scanResult.sessions.reduce(0) { $0 + $1.requests },
+            active_sessions: scanResult.activeSessionCount,
             online_devices: 1,
             unresolved_alerts: 0,
             provider_breakdown: breakdown,
             top_projects: [],
             trend: [],
             recent_activity: [],
-            risk_signals: result.isEmpty ? ["No AI tools detected. Start a coding session to see data."] : [],
+            risk_signals: scanResult.isEmpty && collectorResults.isEmpty
+                ? ["No AI tools detected. Start a coding session to see data."] : [],
             alert_summary: AlertSummaryDTO(critical: 0, warning: 0, info: 0)
         )
 
@@ -799,6 +994,60 @@ public final class AppState: ObservableObject {
         buildProviderDetails()
         updateCostSummary()
         isLoading = false
+    }
+
+    /// Run all available collectors concurrently. Non-fatal: errors are logged, not thrown.
+    private func runCollectors() async -> [CollectorResult] {
+        let configs = providerConfigs.filter(\.isEnabled)
+        var results: [CollectorResult] = []
+
+        await withTaskGroup(of: CollectorResult?.self) { group in
+            for config in configs {
+                if let collector = CollectorRegistry.collector(for: config.kind, config: config) {
+                    group.addTask {
+                        do {
+                            return try await collector.collect(config: config)
+                        } catch {
+                            // Non-fatal: collector failure doesn't block other providers
+                            let msg = "[Collector] \(config.kind.rawValue) failed: \(error.localizedDescription)"
+                            if !Self.shouldSilenceCollectorError(kind: config.kind, error: error) {
+                                print(msg)
+                            }
+                            // Append to diagnostic log
+                            let logPath = NSTemporaryDirectory() + "clipulse_collector_errors.log"
+                            let entry = "\(ISO8601DateFormatter().string(from: Date())) \(msg)\n"
+                            if let fh = FileHandle(forWritingAtPath: logPath) {
+                                fh.seekToEndOfFile()
+                                fh.write(entry.data(using: .utf8) ?? Data())
+                                fh.closeFile()
+                            } else {
+                                try? entry.write(toFile: logPath, atomically: true, encoding: .utf8)
+                            }
+                            return nil
+                        }
+                    }
+                }
+            }
+            for await result in group {
+                if let r = result { results.append(r) }
+            }
+        }
+        return results
+    }
+
+    nonisolated private static func shouldSilenceCollectorError(kind: ProviderKind, error: Error) -> Bool {
+        // Local Ollama is optional. When the daemon is not running, connection-refused
+        // noise in the Xcode console is not actionable for most users.
+        guard kind == .ollama else { return false }
+
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain,
+           [NSURLErrorCannotConnectToHost, NSURLErrorTimedOut, NSURLErrorNetworkConnectionLost]
+            .contains(nsError.code) {
+            return true
+        }
+
+        return nsError.localizedDescription == "Could not connect to the server."
     }
     #endif
 
