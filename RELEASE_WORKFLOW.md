@@ -63,6 +63,9 @@ Xcode build and a quick smoke test of the macOS app.
 - Sign and notarize the app if required.
 - Produce the release artifact, typically a DMG.
 - Keep the built artifact outside the public repo until upload time.
+- Prefer a build/output directory outside iCloud-synced folders. The release
+  script now defaults to `~/Library/Caches/CLI-Pulse-Bar-release` to avoid
+  File Provider extended attributes that can break signing.
 
 Recommended output naming:
 
@@ -82,6 +85,8 @@ Recommended setup:
 export DEVELOPER_ID_APPLICATION="Developer ID Application: Your Name (TEAMID)"
 export NOTARYTOOL_KEYCHAIN_PROFILE="cli-pulse-notary"
 ```
+
+`cli-pulse-notary` is the default profile name expected by the release script.
 
 Create the notary profile once:
 

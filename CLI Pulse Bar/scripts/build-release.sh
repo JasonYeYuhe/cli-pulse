@@ -11,7 +11,7 @@ SCHEME="CLI Pulse Bar"
 APP_NAME="CLI Pulse Bar"
 DMG_BASENAME="CLI-Pulse-Bar"
 
-BUILD_DIR="$PROJECT_DIR/build"
+BUILD_DIR="${CLI_PULSE_RELEASE_BUILD_DIR:-$HOME/Library/Caches/CLI-Pulse-Bar-release}"
 EXPORT_PATH="$BUILD_DIR/export"
 DERIVED_DATA_PATH="$BUILD_DIR/DerivedData"
 SHOW_SETTINGS=$(xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration Release -showBuildSettings 2>/dev/null)
@@ -27,7 +27,7 @@ if [[ "${1:-}" == "--notarize" ]]; then
 fi
 
 DEVELOPER_ID_APPLICATION="${DEVELOPER_ID_APPLICATION:-}"
-NOTARYTOOL_KEYCHAIN_PROFILE="${NOTARYTOOL_KEYCHAIN_PROFILE:-}"
+NOTARYTOOL_KEYCHAIN_PROFILE="${NOTARYTOOL_KEYCHAIN_PROFILE:-cli-pulse-notary}"
 
 if [[ -z "$DEVELOPER_ID_APPLICATION" ]]; then
     DEVELOPER_ID_APPLICATION=$(security find-identity -v -p codesigning 2>/dev/null | sed -n 's/.*"\\(Developer ID Application:.*\\)"/\\1/p' | head -n 1)
