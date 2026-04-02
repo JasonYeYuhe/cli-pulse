@@ -74,3 +74,4 @@ swift test --package-path "CLI Pulse Bar/CLIPulseCore"
 - If you are preparing a release, read `RELEASE_WORKFLOW.md`.
 - If you are starting a new task branch, read `BRANCHING.md`.
 - If you are handing a new task to another AI, use `TASK_START_PROMPT.md`.
+- If you are asking an AI to commit, merge, or decide whether public updates are needed, read `MERGE_AND_PUBLISH_RULES.md`.
