@@ -10,7 +10,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BUILD_DIR="$PROJECT_DIR/build"
 
 VERSION=$(defaults read "$PROJECT_DIR/CLI Pulse Bar/Info.plist" CFBundleShortVersionString 2>/dev/null || echo "0.1.0")
-DMG_PATH="$BUILD_DIR/CLI Pulse Bar-v${VERSION}.dmg"
+DMG_PATH="$BUILD_DIR/CLI-Pulse-Bar-v${VERSION}.dmg"
 TAG="v${VERSION}"
 
 if [[ ! -f "$DMG_PATH" ]]; then
@@ -24,7 +24,7 @@ echo ""
 
 # Generate release notes
 RELEASE_NOTES=$(cat << REOF
-## CLI Pulse Bar v${VERSION}
+## CLI Pulse v${VERSION}
 
 macOS menu bar app for monitoring AI coding tool usage across Claude, Codex, Gemini, OpenRouter, and Ollama.
 
@@ -42,7 +42,7 @@ macOS menu bar app for monitoring AI coding tool usage across Claude, Codex, Gem
 ### Installation
 
 **Direct Download:**
-1. Download \`CLI.Pulse.Bar-v${VERSION}.dmg\` below
+1. Download \`CLI-Pulse-Bar-v${VERSION}.dmg\` below
 2. Open the DMG and drag to Applications
 3. Launch from Applications
 
@@ -66,7 +66,7 @@ REOF
 # Create release with gh CLI
 gh release create "$TAG" \
     "$DMG_PATH" \
-    --title "CLI Pulse Bar $TAG" \
+    --title "CLI Pulse $TAG" \
     --notes "$RELEASE_NOTES" \
     --draft
 

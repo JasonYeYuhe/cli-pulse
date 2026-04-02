@@ -9,14 +9,17 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 PROJECT="$PROJECT_DIR/CLI Pulse Bar.xcodeproj"
 SCHEME="CLI Pulse Bar"
 APP_NAME="CLI Pulse Bar"
+DMG_BASENAME="CLI-Pulse-Bar"
 
 BUILD_DIR="$PROJECT_DIR/build"
-ARCHIVE_PATH="$BUILD_DIR/$APP_NAME.xcarchive"
 EXPORT_PATH="$BUILD_DIR/export"
-DMG_PATH="$BUILD_DIR/$APP_NAME.dmg"
-
-VERSION=$(defaults read "$PROJECT_DIR/CLI Pulse Bar/Info.plist" CFBundleShortVersionString 2>/dev/null || echo "0.1.0")
-DMG_FINAL="$BUILD_DIR/${APP_NAME}-v${VERSION}.dmg"
+DERIVED_DATA_PATH="$BUILD_DIR/DerivedData"
+SHOW_SETTINGS=$(xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration Release -showBuildSettings 2>/dev/null)
+VERSION=$(printf "%s\n" "$SHOW_SETTINGS" | awk -F' = ' '/MARKETING_VERSION = / {print $2; exit}')
+if [[ -z "${VERSION:-}" ]]; then
+    VERSION="0.1.0"
+fi
+DMG_FINAL="$BUILD_DIR/${DMG_BASENAME}-v${VERSION}.dmg"
 
 NOTARIZE=false
 if [[ "${1:-}" == "--notarize" ]]; then
@@ -34,58 +37,40 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
 # Archive
-echo "[2/6] Archiving..."
-xcodebuild archive \
+echo "[2/6] Building Release app..."
+xcodebuild build \
     -project "$PROJECT" \
     -scheme "$SCHEME" \
     -configuration Release \
-    -archivePath "$ARCHIVE_PATH" \
+    -derivedDataPath "$DERIVED_DATA_PATH" \
     -quiet \
-    CODE_SIGN_IDENTITY="-" \
-    CODE_SIGN_STYLE=Manual \
+    CODE_SIGNING_ALLOWED=NO \
+    CODE_SIGNING_REQUIRED=NO \
+    CODE_SIGN_IDENTITY="" \
     DEVELOPMENT_TEAM="" \
+    PROVISIONING_PROFILE_SPECIFIER="" \
     2>&1 | tail -5
 
-echo "  Archive created at: $ARCHIVE_PATH"
+APP_BUILD_DIR="$DERIVED_DATA_PATH/Build/Products/Release"
+APP_IN_BUILD="$APP_BUILD_DIR/$APP_NAME.app"
+echo "  Build products at: $APP_BUILD_DIR"
 
 # Export
 echo "[3/6] Exporting app..."
-cat > "$BUILD_DIR/ExportOptions.plist" << 'EXPORTEOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>method</key>
-    <string>mac-application</string>
-    <key>signingStyle</key>
-    <string>manual</string>
-    <key>signingCertificate</key>
-    <string>-</string>
-</dict>
-</plist>
-EXPORTEOF
-
-# Direct copy from archive instead of export (works without dev account)
-APP_IN_ARCHIVE="$ARCHIVE_PATH/Products/Applications/$APP_NAME.app"
-if [[ -d "$APP_IN_ARCHIVE" ]]; then
-    mkdir -p "$EXPORT_PATH"
-    cp -R "$APP_IN_ARCHIVE" "$EXPORT_PATH/"
+mkdir -p "$EXPORT_PATH"
+if [[ -d "$APP_IN_BUILD" ]]; then
+    rm -rf "$EXPORT_PATH/$APP_NAME.app"
+    cp -R "$APP_IN_BUILD" "$EXPORT_PATH/"
     echo "  Exported to: $EXPORT_PATH/$APP_NAME.app"
 else
-    # Fallback: copy from Products in archive
-    APP_IN_USR="$ARCHIVE_PATH/Products/usr/local/bin/$APP_NAME.app"
-    if [[ -d "$APP_IN_USR" ]]; then
-        mkdir -p "$EXPORT_PATH"
-        cp -R "$APP_IN_USR" "$EXPORT_PATH/"
-    else
-        echo "  ERROR: Could not find app in archive. Listing contents:"
-        find "$ARCHIVE_PATH/Products" -name "*.app" 2>/dev/null
-        exit 1
-    fi
+    echo "  ERROR: Could not find built app at: $APP_IN_BUILD"
+    find "$APP_BUILD_DIR" -name "*.app" 2>/dev/null || true
+    exit 1
 fi
 
 # Ad-hoc sign
 echo "[4/6] Code signing (ad-hoc)..."
+xattr -cr "$EXPORT_PATH/$APP_NAME.app"
 codesign --force --deep --sign - "$EXPORT_PATH/$APP_NAME.app"
 echo "  Signed successfully"
 
