@@ -59,6 +59,7 @@ public enum CollectorRegistry {
         AlibabaCollector(),
         MiniMaxCollector(),
         AugmentCollector(),
+        VolcanoEngineCollector(),
     ]
 
     /// Returns the collector for a given provider, if one exists and is available.
