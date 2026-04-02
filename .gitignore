@@ -26,9 +26,17 @@ DerivedData/
 
 # Claude Code
 .claude/
+.mcp.json
 
 # Swift Package Manager build
 .build/
 
 # Legacy submodule (removed)
 CLI Pulse/
+
+# Local research / vendored reference material
+CLI Pulse Bar/codexbar/
+CLI Pulse Bar/docs/
+
+# Extra Xcode user state
+CLI Pulse Bar/CLI Pulse Bar.xcodeproj/project.xcworkspace/xcuserdata/

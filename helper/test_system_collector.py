@@ -1,7 +1,7 @@
 """Tests for Claude quota parsing in system_collector.py."""
 from __future__ import annotations
 import unittest
-from system_collector import _parse_claude_api_response, _parse_claude_usage_output, _infer_claude_plan
+from system_collector import _parse_claude_api_response, _parse_claude_usage_output, _infer_claude_plan, _parse_gemini_quota_response, _load_gemini_project_id
 
 
 class TestInferClaudePlan(unittest.TestCase):
@@ -142,6 +142,37 @@ Current week (all models)
         self.assertEqual(result["tiers"][0]["remaining"], 42)
         # 25% used → remaining=75
         self.assertEqual(result["tiers"][1]["remaining"], 75)
+
+
+class TestParseGeminiQuotaResponse(unittest.TestCase):
+    def test_prefers_pro_order_and_primary(self):
+        data = {
+            "buckets": [
+                {"modelId": "gemini-2.5-flash", "remainingFraction": 1.0, "resetTime": "2026-04-03T09:08:42Z", "tokenType": "REQUESTS"},
+                {"modelId": "gemini-2.5-flash-lite", "remainingFraction": 1.0, "resetTime": "2026-04-03T09:08:42Z", "tokenType": "REQUESTS"},
+                {"modelId": "gemini-2.5-pro", "remainingFraction": 0.81, "resetTime": "2026-04-03T04:39:00Z", "tokenType": "REQUESTS"},
+            ]
+        }
+        result = _parse_gemini_quota_response(data)
+        self.assertIsNotNone(result)
+        self.assertEqual([tier["name"] for tier in result["tiers"]], ["Pro", "Flash", "Flash Lite"])
+        self.assertEqual(result["remaining"], 81)
+        self.assertEqual(result["reset_time"], "2026-04-03T04:39:00Z")
+
+
+class TestGeminiLoadCodeAssist(unittest.TestCase):
+    def test_load_project_id_from_string(self):
+        import system_collector as sc
+        original = sc.urllib.request.urlopen
+        class Resp:
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self): return b'{"cloudaicompanionProject":"centering-invention-98n20"}'
+        try:
+            sc.urllib.request.urlopen = lambda *args, **kwargs: Resp()
+            self.assertEqual(_load_gemini_project_id("token"), "centering-invention-98n20")
+        finally:
+            sc.urllib.request.urlopen = original
 
 
 if __name__ == "__main__":

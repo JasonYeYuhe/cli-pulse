@@ -113,7 +113,7 @@ public struct OllamaCollector: ProviderCollector, Sendable {
 
     // MARK: - Result building
 
-    private func buildResult(models: [OllamaModel], running: [String]) -> CollectorResult {
+    func buildResult(models: [OllamaModel], running: [String]) -> CollectorResult {
         let statusText = running.isEmpty
             ? "\(models.count) models installed"
             : "\(running.count) running, \(models.count) installed"

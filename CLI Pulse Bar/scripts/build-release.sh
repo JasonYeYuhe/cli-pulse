@@ -9,18 +9,49 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 PROJECT="$PROJECT_DIR/CLI Pulse Bar.xcodeproj"
 SCHEME="CLI Pulse Bar"
 APP_NAME="CLI Pulse Bar"
+DMG_BASENAME="CLI-Pulse-Bar"
 
-BUILD_DIR="$PROJECT_DIR/build"
-ARCHIVE_PATH="$BUILD_DIR/$APP_NAME.xcarchive"
+BUILD_DIR="${CLI_PULSE_RELEASE_BUILD_DIR:-$HOME/Library/Caches/CLI-Pulse-Bar-release}"
 EXPORT_PATH="$BUILD_DIR/export"
-DMG_PATH="$BUILD_DIR/$APP_NAME.dmg"
-
-VERSION=$(defaults read "$PROJECT_DIR/CLI Pulse Bar/Info.plist" CFBundleShortVersionString 2>/dev/null || echo "0.1.0")
-DMG_FINAL="$BUILD_DIR/${APP_NAME}-v${VERSION}.dmg"
+DERIVED_DATA_PATH="$BUILD_DIR/DerivedData"
+SHOW_SETTINGS=$(xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration Release -showBuildSettings 2>/dev/null)
+VERSION=$(printf "%s\n" "$SHOW_SETTINGS" | awk -F' = ' '/MARKETING_VERSION = / {print $2; exit}')
+if [[ -z "${VERSION:-}" ]]; then
+    VERSION="0.1.0"
+fi
+DMG_FINAL="$BUILD_DIR/${DMG_BASENAME}-v${VERSION}.dmg"
 
 NOTARIZE=false
 if [[ "${1:-}" == "--notarize" ]]; then
     NOTARIZE=true
+fi
+
+DEVELOPER_ID_APPLICATION="${DEVELOPER_ID_APPLICATION:-}"
+NOTARYTOOL_KEYCHAIN_PROFILE="${NOTARYTOOL_KEYCHAIN_PROFILE:-cli-pulse-notary}"
+
+if [[ -z "$DEVELOPER_ID_APPLICATION" ]]; then
+    DEVELOPER_ID_APPLICATION=$(security find-identity -v -p codesigning 2>/dev/null | sed -n 's/.*"\\(Developer ID Application:.*\\)"/\\1/p' | head -n 1)
+fi
+
+USE_DEVELOPER_ID=false
+if [[ -n "$DEVELOPER_ID_APPLICATION" ]]; then
+    USE_DEVELOPER_ID=true
+fi
+
+if [[ "$NOTARIZE" == true && "$USE_DEVELOPER_ID" != true ]]; then
+    echo "ERROR: --notarize requested but no Developer ID Application certificate was found."
+    echo "Install a certificate like:"
+    echo "  Developer ID Application: <Your Name> (<TEAM_ID>)"
+    exit 1
+fi
+
+if [[ "$NOTARIZE" == true && -z "$NOTARYTOOL_KEYCHAIN_PROFILE" && ( -z "${APPLE_ID:-}" || -z "${APPLE_TEAM_ID:-}" || -z "${APPLE_APP_PASSWORD:-}" ) ]]; then
+    echo "ERROR: --notarize requested but notarytool credentials are not configured."
+    echo "Set one of:"
+    echo "  NOTARYTOOL_KEYCHAIN_PROFILE=<profile>"
+    echo "or:"
+    echo "  APPLE_ID / APPLE_TEAM_ID / APPLE_APP_PASSWORD"
+    exit 1
 fi
 
 echo "================================================"
@@ -34,59 +65,50 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
 # Archive
-echo "[2/6] Archiving..."
-xcodebuild archive \
+echo "[2/6] Building Release app..."
+xcodebuild build \
     -project "$PROJECT" \
     -scheme "$SCHEME" \
     -configuration Release \
-    -archivePath "$ARCHIVE_PATH" \
+    -derivedDataPath "$DERIVED_DATA_PATH" \
     -quiet \
-    CODE_SIGN_IDENTITY="-" \
-    CODE_SIGN_STYLE=Manual \
+    CODE_SIGNING_ALLOWED=NO \
+    CODE_SIGNING_REQUIRED=NO \
+    CODE_SIGN_IDENTITY="" \
     DEVELOPMENT_TEAM="" \
+    PROVISIONING_PROFILE_SPECIFIER="" \
     2>&1 | tail -5
 
-echo "  Archive created at: $ARCHIVE_PATH"
+APP_BUILD_DIR="$DERIVED_DATA_PATH/Build/Products/Release"
+APP_IN_BUILD="$APP_BUILD_DIR/$APP_NAME.app"
+echo "  Build products at: $APP_BUILD_DIR"
 
 # Export
 echo "[3/6] Exporting app..."
-cat > "$BUILD_DIR/ExportOptions.plist" << 'EXPORTEOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>method</key>
-    <string>mac-application</string>
-    <key>signingStyle</key>
-    <string>manual</string>
-    <key>signingCertificate</key>
-    <string>-</string>
-</dict>
-</plist>
-EXPORTEOF
-
-# Direct copy from archive instead of export (works without dev account)
-APP_IN_ARCHIVE="$ARCHIVE_PATH/Products/Applications/$APP_NAME.app"
-if [[ -d "$APP_IN_ARCHIVE" ]]; then
-    mkdir -p "$EXPORT_PATH"
-    cp -R "$APP_IN_ARCHIVE" "$EXPORT_PATH/"
+mkdir -p "$EXPORT_PATH"
+if [[ -d "$APP_IN_BUILD" ]]; then
+    rm -rf "$EXPORT_PATH/$APP_NAME.app"
+    cp -R "$APP_IN_BUILD" "$EXPORT_PATH/"
     echo "  Exported to: $EXPORT_PATH/$APP_NAME.app"
 else
-    # Fallback: copy from Products in archive
-    APP_IN_USR="$ARCHIVE_PATH/Products/usr/local/bin/$APP_NAME.app"
-    if [[ -d "$APP_IN_USR" ]]; then
-        mkdir -p "$EXPORT_PATH"
-        cp -R "$APP_IN_USR" "$EXPORT_PATH/"
-    else
-        echo "  ERROR: Could not find app in archive. Listing contents:"
-        find "$ARCHIVE_PATH/Products" -name "*.app" 2>/dev/null
-        exit 1
-    fi
+    echo "  ERROR: Could not find built app at: $APP_IN_BUILD"
+    find "$APP_BUILD_DIR" -name "*.app" 2>/dev/null || true
+    exit 1
 fi
 
-# Ad-hoc sign
-echo "[4/6] Code signing (ad-hoc)..."
-codesign --force --deep --sign - "$EXPORT_PATH/$APP_NAME.app"
+# Sign app
+if [[ "$USE_DEVELOPER_ID" == true ]]; then
+    echo "[4/6] Code signing (Developer ID)..."
+else
+    echo "[4/6] Code signing (ad-hoc)..."
+fi
+xattr -cr "$EXPORT_PATH/$APP_NAME.app"
+if [[ "$USE_DEVELOPER_ID" == true ]]; then
+    codesign --force --deep --options runtime --timestamp --sign "$DEVELOPER_ID_APPLICATION" "$EXPORT_PATH/$APP_NAME.app"
+else
+    codesign --force --deep --sign - "$EXPORT_PATH/$APP_NAME.app"
+fi
+codesign --verify --deep --strict "$EXPORT_PATH/$APP_NAME.app"
 echo "  Signed successfully"
 
 # Create DMG
@@ -105,31 +127,32 @@ hdiutil create \
     -quiet
 
 rm -rf "$DMG_STAGING"
+
+if [[ "$USE_DEVELOPER_ID" == true ]]; then
+    xattr -cr "$DMG_FINAL"
+    codesign --force --sign "$DEVELOPER_ID_APPLICATION" --timestamp "$DMG_FINAL"
+fi
+
 echo "  DMG created: $DMG_FINAL"
 
 # Notarize (optional)
 if [[ "$NOTARIZE" == true ]]; then
     echo "[6/6] Notarizing..."
-    echo ""
-    echo "  To notarize, you need an Apple Developer account."
-    echo "  Set these environment variables:"
-    echo "    APPLE_ID=your@email.com"
-    echo "    APPLE_TEAM_ID=YOUR_TEAM_ID"
-    echo "    APPLE_APP_PASSWORD=app-specific-password"
-    echo ""
-
-    if [[ -n "${APPLE_ID:-}" && -n "${APPLE_TEAM_ID:-}" && -n "${APPLE_APP_PASSWORD:-}" ]]; then
+    if [[ -n "$NOTARYTOOL_KEYCHAIN_PROFILE" ]]; then
+        xcrun notarytool submit "$DMG_FINAL" \
+            --keychain-profile "$NOTARYTOOL_KEYCHAIN_PROFILE" \
+            --wait
+    else
         xcrun notarytool submit "$DMG_FINAL" \
             --apple-id "$APPLE_ID" \
             --team-id "$APPLE_TEAM_ID" \
             --password "$APPLE_APP_PASSWORD" \
             --wait
-
-        xcrun stapler staple "$DMG_FINAL"
-        echo "  Notarization complete!"
-    else
-        echo "  Skipping - environment variables not set"
     fi
+
+    xcrun stapler staple "$DMG_FINAL"
+    xcrun stapler validate "$DMG_FINAL"
+    echo "  Notarization complete!"
 else
     echo "[6/6] Skipping notarization (use --notarize to enable)"
 fi

@@ -39,6 +39,10 @@ public enum PulseTheme {
         case "OpenRouter": return Color(red: 0.20, green: 0.65, blue: 0.90)
         case "Ollama": return Color(red: 0.30, green: 0.80, blue: 0.65)
         case "Alibaba": return Color(red: 0.95, green: 0.50, blue: 0.15)
+        case "Kimi": return Color(red: 0.35, green: 0.55, blue: 0.90)
+        case "Kiro": return Color(red: 0.20, green: 0.70, blue: 0.50)
+        case "Vertex AI": return Color(red: 0.26, green: 0.52, blue: 0.96)
+        case "Perplexity": return Color(red: 0.10, green: 0.75, blue: 0.75)
         default: return .gray
         }
     }
@@ -467,5 +471,29 @@ public enum RelativeTime {
             let remHours = Int(remaining.truncatingRemainder(dividingBy: 86400) / 3600)
             return remHours > 0 ? "in \(days)d \(remHours)h" : "in \(days)d"
         }
+    }
+
+    /// Format reset times for quota windows.
+    /// Reset timestamps should only be shown when they are in the future.
+    public static func formatReset(_ isoString: String) -> String? {
+        guard let date = formatterWithFractional.date(from: isoString) ?? formatterBasic.date(from: isoString) else {
+            return nil
+        }
+
+        let interval = Date().timeIntervalSince(date)
+        guard interval < 0 else { return nil }
+
+        let totalMinutes = max(1, Int(ceil((-interval) / 60.0)))
+        let days = totalMinutes / (24 * 60)
+        let hours = (totalMinutes / 60) % 24
+        let mins = totalMinutes % 60
+
+        if days > 0 {
+            return hours > 0 ? "in \(days)d \(hours)h" : "in \(days)d"
+        }
+        if hours > 0 {
+            return mins > 0 ? "in \(hours)h \(mins)m" : "in \(hours)h"
+        }
+        return "in \(totalMinutes)m"
     }
 }

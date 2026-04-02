@@ -281,8 +281,9 @@ struct EnhancedProviderCard: View {
         guard let remaining = tier.remaining, let quota = tier.quota, quota > 0 else { return nil }
         let pctLeft = Int(100.0 * Double(remaining) / Double(quota))
         var result = "\(pctLeft)% left"
-        if let reset = tier.resetTime {
-            result += " · Resets \(RelativeTime.format(reset))"
+        if let reset = tier.resetTime,
+           let resetText = RelativeTime.formatReset(reset) {
+            result += " · Resets \(resetText)"
         }
         return result
     }

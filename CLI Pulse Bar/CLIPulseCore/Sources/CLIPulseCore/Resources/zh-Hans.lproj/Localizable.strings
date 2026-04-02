@@ -13,7 +13,7 @@
 "dashboard.server_online" = "服务器在线";
 "dashboard.server_offline" = "服务器离线";
 "dashboard.no_data" = "暂无数据";
-"dashboard.connect_helper" = "连接助手设备以开始监控";
+"dashboard.connect_helper" = "在 Mac 上设置助手以开始同步";
 "dashboard.usage_today" = "今日用量";
 "dashboard.cost_today" = "今日费用";
 "dashboard.est_cost" = "预估费用";
@@ -41,7 +41,7 @@
 "providers.tracked" = "跟踪中";
 "providers.no_providers" = "无服务商";
 "providers.no_data" = "无服务商数据";
-"providers.empty_hint" = "助手同步后将显示服务商数据";
+"providers.empty_hint" = "Mac 上的助手运行后将显示服务商数据";
 "providers.all_hidden" = "所有服务商已隐藏";
 "providers.show_all_hint" = "点按「显示全部」查看已禁用的服务商";
 "providers.this_week" = "本周";
@@ -89,9 +89,9 @@
 "settings.status" = "状态";
 "settings.connected" = "已连接";
 "settings.disconnected" = "未连接";
-"settings.paired" = "已配对";
-"settings.not_paired" = "未配对";
-"settings.connection" = "连接";
+"settings.paired" = "已同步";
+"settings.not_paired" = "未同步";
+"settings.connection" = "同步状态";
 "settings.refresh_cadence" = "刷新频率";
 "settings.refresh_interval" = "刷新间隔";
 "settings.subscription" = "订阅";
@@ -279,3 +279,23 @@
 "badge.local" = "本地";
 "badge.aggregator" = "聚合";
 "badge.ide" = "IDE";
+
+/* ── 引导 / 同步设置 ── */
+"onboarding.how_it_works" = "CLI Pulse 工作原理";
+"onboarding.cloud_sync_title" = "云同步";
+"onboarding.cloud_sync_desc" = "助手脚本在 Mac 上运行，将 AI 工具使用数据同步到云端。然后任何设备（包括此 iPhone）都可以查看数据。";
+"onboarding.not_bluetooth" = "这不是蓝牙或直接设备配对。";
+"onboarding.setup_steps_title" = "开始使用";
+"onboarding.step1_mac" = "在 Mac 应用上登录";
+"onboarding.step2_helper" = "在终端中运行助手脚本";
+"onboarding.step3_phone" = "数据将自动显示在这里";
+"onboarding.local_mode_title" = "本地模式";
+"onboarding.local_mode_desc" = "检测在此 Mac 上运行的 AI 工具，无需云设置。";
+"onboarding.cloud_mode_title" = "云同步（可选）";
+"onboarding.cloud_mode_desc" = "助手脚本将数据同步到云端，可在任何设备（包括 iPhone）上查看。";
+"onboarding.ios_waiting" = "等待数据";
+"onboarding.ios_waiting_desc" = "Mac 上的助手运行后，使用数据将显示在这里。";
+"onboarding.check_sync" = "检查同步状态";
+"onboarding.set_up_sync" = "设置云同步";
+"onboarding.synced_mode" = "云同步 — 数据在设备间同步";
+"onboarding.not_synced_hint" = "在 Mac 上设置助手以启用多设备同步、历史记录和 iPhone 访问。";

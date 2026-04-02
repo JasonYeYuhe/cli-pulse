@@ -4,13 +4,20 @@ import json as _json
 import logging
 import os
 import re
+import sqlite3
 import subprocess
 import urllib.parse
 import urllib.request
+from contextlib import closing
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
+
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 HELPER_VERSION = "0.2.0"
 
@@ -361,7 +368,7 @@ def estimate_provider_quotas(sessions: list[CollectedSession]) -> dict[str, dict
 
 
 def _fetch_claude_usage() -> dict | None:
-    """Fetch Claude usage via OAuth API → CLI fallback → plan-only fallback.
+    """Fetch Claude usage via OAuth API → Web session → CLI fallback → plan-only fallback.
 
     Also writes ~/.clipulse/claude_snapshot.json for the sandboxed app's
     local collector (ClaudeWebStrategy) to use as fallback when OAuth fails.
@@ -405,13 +412,19 @@ def _fetch_claude_usage() -> dict | None:
             _write_claude_snapshot(api_result, tier_raw, "oauth")
             return api_result
 
-    # Step 3: Try `claude /usage` CLI fallback
+    # Step 3: Try real Claude web usage via sessionKey from desktop/browser cookies
+    web_result = _fetch_claude_web_usage(plan_type)
+    if web_result:
+        _write_claude_snapshot(web_result, tier_raw, "web")
+        return web_result
+
+    # Step 4: Try `claude /usage` CLI fallback
     cli_result = _fetch_claude_cli(plan_type)
     if cli_result:
         _write_claude_snapshot(cli_result, tier_raw, "cli")
         return cli_result
 
-    # Step 4: Plan-only fallback (no bars, just badge)
+    # Step 5: Plan-only fallback (no bars, just badge)
     if plan_type:
         return {
             "quota": 0, "remaining": 0,
@@ -460,16 +473,16 @@ def _refresh_claude_token(refresh_token: str | None) -> str | None:
 
 
 def _write_claude_snapshot(result: dict, tier_raw: str, source: str) -> None:
-    """Write ~/.clipulse/claude_snapshot.json for the app's local collector.
+    """Write Claude snapshot files for the app's local collector.
 
-    The sandboxed macOS app reads this file via ClaudeWebStrategy as a
-    fallback when OAuth/CLI strategies are unavailable.
+    The sandboxed macOS app reads the app-group container path first:
+    ~/Library/Group Containers/group.yyh.CLI-Pulse/claude_snapshot.json
+
+    We also keep writing the legacy ~/.clipulse/claude_snapshot.json path for
+    compatibility with older builds and command-line diagnostics.
     Schema matches ClaudeHelperContract.swift.
     """
     try:
-        clipulse_dir = Path.home() / ".clipulse"
-        clipulse_dir.mkdir(parents=True, exist_ok=True)
-
         # Convert tier-based result back into snapshot format
         tiers = result.get("tiers", [])
         tier_map = {t["name"]: t for t in tiers}
@@ -505,11 +518,190 @@ def _write_claude_snapshot(result: dict, tier_raw: str, source: str) -> None:
                 "currency": "USD",
             }
 
-        snapshot_path = clipulse_dir / "claude_snapshot.json"
-        snapshot_path.write_text(_json.dumps(snapshot, indent=2))
-        logger.debug(f"Wrote Claude snapshot to {snapshot_path}")
+        snapshot_json = _json.dumps(snapshot, indent=2)
+        target_dirs = [
+            Path.home() / "Library" / "Group Containers" / "group.yyh.CLI-Pulse",
+            Path.home() / ".clipulse",
+        ]
+
+        wrote_any = False
+        for target_dir in target_dirs:
+            try:
+                target_dir.mkdir(parents=True, exist_ok=True)
+                snapshot_path = target_dir / "claude_snapshot.json"
+                snapshot_path.write_text(snapshot_json)
+                wrote_any = True
+                logger.debug(f"Wrote Claude snapshot to {snapshot_path}")
+            except Exception as path_error:
+                logger.debug(f"Failed to write Claude snapshot to {target_dir}: {path_error}")
+
+        if not wrote_any:
+            logger.debug("Claude snapshot write failed for all target paths")
     except Exception as e:
         logger.debug(f"Failed to write Claude snapshot: {e}")
+
+
+def _write_claude_session_key(session_key: str, source: str) -> None:
+    """Write session key file for the app's Web strategy."""
+    try:
+        payload = _json.dumps({
+            "sessionKey": session_key,
+            "source": source,
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+        }, indent=2)
+        target_dirs = [
+            Path.home() / "Library" / "Group Containers" / "group.yyh.CLI-Pulse",
+            Path.home() / ".clipulse",
+        ]
+        for target_dir in target_dirs:
+            try:
+                target_dir.mkdir(parents=True, exist_ok=True)
+                (target_dir / "claude_session.json").write_text(payload)
+            except Exception as path_error:
+                logger.debug(f"Failed to write Claude session key to {target_dir}: {path_error}")
+    except Exception as e:
+        logger.debug(f"Failed to write Claude session key: {e}")
+
+
+def _fetch_claude_web_usage(plan_type: str | None) -> dict | None:
+    """Fetch Claude usage from the real claude.ai web API using a sessionKey cookie."""
+    resolved = _resolve_claude_session_key()
+    if not resolved:
+        return None
+
+    session_key, source = resolved
+    try:
+        headers = {
+            "Cookie": f"sessionKey={session_key}",
+            "Accept": "application/json",
+            "User-Agent": "CLI-Pulse-Helper/0.3",
+        }
+        org_req = urllib.request.Request("https://claude.ai/api/organizations", headers=headers)
+        with urllib.request.urlopen(org_req, timeout=15) as resp:
+            orgs = _json.loads(resp.read())
+
+        if not isinstance(orgs, list) or not orgs:
+            return None
+        first = orgs[0]
+        org_id = first.get("uuid") or first.get("id")
+        if not org_id:
+            return None
+
+        usage_req = urllib.request.Request(
+            f"https://claude.ai/api/organizations/{org_id}/usage",
+            headers=headers,
+        )
+        with urllib.request.urlopen(usage_req, timeout=15) as resp:
+            usage = _json.loads(resp.read())
+
+        result = _parse_claude_api_response(usage, plan_type or "Max")
+        if result:
+            _write_claude_session_key(session_key, source)
+        return result
+    except Exception as e:
+        logger.debug(f"Claude web usage fetch failed: {e}")
+        return None
+
+
+def _resolve_claude_session_key() -> tuple[str, str] | None:
+    """Return a decrypted claude.ai sessionKey from Claude desktop or Chromium browsers."""
+    for source_label, db_path, services in _claude_cookie_candidates():
+        try:
+            session_key = _extract_session_key_from_cookie_db(db_path, services)
+            if session_key:
+                logger.debug(f"Resolved Claude session key from {source_label}: {db_path}")
+                return session_key, source_label
+        except Exception as e:
+            logger.debug(f"Claude session key extraction failed for {db_path}: {e}")
+    return None
+
+
+def _claude_cookie_candidates() -> list[tuple[str, Path, list[str]]]:
+    """Cookie DBs to probe, in priority order."""
+    candidates: list[tuple[str, Path, list[str]]] = []
+
+    def add(label: str, path: Path, services: list[str]) -> None:
+        if path.exists():
+            candidates.append((label, path, services))
+
+    home = Path.home()
+    add("claude-desktop", home / "Library" / "Application Support" / "Claude" / "Cookies", [
+        "Claude Safe Storage", "Chrome Safe Storage",
+    ])
+    for path in sorted((home / "Library" / "Application Support" / "Google" / "Chrome").glob("*/Cookies")):
+        add(f"chrome:{path.parent.name}", path, ["Chrome Safe Storage"])
+    for path in sorted((home / "Library" / "Application Support" / "Microsoft Edge").glob("*/Cookies")):
+        add(f"edge:{path.parent.name}", path, ["Microsoft Edge Safe Storage", "Chrome Safe Storage"])
+    for path in sorted((home / "Library" / "Application Support" / "BraveSoftware" / "Brave-Browser").glob("*/Cookies")):
+        add(f"brave:{path.parent.name}", path, ["Brave Safe Storage", "Chrome Safe Storage"])
+    for path in sorted((home / "Library" / "Application Support" / "Chromium").glob("*/Cookies")):
+        add(f"chromium:{path.parent.name}", path, ["Chromium Safe Storage", "Chrome Safe Storage"])
+    for path in sorted((home / "Library" / "Application Support" / "Arc" / "User Data").glob("*/Cookies")):
+        add(f"arc:{path.parent.name}", path, ["Arc Safe Storage", "Chrome Safe Storage"])
+    return candidates
+
+
+def _extract_session_key_from_cookie_db(db_path: Path, keychain_services: list[str]) -> str | None:
+    query = """
+        SELECT host_key, encrypted_value
+        FROM cookies
+        WHERE name = 'sessionKey' AND host_key LIKE '%claude.ai%'
+        ORDER BY host_key DESC
+    """
+    with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as conn:
+        rows = conn.execute(query).fetchall()
+
+    if not rows:
+        return None
+
+    passwords = [pw for service in keychain_services if (pw := _read_safe_storage_password(service))]
+    for _host_key, encrypted_value in rows:
+        for password in passwords:
+            try:
+                decrypted = _decrypt_chromium_cookie(encrypted_value, password)
+                if decrypted.startswith("sk-ant-sid"):
+                    return decrypted
+            except Exception:
+                continue
+    return None
+
+
+def _read_safe_storage_password(service: str) -> str | None:
+    try:
+        proc = subprocess.run(
+            ["security", "find-generic-password", "-w", "-s", service],
+            capture_output=True, text=True, timeout=5,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            return proc.stdout.strip()
+    except Exception as e:
+        logger.debug(f"Safe storage lookup failed for {service}: {e}")
+    return None
+
+
+def _decrypt_chromium_cookie(encrypted_value: bytes, password: str) -> str:
+    blob = bytes(encrypted_value)
+    if blob.startswith(b"v10"):
+        blob = blob[3:]
+    key = PBKDF2HMAC(
+        algorithm=hashes.SHA1(),
+        length=16,
+        salt=b"saltysalt",
+        iterations=1003,
+        backend=default_backend(),
+    ).derive(password.encode())
+    decryptor = Cipher(
+        algorithms.AES(key),
+        modes.CBC(b" " * 16),
+        backend=default_backend(),
+    ).decryptor()
+    decrypted = decryptor.update(blob) + decryptor.finalize()
+    decrypted = decrypted[:-decrypted[-1]]
+    if len(decrypted) > 32:
+        host_prefix = decrypted[:32]
+        if not all(32 <= b <= 126 for b in host_prefix):
+            decrypted = decrypted[32:]
+    return decrypted.decode("utf-8", "ignore")
 
 
 def _infer_claude_plan(tier: str, sub_type: str) -> str:
@@ -824,7 +1016,6 @@ def _refresh_gemini_token(creds_path: Path) -> str | None:
 def _fetch_gemini_usage() -> dict | None:
     """Read Gemini usage via OAuth token → Google quota API."""
     creds_path = Path.home() / ".gemini" / "oauth_creds.json"
-    settings_path = Path.home() / ".gemini" / "settings.json"
     if not creds_path.exists():
         return None
     try:
@@ -842,11 +1033,9 @@ def _fetch_gemini_usage() -> dict | None:
         if not access_token:
             return None
 
-        # Get project ID from settings
-        project_id = ""
-        if settings_path.exists():
-            settings = _json.loads(settings_path.read_text())
-            project_id = settings.get("project", "")
+        project_id = _load_gemini_project_id(access_token)
+        if project_id is None:
+            project_id = ""
 
         req = urllib.request.Request(
             "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota",
@@ -864,12 +1053,44 @@ def _fetch_gemini_usage() -> dict | None:
         return None
 
 
+def _load_gemini_project_id(access_token: str) -> str | None:
+    """Load the active Gemini Code Assist project via loadCodeAssist.
+
+    This matches CodexBar and the local Swift collector. Without the project ID,
+    retrieveUserQuota often returns generic 100% buckets that don't match the
+    actual Gemini Pro usage shown in the official UI.
+    """
+    try:
+        req = urllib.request.Request(
+            "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist",
+            data=_json.dumps({"metadata": {"ideType": "GEMINI_CLI", "pluginType": "GEMINI"}}).encode(),
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = _json.loads(resp.read())
+
+        project = data.get("cloudaicompanionProject")
+        if isinstance(project, str) and project.strip():
+            return project.strip()
+        if isinstance(project, dict):
+            pid = project.get("projectId") or project.get("id")
+            if isinstance(pid, str) and pid.strip():
+                return pid.strip()
+    except Exception as e:
+        logger.debug(f"Gemini loadCodeAssist failed: {e}")
+    return None
+
+
 def _parse_gemini_quota_response(data: dict) -> dict | None:
     """Parse Google quota API response for Gemini models.
 
     Real format: {"buckets": [{"resetTime":"...","tokenType":"REQUESTS","modelId":"gemini-2.5-pro","remainingFraction":1.0}]}
     """
-    tiers = []
+    family_best: dict[str, dict] = {}
     buckets = data.get("buckets", data.get("quotas", data.get("userQuotas", [])))
     if isinstance(buckets, list):
         for q in buckets:
@@ -887,14 +1108,29 @@ def _parse_gemini_quota_response(data: dict) -> dict | None:
             fraction = q.get("remainingFraction", 1.0)
             remaining_pct = int(fraction * 100)
             reset = q.get("resetTime")
-            tiers.append({"name": name, "quota": 100, "remaining": remaining_pct, "reset_time": reset})
+            current = family_best.get(name)
+            candidate = {"name": name, "quota": 100, "remaining": remaining_pct, "reset_time": reset}
+            if current is None or candidate["remaining"] < current["remaining"]:
+                family_best[name] = candidate
+
+    preferred_order = ["Pro", "Flash", "Flash Lite"]
+    tiers: list[dict] = []
+    for family in preferred_order:
+        if family in family_best:
+            tiers.append(family_best[family])
+    for family in sorted(family_best):
+        if family not in preferred_order:
+            tiers.append(family_best[family])
+
     if not tiers:
         return None
+
+    primary = next((family_best[name] for name in preferred_order if name in family_best), tiers[0])
     return {
-        "quota": tiers[0]["quota"],
-        "remaining": tiers[0]["remaining"],
+        "quota": primary["quota"],
+        "remaining": primary["remaining"],
         "plan_type": "Paid",
-        "reset_time": tiers[0].get("reset_time"),
+        "reset_time": primary.get("reset_time"),
         "tiers": tiers,
     }
 

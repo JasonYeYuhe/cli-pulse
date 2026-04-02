@@ -100,9 +100,9 @@ public struct ClaudeSourceResolver: Sendable {
         }
 
         // All live strategies exhausted — try the snapshot cache as last resort.
-        // The cache accepts snapshots up to 30 min old (vs 10 min for WebStrategy),
-        // bridging transient 429 rate-limit windows.
-        Self.log("[cache] attempting fallback, path=\(ClaudeHelperContract.snapshotPath)")
+        // The cache accepts last-known-good snapshots much longer than the
+        // WebStrategy live window, bridging transient 429 rate-limit windows.
+        Self.log("[cache] attempting fallback, paths=\(ClaudeHelperContract.snapshotCandidatePaths.joined(separator: ", "))")
         if let cached = Self.readCachedSnapshot() {
             return cached
         }
@@ -115,7 +115,7 @@ public struct ClaudeSourceResolver: Sendable {
             for (source, err) in errors {
                 msg += "  - \(source): \(err.localizedDescription)\n"
             }
-            msg += "  - cache: \(ClaudeHelperContract.snapshotPath) — see resolver log for details\n"
+            msg += "  - cache: \(ClaudeHelperContract.snapshotCandidatePaths.joined(separator: ", ")) — see resolver log for details\n"
             if let fh = FileHandle(forWritingAtPath: logPath) {
                 fh.seekToEndOfFile()
                 fh.write(msg.data(using: .utf8) ?? Data())
@@ -132,8 +132,9 @@ public struct ClaudeSourceResolver: Sendable {
 
     // MARK: - Snapshot cache (single source of truth: ClaudeHelperContract.snapshotPath)
 
-    /// Max age for cache fallback (30 min). WebStrategy uses 10 min for live freshness.
-    private static let cacheMaxAge: TimeInterval = 1800
+    /// Max age for cache fallback. WebStrategy stays strict (10 min), but the
+    /// resolver can continue serving the last-known-good bars for much longer.
+    private static let cacheMaxAge: TimeInterval = ClaudeHelperContract.cacheSnapshotAge
 
     /// Cache a successful snapshot to disk for fallback during rate-limit windows.
     private static func cacheSnapshot(_ snapshot: ClaudeSnapshot) {
@@ -146,69 +147,56 @@ public struct ClaudeSourceResolver: Sendable {
     }
 
     /// Read a cached snapshot with full diagnostics.
-    /// Accepts snapshots up to `cacheMaxAge` (30 min) old.
+    /// Accepts snapshots up to `cacheMaxAge` old.
     private static func readCachedSnapshot() -> ClaudeSnapshot? {
-        let path = ClaudeHelperContract.snapshotPath
-        let exists = FileManager.default.fileExists(atPath: path)
+        for path in ClaudeHelperContract.snapshotCandidatePaths {
+            let exists = FileManager.default.fileExists(atPath: path)
+            guard exists else {
+                log("[cache] path=\(path) exists=false")
+                continue
+            }
 
-        guard exists else {
-            log("[cache] path=\(path) exists=false")
-            return nil
+            guard let data = FileManager.default.contents(atPath: path) else {
+                log("[cache] path=\(path) exists=true BUT contents()=nil (permissions?)")
+                continue
+            }
+
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                log("[cache] path=\(path) exists=true size=\(data.count) BUT JSON parse failed")
+                continue
+            }
+
+            let fetchedAtStr = json["fetched_at"] as? String ?? "missing"
+            let date = ISO8601DateFormatter().date(from: fetchedAtStr)
+            let age = date.map { Date().timeIntervalSince($0) } ?? .infinity
+            let liveFresh = age <= ClaudeHelperContract.maxSnapshotAge
+            let cacheFresh = age <= cacheMaxAge
+
+            log("[cache] path=\(path) exists=true age=\(Int(age))s liveFresh=\(liveFresh) cacheFresh=\(cacheFresh) fetched_at=\(fetchedAtStr)")
+
+            guard cacheFresh else {
+                log("[cache] REJECTED path=\(path): age \(Int(age))s > cacheMaxAge \(Int(cacheMaxAge))s")
+                continue
+            }
+
+            guard let snapshot = ClaudeHelperContract.readSnapshot(
+                maxAge: cacheMaxAge,
+                sourceLabel: "cache"
+            ) else {
+                log("[cache] REJECTED path=\(path): helper contract could not parse accepted snapshot")
+                continue
+            }
+
+            let tierSummary = [
+                snapshot.sessionUsed.map { "session=\($0)" },
+                snapshot.weeklyUsed.map { "weekly=\($0)" },
+                snapshot.sonnetUsed.map { "sonnet=\($0)" },
+            ].compactMap { $0 }.joined(separator: " ")
+            log("[cache] ACCEPTED path=\(path): source=\(json["source"] ?? "?") \(tierSummary) tier=\(snapshot.rateLimitTier ?? "?")")
+            return snapshot
         }
 
-        guard let data = FileManager.default.contents(atPath: path) else {
-            log("[cache] path=\(path) exists=true BUT contents()=nil (permissions?)")
-            return nil
-        }
-
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            log("[cache] path=\(path) exists=true size=\(data.count) BUT JSON parse failed")
-            return nil
-        }
-
-        // Compute age from fetched_at
-        let fetchedAtStr = json["fetched_at"] as? String ?? "missing"
-        let date = ISO8601DateFormatter().date(from: fetchedAtStr)
-        let age = date.map { Date().timeIntervalSince($0) } ?? .infinity
-        let liveFresh = age <= ClaudeHelperContract.maxSnapshotAge  // 10 min
-        let cacheFresh = age <= cacheMaxAge                         // 30 min
-
-        log("[cache] path=\(path) exists=true age=\(Int(age))s liveFresh=\(liveFresh) cacheFresh=\(cacheFresh) fetched_at=\(fetchedAtStr)")
-
-        guard cacheFresh else {
-            log("[cache] REJECTED: age \(Int(age))s > cacheMaxAge \(Int(cacheMaxAge))s")
-            return nil
-        }
-
-        let snapshot = ClaudeSnapshot(
-            sessionUsed: json["session_used"] as? Int,
-            weeklyUsed: json["weekly_used"] as? Int,
-            opusUsed: json["opus_used"] as? Int,
-            sonnetUsed: json["sonnet_used"] as? Int,
-            sessionReset: json["session_reset"] as? String,
-            weeklyReset: json["weekly_reset"] as? String,
-            extraUsage: {
-                guard let e = json["extra_usage"] as? [String: Any],
-                      e["is_enabled"] as? Bool == true else { return nil }
-                return ClaudeExtraUsage(
-                    isEnabled: true,
-                    monthlyLimit: (e["monthly_limit"] as? NSNumber)?.doubleValue,
-                    usedCredits: (e["used_credits"] as? NSNumber)?.doubleValue,
-                    currency: e["currency"] as? String
-                )
-            }(),
-            rateLimitTier: json["rate_limit_tier"] as? String,
-            accountEmail: json["account_email"] as? String,
-            sourceLabel: "cache"
-        )
-
-        let tierSummary = [
-            snapshot.sessionUsed.map { "session=\($0)" },
-            snapshot.weeklyUsed.map { "weekly=\($0)" },
-            snapshot.sonnetUsed.map { "sonnet=\($0)" },
-        ].compactMap { $0 }.joined(separator: " ")
-        log("[cache] ACCEPTED: source=\(json["source"] ?? "?") \(tierSummary) tier=\(snapshot.rateLimitTier ?? "?")")
-        return snapshot
+        return nil
     }
 
     private static func log(_ message: String) {

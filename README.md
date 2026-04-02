@@ -1,109 +1,74 @@
 # CLI Pulse
 
-CLI Pulse is an MVP workspace with three integrated parts:
+This workspace contains the current `CLI Pulse Bar` app plus a small amount of
+legacy material kept for reference.
 
-- `CLI Pulse/`: native iOS SwiftUI app
-- `backend/`: FastAPI backend with SQLite persistence
-- `helper/`: device helper CLI for Macs or servers
+## Current Product Structure
 
-## Product Docs
+- `CLI Pulse Bar/`
+  - Current Xcode workspace and app targets for macOS, iOS, Watch, Widgets, and
+    the shared `CLIPulseCore` package.
+- `helper/`
+  - Current helper CLI used for pairing, daemon sync, and local provider
+    collection.
+- `backend/supabase/`
+  - Active SQL schema, migrations, and RPC definitions used by the app and
+    helper when talking to Supabase.
+- `docs/`
+  - Published static site assets, including `privacy.html`, `terms.html`, and
+    `index.html`, which are linked from the shipping app.
 
-- `docs/CLI_Pulse_v0.2_PRD.md`: planned post-MVP scope for provider expansion, projects, cost estimation, alert upgrades, and helper improvements
-- `docs/CLI_Pulse_v0.2_Technical_Design.md`: system design for v0.2
-- `docs/CLI_Pulse_v0.2_Execution_Plan.md`: phased implementation plan
-- `docs/CLI_Pulse_v0.2_Roadmap.md`: weekly roadmap
+## Current Development Commands
 
-## Backend
+### App
 
-Create a local environment and start the API:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r backend/requirements.txt
-uvicorn backend.app.main:app --reload
-```
-
-Optional environment variables:
+Open the current app workspace:
 
 ```bash
-CLI_PULSE_DB_PATH=backend/data/cli_pulse.db
+open "CLI Pulse Bar/CLI Pulse Bar.xcodeproj"
 ```
 
-Main backend capabilities:
+### Helper
 
-- account sign-in and account creation
-- pairing code generation and helper registration
-- dashboard, providers, projects, sessions, devices, alerts, settings
-- helper heartbeat and sync ingestion
-- account deletion
-
-Run backend tests:
+Run helper tests:
 
 ```bash
-source .venv/bin/activate
-pytest tests/test_backend.py
+python3 -m pytest -q helper/test_system_collector.py
 ```
 
-## Helper
-
-Generate a pairing code from the app or backend, then pair the local machine:
-
-```bash
-python3 helper/cli_pulse_helper.py pair \
-  --server http://127.0.0.1:8000 \
-  --pairing-code PULSE-XXXXXX \
-  --device-name "Jason's MacBook Pro"
-```
-
-Inspect the locally collected snapshot before syncing:
+Inspect local collection output:
 
 ```bash
 python3 helper/cli_pulse_helper.py inspect
 ```
 
-Send one heartbeat and one sync:
+Run one sync:
 
 ```bash
-python3 helper/cli_pulse_helper.py heartbeat
 python3 helper/cli_pulse_helper.py sync
 ```
 
-Run a short demo loop:
+### Shared Swift Package
+
+Run the shared package tests:
 
 ```bash
-python3 helper/cli_pulse_helper.py run-demo --cycles 3 --interval 2
+swift test --package-path "CLI Pulse Bar/CLIPulseCore"
 ```
 
-The helper currently collects:
+## Legacy or Reference Areas
 
-- local CPU and memory summary
-- detected Codex, Gemini, Claude, OpenRouter, and Ollama processes when recognizable
-- synthetic usage estimates from process lifetime and CPU
-- basic local alerts for high CPU and long-running sessions
+- `archive/`
+  - Archived drafts, old projects, and working notes that are no longer part of
+    the active product path.
+  - `archive/backend-fastapi-legacy/` contains the older FastAPI runtime and its
+    tests.
 
-## iOS App
+## Notes
 
-The app defaults to mock data. To switch to the live backend, set these environment variables in the Xcode scheme:
-
-```bash
-CLI_PULSE_USE_REMOTE=1
-CLI_PULSE_API_BASE_URL=http://127.0.0.1:8000
-```
-
-Current app integration includes:
-
-- remote auth and onboarding
-- dashboard, providers, projects, sessions, devices, alerts, settings
-- inline error states for failed remote requests
-- alert polling every 30 seconds after pairing
-- local notification scheduling for warning and critical alerts
-- account deletion wired to the backend
-
-After launch:
-
-1. Sign in or create an account.
-2. Complete onboarding and get the pairing code.
-3. Pair a Mac or server with the helper.
-4. Open Dashboard, Sessions, Devices, or Alerts to view live synced data.
-5. Allow notifications if you want local alert banners.
+- If you are looking for the current shipping code, start in `CLI Pulse Bar/`.
+- If you are looking for pairing or provider collection logic, start in
+  `helper/`.
+- If you are looking for the live backend contract, start in
+  `backend/supabase/`.
+- If you are preparing a release, read `RELEASE_WORKFLOW.md`.

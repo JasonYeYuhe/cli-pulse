@@ -48,12 +48,10 @@ struct iOSOverviewTab: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 60)
                     } else {
-                        ContentUnavailableView {
-                            Label(L10n.dashboard.noData, systemImage: "chart.bar.xaxis")
-                        } description: {
-                            Text(L10n.dashboard.connectHelper)
-                        }
-                        .padding(.vertical, 40)
+                        iOSSyncOnboardingCard()
+                            .environmentObject(state)
+                            .padding(.horizontal)
+                            .padding(.vertical, 20)
                     }
                 }
                 .padding(.vertical)
@@ -338,6 +336,79 @@ struct iOSOverviewTab: View {
             return String(timestamp[hourStart..<hourEnd]) + "h"
         }
         return timestamp
+    }
+}
+
+// MARK: - Sync Onboarding Card
+
+struct iOSSyncOnboardingCard: View {
+    @EnvironmentObject var state: AppState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
+            HStack(spacing: 10) {
+                Image(systemName: "cloud")
+                    .font(.title2)
+                    .foregroundStyle(PulseTheme.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.onboarding.iosWaiting)
+                        .font(.headline)
+                    Text(L10n.onboarding.iosWaitingDesc)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Divider()
+
+            // How it works explanation
+            Text(L10n.onboarding.howItWorks)
+                .font(.subheadline.weight(.semibold))
+
+            Text(L10n.onboarding.cloudSyncDesc)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            // Steps
+            VStack(alignment: .leading, spacing: 10) {
+                iOSSetupStepRow(number: 1, icon: "desktopcomputer", text: L10n.onboarding.step1Mac)
+                iOSSetupStepRow(number: 2, icon: "terminal", text: L10n.onboarding.step2Helper)
+                iOSSetupStepRow(number: 3, icon: "iphone", text: L10n.onboarding.step3Phone)
+            }
+
+            Text(L10n.onboarding.notBluetooth)
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .italic()
+
+            // Refresh button
+            Button {
+                Task { await state.refreshAll() }
+            } label: {
+                HStack {
+                    if state.isLoading {
+                        ProgressView()
+                            .tint(.white)
+                    }
+                    Image(systemName: "arrow.clockwise")
+                    Text(L10n.onboarding.checkSync)
+                        .font(.subheadline.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(PulseTheme.accent)
+            .disabled(state.isLoading)
+        }
+        .padding()
+        .background(PulseTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(PulseTheme.accent.opacity(0.2), lineWidth: 1)
+        )
     }
 }
 

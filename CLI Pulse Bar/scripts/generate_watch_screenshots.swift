@@ -77,18 +77,18 @@ func drawDashboard() -> NSBitmapImageRep {
     drawCircle(center: NSPoint(x: W - 30, y: H - 30), radius: 4, fill: green)
     drawText("Online", at: NSPoint(x: W - 80, y: H - 35), size: 10, color: .gray)
 
-    // Usage gauge
-    let gaugeCenter = NSPoint(x: W / 2, y: H - 110)
-    let gaugeR: CGFloat = 50
+    // Usage gauge (compact)
+    let gaugeCenter = NSPoint(x: W / 2, y: H - 95)
+    let gaugeR: CGFloat = 38
     // Background arc
-    drawArc(center: gaugeCenter, radius: gaugeR, startAngle: 210, endAngle: -30, lineWidth: 10, color: NSColor(white: 0.2, alpha: 1))
+    drawArc(center: gaugeCenter, radius: gaugeR, startAngle: 210, endAngle: -30, lineWidth: 8, color: NSColor(white: 0.2, alpha: 1))
     // Usage arc (67%)
-    drawArc(center: gaugeCenter, radius: gaugeR, startAngle: 210, endAngle: 210 - 240 * 0.67, lineWidth: 10, color: accent)
-    drawText("67%", at: NSPoint(x: gaugeCenter.x - 20, y: gaugeCenter.y - 10), size: 20, bold: true)
-    drawText("Usage Today", at: NSPoint(x: gaugeCenter.x - 36, y: gaugeCenter.y - 28), size: 10, color: .gray)
+    drawArc(center: gaugeCenter, radius: gaugeR, startAngle: 210, endAngle: 210 - 240 * 0.67, lineWidth: 8, color: accent)
+    drawText("67%", at: NSPoint(x: gaugeCenter.x - 18, y: gaugeCenter.y - 9), size: 18, bold: true)
+    drawText("Usage Today", at: NSPoint(x: gaugeCenter.x - 34, y: gaugeCenter.y - 24), size: 9, color: .gray)
 
     // Metric cards
-    var y: CGFloat = H - 200
+    var y: CGFloat = H - 180
     let cardH: CGFloat = 44
     let cardW: CGFloat = (W - 48) / 2
 

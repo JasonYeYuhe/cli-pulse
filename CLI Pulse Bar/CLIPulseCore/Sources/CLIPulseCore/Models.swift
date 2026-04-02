@@ -23,6 +23,10 @@ public enum ProviderKind: String, Codable, CaseIterable, Identifiable, Sendable 
     case ollama = "Ollama"
     case openRouter = "OpenRouter"
     case alibaba = "Alibaba"
+    case kimi = "Kimi"
+    case kiro = "Kiro"
+    case vertexAI = "Vertex AI"
+    case perplexity = "Perplexity"
 
     public var id: String { rawValue }
 
@@ -48,6 +52,10 @@ public enum ProviderKind: String, Codable, CaseIterable, Identifiable, Sendable 
         case .ollama: return "desktopcomputer"
         case .openRouter: return "arrow.triangle.branch"
         case .alibaba: return "cloud"
+        case .kimi: return "k.circle.fill"
+        case .kiro: return "arrow.triangle.turn.up.right.diamond"
+        case .vertexAI: return "v.circle"
+        case .perplexity: return "magnifyingglass.circle"
         }
     }
 }
@@ -110,10 +118,14 @@ public enum ProviderStatus: String, Codable, Sendable {
     case down = "Down"
 }
 
-public enum SourceType: String, Codable, Sendable {
-    case api
-    case web
+public enum SourceType: String, Codable, CaseIterable, Sendable {
     case auto
+    case web
+    case cli
+    case oauth
+    case api
+    case local
+    case merged  // cloud + local collector supplemented
 }
 
 // MARK: - Auth
