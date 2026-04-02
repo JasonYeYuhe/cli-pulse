@@ -417,6 +417,13 @@ public enum ProviderRegistry {
             requiresHelperBackend: true,
             cliNames: ["perplexity", "pplx"], webDomain: "perplexity.ai"
         ),
+        ProviderDescriptor(
+            kind: .volcanoEngine, displayName: "Volcano Engine (豆包)", category: .cloud,
+            supportedSources: [.auto, .web, .api],
+            supportsQuota: true, requiresHelperBackend: true,
+            cliNames: ["volcano", "doubao", "ark", "vecli"],
+            webDomain: "console.volcengine.com"
+        ),
     ]
 }
 

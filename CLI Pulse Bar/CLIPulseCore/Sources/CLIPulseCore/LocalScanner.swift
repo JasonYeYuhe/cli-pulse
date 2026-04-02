@@ -45,6 +45,7 @@ public final class LocalScanner: @unchecked Sendable {
         ("Kiro", #"\bkiro\b"#, "high"),
         ("Vertex AI", #"\bvertex[\s_-]?ai\b|\bgcloud\b.*\baiplatform\b"#, "high"),
         ("Perplexity", #"\bperplexity\b|\bpplx\b"#, "high"),
+        ("Volcano Engine", #"\bvecli\b|\bvolcengine\b|\bdoubao\b|\bvolcano[\s_-]?engine\b|\bark\b.*\bvolc"#, "high"),
     ]
 
     private static let ignoredPatterns: [String] = [

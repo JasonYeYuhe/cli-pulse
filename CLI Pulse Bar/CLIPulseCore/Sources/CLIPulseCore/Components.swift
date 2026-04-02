@@ -43,6 +43,7 @@ public enum PulseTheme {
         case "Kiro": return Color(red: 0.20, green: 0.70, blue: 0.50)
         case "Vertex AI": return Color(red: 0.26, green: 0.52, blue: 0.96)
         case "Perplexity": return Color(red: 0.10, green: 0.75, blue: 0.75)
+        case "Volcano Engine": return Color(red: 0.15, green: 0.55, blue: 0.95)
         default: return .gray
         }
     }

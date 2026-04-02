@@ -72,3 +72,5 @@ swift test --package-path "CLI Pulse Bar/CLIPulseCore"
 - If you are looking for the live backend contract, start in
   `backend/supabase/`.
 - If you are preparing a release, read `RELEASE_WORKFLOW.md`.
+- If you are starting a new task branch, read `BRANCHING.md`.
+- If you are handing a new task to another AI, use `TASK_START_PROMPT.md`.

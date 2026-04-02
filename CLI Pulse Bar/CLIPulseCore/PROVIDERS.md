@@ -19,7 +19,7 @@ Codex, Claude, and Gemini collectors target **subscription-linked usage/quota en
 
 These do **not** use developer API key billing.
 
-## Implemented Local Collectors (16 providers)
+## Implemented Local Collectors (17 providers)
 
 | Provider | Collector | Strategy | Data Kind | isAvailable Condition | Confidence |
 |---|---|---|---|---|---|
@@ -39,6 +39,7 @@ These do **not** use developer API key billing.
 | **Alibaba** | `AlibabaCollector` | API token → REST (region routing) | `.quota` | `config.apiKey` or `ALIBABA_CODING_PLAN_API_KEY` | medium (region fallback) |
 | **MiniMax** | `MiniMaxCollector` | API token → REST; cookie fallback | `.quota` | `config.apiKey` or `MINIMAX_API_KEY` or cookie | medium (API token: high; cookie: fragile) |
 | **Augment** | `AugmentCollector` | cookie → REST | `.quota` | `config.manualCookieHeader` or `AUGMENT_COOKIE` | medium (cookie-based) |
+| **Volcano Engine** | `VolcanoEngineCollector` | API token → REST (Ark) | `.quota` | `config.apiKey` or `ARK_API_KEY`/`VOLC_ACCESSKEY`/`VOLCANO_ENGINE_API_KEY` | medium (quota endpoint TBD) |
 
 ## Providers Not Implemented Locally (8 providers)
 

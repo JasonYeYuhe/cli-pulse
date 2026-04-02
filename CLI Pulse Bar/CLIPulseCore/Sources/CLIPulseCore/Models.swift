@@ -27,6 +27,7 @@ public enum ProviderKind: String, Codable, CaseIterable, Identifiable, Sendable 
     case kiro = "Kiro"
     case vertexAI = "Vertex AI"
     case perplexity = "Perplexity"
+    case volcanoEngine = "Volcano Engine"
 
     public var id: String { rawValue }
 
@@ -56,6 +57,7 @@ public enum ProviderKind: String, Codable, CaseIterable, Identifiable, Sendable 
         case .kiro: return "arrow.triangle.turn.up.right.diamond"
         case .vertexAI: return "v.circle"
         case .perplexity: return "magnifyingglass.circle"
+        case .volcanoEngine: return "flame"
         }
     }
 }

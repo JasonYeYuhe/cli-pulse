@@ -44,6 +44,52 @@ final class MiniMaxCollectorTests: XCTestCase {
     }
 }
 
+// MARK: - Volcano Engine
+
+final class VolcanoEngineCollectorTests: XCTestCase {
+    func testParseQuotaResponse() throws {
+        let json = """
+        {"total":10000,"remaining":7500,"end_time":"2026-05-01T00:00:00Z"}
+        """.data(using: .utf8)!
+        let u = try VolcanoEngineCollector.parseUsageResponse(json)
+        XCTAssertEqual(u.quota, 10000)
+        XCTAssertEqual(u.remaining, 7500)
+        XCTAssertEqual(u.endTime, "2026-05-01T00:00:00Z")
+    }
+
+    func testParseModelsList() throws {
+        let json = """
+        {"data":[{"id":"doubao-1.5-pro"},{"id":"doubao-1.5-lite"}]}
+        """.data(using: .utf8)!
+        let u = try VolcanoEngineCollector.parseUsageResponse(json)
+        XCTAssertEqual(u.modelCount, 2)
+        XCTAssertEqual(u.quota, 0)
+    }
+
+    func testParseWrappedResponse() throws {
+        let json = """
+        {"result":{"total":5000,"remaining":3000,"end_time":"2026-06-01T00:00:00Z"}}
+        """.data(using: .utf8)!
+        let u = try VolcanoEngineCollector.parseUsageResponse(json)
+        XCTAssertEqual(u.quota, 5000)
+        XCTAssertEqual(u.remaining, 3000)
+    }
+
+    func testParseInvalid() {
+        XCTAssertThrowsError(try VolcanoEngineCollector.parseUsageResponse("bad".data(using: .utf8)!))
+    }
+
+    func testAvailabilityAPIKey() {
+        let c = VolcanoEngineCollector()
+        XCTAssertTrue(c.isAvailable(config: ProviderConfig(kind: .volcanoEngine, apiKey: "key")))
+    }
+
+    func testAvailabilityNone() {
+        let c = VolcanoEngineCollector()
+        XCTAssertFalse(c.isAvailable(config: ProviderConfig(kind: .volcanoEngine)))
+    }
+}
+
 // MARK: - Augment
 
 final class AugmentCollectorTests: XCTestCase {
