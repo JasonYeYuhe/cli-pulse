@@ -1185,12 +1185,35 @@ public final class AppState: ObservableObject {
                 }
             }
         }
+        // Observe helper sync notifications for immediate refresh
+        #if os(macOS)
+        observeHelperSync()
+        #endif
     }
 
     public func stopRefreshLoop() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+        #if os(macOS)
+        DistributedNotificationCenter.default().removeObserver(
+            self, name: HelperIPC.didSyncNotificationName, object: nil
+        )
+        #endif
     }
+
+    #if os(macOS)
+    private func observeHelperSync() {
+        DistributedNotificationCenter.default().addObserver(
+            forName: HelperIPC.didSyncNotificationName,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self, self.isAuthenticated else { return }
+            Task { @MainActor in
+                await self.refreshAll()
+            }
+        }
+    }
+    #endif
 
     public func updateRefreshInterval(_ seconds: Int) {
         refreshInterval = seconds

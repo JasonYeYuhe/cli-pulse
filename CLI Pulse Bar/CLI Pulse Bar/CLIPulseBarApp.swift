@@ -126,3 +126,48 @@ enum LaunchAtLogin {
         }
     }
 }
+
+// MARK: - Background Helper Login Item
+
+enum HelperLogin {
+    private static let identifier = "yyh.CLI-Pulse.helper"
+
+    @available(macOS 13.0, *)
+    static var service: SMAppService {
+        SMAppService.loginItem(identifier: identifier)
+    }
+
+    @available(macOS 13.0, *)
+    static var isEnabled: Bool {
+        service.status == .enabled
+    }
+
+    @available(macOS 13.0, *)
+    static func register() {
+        do {
+            try service.register()
+            print("HelperLogin: registered")
+        } catch {
+            print("HelperLogin register error: \(error)")
+        }
+    }
+
+    @available(macOS 13.0, *)
+    static func unregister() {
+        do {
+            try service.unregister()
+            print("HelperLogin: unregistered")
+        } catch {
+            print("HelperLogin unregister error: \(error)")
+        }
+    }
+
+    @available(macOS 13.0, *)
+    static func toggle() {
+        if isEnabled {
+            unregister()
+        } else {
+            register()
+        }
+    }
+}

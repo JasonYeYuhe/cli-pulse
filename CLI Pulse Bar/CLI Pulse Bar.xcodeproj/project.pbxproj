@@ -48,6 +48,11 @@
 		PKG00004 /* CLIPulseCore in Frameworks */ = {isa = PBXBuildFile; productRef = PKG00002 /* CLIPulseCore */; };
 		PKG00005 /* CLIPulseCore in Frameworks */ = {isa = PBXBuildFile; productRef = PKG00003 /* CLIPulseCore */; };
 		PKG00007 /* CLIPulseCore in Frameworks */ = {isa = PBXBuildFile; productRef = PKG00006 /* CLIPulseCore */; };
+		A60001 /* CLIPulseHelperApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60001 /* CLIPulseHelperApp.swift */; };
+		A60002 /* HelperAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60002 /* HelperAppDelegate.swift */; };
+		A60003 /* HelperDaemon.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60003 /* HelperDaemon.swift */; };
+		PKG00008 /* CLIPulseCore in Frameworks */ = {isa = PBXBuildFile; productRef = PKG00009 /* CLIPulseCore */; };
+		A60010 /* CLIPulseHelper.app in Embed Login Items */ = {isa = PBXBuildFile; fileRef = C60001 /* CLIPulseHelper.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +69,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = F30001;
 			remoteInfo = "CLI Pulse Watch";
+		};
+		P60001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = H10001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F60001;
+			remoteInfo = CLIPulseHelper;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -88,6 +100,17 @@
 				A50001 /* CLI Pulse Watch.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CP60001 /* Embed Login Items */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Library/LoginItems";
+			dstSubfolderSpec = 16;
+			files = (
+				A60010 /* CLIPulseHelper.app in Embed Login Items */,
+			);
+			name = "Embed Login Items";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -139,6 +162,12 @@
 		C20001 /* CLI Pulse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "CLI Pulse.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C30001 /* CLI Pulse Watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "CLI Pulse Watch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C40001 /* CLI Pulse Widgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "CLI Pulse Widgets.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B60001 /* CLIPulseHelperApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIPulseHelperApp.swift; sourceTree = "<group>"; };
+		B60002 /* HelperAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperAppDelegate.swift; sourceTree = "<group>"; };
+		B60003 /* HelperDaemon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperDaemon.swift; sourceTree = "<group>"; };
+		B60004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B60005 /* CLIPulseHelper.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CLIPulseHelper.entitlements; sourceTree = "<group>"; };
+		C60001 /* CLIPulseHelper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CLIPulseHelper.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -175,6 +204,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D60001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				PKG00008 /* CLIPulseCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -185,8 +222,21 @@
 				E20001 /* CLI Pulse Bar iOS */,
 				E30001 /* CLI Pulse Bar Watch */,
 				E40001 /* CLI Pulse Widgets */,
+				E60001 /* CLIPulseHelper */,
 				E10003 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		E60001 /* CLIPulseHelper */ = {
+			isa = PBXGroup;
+			children = (
+				B60001 /* CLIPulseHelperApp.swift */,
+				B60002 /* HelperAppDelegate.swift */,
+				B60003 /* HelperDaemon.swift */,
+				B60004 /* Info.plist */,
+				B60005 /* CLIPulseHelper.entitlements */,
+			);
+			path = CLIPulseHelper;
 			sourceTree = "<group>";
 		};
 		E10002 /* CLI Pulse Bar */ = {
@@ -214,6 +264,7 @@
 				C20001 /* CLI Pulse.app */,
 				C30001 /* CLI Pulse Watch.app */,
 				C40001 /* CLI Pulse Widgets.appex */,
+				C60001 /* CLIPulseHelper.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -280,10 +331,12 @@
 				F10002 /* Sources */,
 				D10001 /* Frameworks */,
 				F10003 /* Resources */,
+				CP60001 /* Embed Login Items */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				DEP60001 /* PBXTargetDependency */,
 			);
 			name = "CLI Pulse Bar";
 			packageProductDependencies = (
@@ -354,6 +407,25 @@
 			productReference = C40001 /* CLI Pulse Widgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		F60001 /* CLIPulseHelper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = G60003 /* Build configuration list for PBXNativeTarget "CLIPulseHelper" */;
+			buildPhases = (
+				F60002 /* Sources */,
+				D60001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CLIPulseHelper;
+			packageProductDependencies = (
+				PKG00009 /* CLIPulseCore */,
+			);
+			productName = CLIPulseHelper;
+			productReference = C60001 /* CLIPulseHelper.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -374,6 +446,9 @@
 						CreatedOnToolsVersion = 15.0;
 					};
 					F40001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					F60001 = {
 						CreatedOnToolsVersion = 15.0;
 					};
 				};
@@ -398,6 +473,7 @@
 				F20001 /* CLI Pulse iOS */,
 				F30001 /* CLI Pulse Watch */,
 				F40001 /* CLI Pulse Widgets */,
+				F60001 /* CLIPulseHelper */,
 			);
 		};
 /* End PBXProject section */
@@ -496,6 +572,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F60002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A60001 /* CLIPulseHelperApp.swift in Sources */,
+				A60002 /* HelperAppDelegate.swift in Sources */,
+				A60003 /* HelperDaemon.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -508,6 +594,11 @@
 			isa = PBXTargetDependency;
 			target = F30001 /* CLI Pulse Watch */;
 			targetProxy = P50001 /* PBXContainerItemProxy */;
+		};
+		DEP60001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F60001 /* CLIPulseHelper */;
+			targetProxy = P60001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -828,6 +919,54 @@
 			};
 			name = Release;
 		};
+		G60001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CLIPulseHelper/CLIPulseHelper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CLIPulseHelper/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "yyh.CLI-Pulse.helper";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		G60002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CLIPulseHelper/CLIPulseHelper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CLIPulseHelper/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "yyh.CLI-Pulse.helper";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -876,6 +1015,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		G60003 /* Build configuration list for PBXNativeTarget "CLIPulseHelper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				G60001 /* Debug */,
+				G60002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -895,6 +1043,10 @@
 			productName = CLIPulseCore;
 		};
 		PKG00006 /* CLIPulseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CLIPulseCore;
+		};
+		PKG00009 /* CLIPulseCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = CLIPulseCore;
 		};
