@@ -46,7 +46,8 @@ final class MergeTests: XCTestCase {
         XCTAssertEqual(claude.today_usage, 100, "Cloud usage values should be preserved")
     }
 
-    func testCloudWithTiersIsPreserved() {
+    /// When cloud and local have equal tier counts, local wins (fresher data).
+    func testEqualTierCountLocalWins() {
         let tiers = [TierDTO(name: "Pro", quota: 200, remaining: 150, reset_time: nil)]
         let cloud = [makeCloudUsage(provider: "Gemini", quota: nil, remaining: nil, tiers: tiers)]
         let local = [makeLocalResult(provider: "Gemini", quota: 100, remaining: 50)]
@@ -54,9 +55,10 @@ final class MergeTests: XCTestCase {
 
         XCTAssertEqual(merged.count, 1)
         let gemini = merged.first!
-        XCTAssertEqual(gemini.tiers.count, 1, "Cloud tiers must be preserved")
-        XCTAssertEqual(gemini.tiers[0].name, "Pro")
-        XCTAssertFalse(supplemented.contains("Gemini"))
+        // Equal tier count (both 1) → local wins because it was just fetched
+        XCTAssertEqual(gemini.tiers.count, 1, "Local tiers should win on equal count (fresher)")
+        XCTAssertEqual(gemini.tiers[0].name, "5h Window")
+        XCTAssertTrue(supplemented.contains("Gemini"))
     }
 
     func testCloudWithoutQuotaGetsMerged() {
@@ -160,20 +162,19 @@ final class MergeTests: XCTestCase {
         XCTAssertTrue(supplemented.contains("Claude"))
     }
 
-    /// When cloud tiers >= local tiers, cloud should be preserved (backward compat).
-    func testCloudEqualTiersPreserved() {
+    /// When cloud has strictly more tiers than local, cloud is preserved.
+    func testCloudMoreTiersPreserved() {
         let cloudTiers = [
             TierDTO(name: "5h Window", quota: 100, remaining: 90, reset_time: nil),
             TierDTO(name: "Weekly", quota: 100, remaining: 80, reset_time: nil),
         ]
         let cloud = [makeCloudUsage(provider: "Claude", quota: 100, remaining: 90, tiers: cloudTiers)]
-        // Local also has 2 tiers — equal count, cloud should win
+        // makeLocalResult creates 1 tier, so cloud (2) > local (1) → cloud wins
         let local = [makeLocalResult(provider: "Claude", quota: 100, remaining: 70)]
-        // makeLocalResult creates 1 tier, so cloud (2) >= local (1)
         let (merged, supplemented) = AppState.mergeCloudWithLocal(cloud: cloud, local: local)
 
         let claude = merged.first!
-        XCTAssertEqual(claude.tiers.count, 2, "Cloud tiers should be preserved when count >= local")
+        XCTAssertEqual(claude.tiers.count, 2, "Cloud tiers should be preserved when count > local")
         XCTAssertEqual(claude.tiers[0].name, "5h Window")
         XCTAssertFalse(supplemented.contains("Claude"))
     }
