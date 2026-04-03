@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CLI Pulse</string>
+    <string name="tab_overview">概要</string>
+    <string name="tab_providers">プロバイダー</string>
+    <string name="tab_sessions">セッション</string>
+    <string name="tab_alerts">アラート</string>
+    <string name="tab_settings">設定</string>
+    <string name="sign_in_google">Googleでサインイン</string>
+    <string name="sign_in_email">メールでサインイン</string>
+    <string name="sign_in_password">パスワードでサインイン</string>
+    <string name="enter_otp">認証コードを入力</string>
+    <string name="send_code">コードを送信</string>
+    <string name="verify">確認</string>
+    <string name="sign_out">サインアウト</string>
+    <string name="delete_account">アカウント削除</string>
+    <string name="loading">読み込み中…</string>
+    <string name="error_generic">エラーが発生しました</string>
+    <string name="today_usage">本日の使用量</string>
+    <string name="estimated_cost">推定コスト</string>
+    <string name="active_sessions">アクティブセッション</string>
+    <string name="online_devices">オンラインデバイス</string>
+    <string name="unresolved_alerts">未解決アラート</string>
+</resources>
