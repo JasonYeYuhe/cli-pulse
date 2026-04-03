@@ -1,5 +1,6 @@
 #if os(macOS)
 import Foundation
+import AppKit
 import CLIPulseCore
 import os
 
@@ -160,7 +161,7 @@ final class HelperDaemon {
             let providerName = collector.kind.rawValue
             guard activeProviders.contains(providerName) else { continue }
 
-            let config = configs.first(where: { $0.provider == providerName }) ?? ProviderConfig(provider: providerName)
+            let config = configs.first(where: { $0.kind == collector.kind }) ?? ProviderConfig(kind: collector.kind)
             guard collector.isAvailable(config: config) else { continue }
 
             do {
