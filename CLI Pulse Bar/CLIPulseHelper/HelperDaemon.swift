@@ -11,6 +11,8 @@ final class HelperDaemon {
     private let queue = DispatchQueue(label: "com.clipulse.helper.daemon", qos: .utility)
     private let apiClient = HelperAPIClient()
     private var isRunning = false
+    private var isSyncing = false
+    private var suspendCount = 0
 
     /// Default sync interval (seconds). Can be overridden via shared UserDefaults.
     private var syncInterval: Int {
@@ -25,15 +27,13 @@ final class HelperDaemon {
         logger.info("Daemon starting, interval=\(self.syncInterval)s")
 
         // Initial sync immediately
-        queue.async { [weak self] in
-            self?.collectAndSync()
-        }
+        Task { await collectAndSync() }
 
         // Set up repeating timer
         let source = DispatchSource.makeTimerSource(queue: queue)
         source.schedule(deadline: .now() + .seconds(syncInterval), repeating: .seconds(syncInterval))
         source.setEventHandler { [weak self] in
-            self?.collectAndSync()
+            Task { [weak self] in await self?.collectAndSync() }
         }
         source.resume()
         timer = source
@@ -45,6 +45,11 @@ final class HelperDaemon {
     }
 
     func stop() {
+        // Resume before cancel to avoid crash on suspended source
+        if suspendCount > 0 {
+            timer?.resume()
+            suspendCount = 0
+        }
         timer?.cancel()
         timer = nil
         isRunning = false
@@ -55,21 +60,30 @@ final class HelperDaemon {
     // MARK: - Sleep/Wake
 
     @objc private func willSleep() {
-        logger.info("System sleeping — pausing timer")
+        guard suspendCount == 0 else { return }
+        suspendCount += 1
         timer?.suspend()
+        logger.info("System sleeping — paused timer")
     }
 
     @objc private func didWake() {
-        logger.info("System woke — resuming + immediate sync")
+        guard suspendCount > 0 else { return }
+        suspendCount -= 1
         timer?.resume()
-        queue.async { [weak self] in
-            self?.collectAndSync()
-        }
+        logger.info("System woke — resumed timer + immediate sync")
+        Task { [weak self] in await self?.collectAndSync() }
     }
 
-    // MARK: - Collection + Sync
+    // MARK: - Collection + Sync (fully async)
 
-    private func collectAndSync() {
+    private func collectAndSync() async {
+        guard !isSyncing else {
+            logger.debug("Sync already in progress — skipping")
+            return
+        }
+        isSyncing = true
+        defer { isSyncing = false }
+
         guard let config = HelperConfig.load() else {
             logger.warning("No helper config found — waiting for pairing")
             return
@@ -92,7 +106,7 @@ final class HelperDaemon {
         )
 
         // Step 4: Provider quotas via collectors
-        let providerTiers = collectProviderQuotas(sessions: scanResult.sessions)
+        let providerTiers = await collectProviderQuotas(sessions: scanResult.sessions)
 
         // Step 5-6: Sync to Supabase
         let sessionDicts = scanResult.sessions.map { sessionToDict($0) }
@@ -100,103 +114,89 @@ final class HelperDaemon {
             (dict as? [String: Any])?["remaining"] as? Int
         }
 
-        Task {
-            do {
-                // Heartbeat
-                try await apiClient.heartbeat(
-                    config: config,
-                    cpuUsage: device.cpuUsage,
-                    memoryUsage: device.memoryUsage,
-                    activeSessionCount: scanResult.activeSessionCount
-                )
+        do {
+            // Heartbeat
+            try await apiClient.heartbeat(
+                config: config,
+                cpuUsage: device.cpuUsage,
+                memoryUsage: device.memoryUsage,
+                activeSessionCount: scanResult.activeSessionCount
+            )
 
-                // Sync
-                let result = try await apiClient.sync(
-                    config: config,
-                    sessions: sessionDicts,
-                    alerts: alerts,
-                    providerRemaining: providerRemaining,
-                    providerTiers: providerTiers
-                )
-                logger.info("Synced \(result.sessionsSynced) sessions, \(result.alertsSynced) alerts")
+            // Sync
+            let result = try await apiClient.sync(
+                config: config,
+                sessions: sessionDicts,
+                alerts: alerts,
+                providerRemaining: providerRemaining,
+                providerTiers: providerTiers
+            )
+            logger.info("Synced \(result.sessionsSynced) sessions, \(result.alertsSynced) alerts")
 
-                // Update status
-                HelperIPC.writeStatus(HelperIPC.Status(
-                    state: .running, lastSync: Date(), helperVersion: "1.0.0"
-                ))
-                HelperIPC.postSyncNotification()
+            // Update status
+            HelperIPC.writeStatus(HelperIPC.Status(
+                state: .running, lastSync: Date(), helperVersion: "1.0.0"
+            ))
+            HelperIPC.postSyncNotification()
 
-            } catch {
-                logger.error("Sync failed: \(error.localizedDescription)")
-                HelperIPC.writeStatus(HelperIPC.Status(
-                    state: .error, lastSync: nil, error: error.localizedDescription, helperVersion: "1.0.0"
-                ))
-            }
+        } catch {
+            logger.error("Sync failed: \(error.localizedDescription)")
+            HelperIPC.writeStatus(HelperIPC.Status(
+                state: .error, lastSync: nil, error: error.localizedDescription, helperVersion: "1.0.0"
+            ))
         }
     }
 
     // MARK: - Provider Quota Collection
 
     /// Run the same collectors the main app uses, producing tier data for Supabase.
-    private func collectProviderQuotas(sessions: [SessionRecord]) -> [String: Any] {
-        // Determine which providers are active
+    private func collectProviderQuotas(sessions: [SessionRecord]) async -> [String: Any] {
         let activeProviders = Set(sessions.map(\.provider))
         var result: [String: Any] = [:]
 
-        // Use a synchronous semaphore to collect async results on the daemon queue
-        let semaphore = DispatchSemaphore(value: 0)
+        let configs = ProviderConfig.defaults()
 
-        Task {
-            defer { semaphore.signal() }
+        for collector in CollectorRegistry.collectors {
+            let providerName = collector.kind.rawValue
+            guard activeProviders.contains(providerName) else { continue }
 
-            let configs = ProviderConfig.defaults()
+            let config = configs.first(where: { $0.provider == providerName }) ?? ProviderConfig(provider: providerName)
+            guard collector.isAvailable(config: config) else { continue }
 
-            for collector in CollectorRegistry.collectors {
-                let providerName = collector.kind.rawValue
-                guard activeProviders.contains(providerName) else { continue }
+            do {
+                let collectorResult = try await collector.collect(config: config)
+                let usage = collectorResult.usage
 
-                let config = configs.first(where: { $0.provider == providerName }) ?? ProviderConfig(provider: providerName)
+                var tierData: [String: Any] = [
+                    "quota": usage.quota ?? 100,
+                    "remaining": usage.remaining ?? 100,
+                ]
+                if let planType = usage.plan_type { tierData["plan_type"] = planType }
+                if let resetTime = usage.reset_time { tierData["reset_time"] = resetTime }
 
-                guard collector.isAvailable(config: config) else { continue }
-
-                do {
-                    let collectorResult = try await collector.collect(config: config)
-                    let usage = collectorResult.usage
-
-                    // Build tier dict matching Python's format for helper_sync
-                    var tierData: [String: Any] = [
-                        "quota": usage.quota ?? 100,
-                        "remaining": usage.remaining ?? 100,
+                let tiers: [[String: Any]] = usage.tiers.map { tier in
+                    var d: [String: Any] = [
+                        "name": tier.name,
+                        "quota": tier.quota,
+                        "remaining": tier.remaining,
                     ]
-                    if let planType = usage.plan_type { tierData["plan_type"] = planType }
-                    if let resetTime = usage.reset_time { tierData["reset_time"] = resetTime }
-
-                    let tiers: [[String: Any]] = usage.tiers.map { tier in
-                        var d: [String: Any] = [
-                            "name": tier.name,
-                            "quota": tier.quota,
-                            "remaining": tier.remaining,
-                        ]
-                        if let rt = tier.reset_time { d["reset_time"] = rt }
-                        return d
-                    }
-                    tierData["tiers"] = tiers
-
-                    result[providerName] = tierData
-                    self.logger.debug("Collected \(providerName): \(usage.tiers.count) tiers")
-                } catch {
-                    self.logger.warning("Collector failed for \(providerName): \(error.localizedDescription)")
+                    if let rt = tier.reset_time { d["reset_time"] = rt }
+                    return d
                 }
+                tierData["tiers"] = tiers
+
+                result[providerName] = tierData
+                logger.debug("Collected \(providerName): \(usage.tiers.count) tiers")
+            } catch {
+                logger.warning("Collector failed for \(providerName): \(error.localizedDescription)")
             }
         }
 
-        semaphore.wait()
         return result
     }
 
     // MARK: - Helpers
 
-    /// Convert a SessionRecord to a dict matching helper_sync's p_sessions JSON schema.
     private func sessionToDict(_ session: SessionRecord) -> [String: Any] {
         [
             "id": session.id,

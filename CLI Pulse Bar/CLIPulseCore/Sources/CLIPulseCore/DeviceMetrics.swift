@@ -42,9 +42,12 @@ public enum DeviceMetrics {
         var info = vm_statistics64()
         var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.stride / MemoryLayout<integer_t>.stride)
 
+        let hostPort = mach_host_self()
+        defer { mach_port_deallocate(mach_task_self_, hostPort) }
+
         let result = withUnsafeMutablePointer(to: &info) { ptr in
             ptr.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { intPtr in
-                host_statistics64(mach_host_self(), HOST_VM_INFO64, intPtr, &count)
+                host_statistics64(hostPort, HOST_VM_INFO64, intPtr, &count)
             }
         }
 

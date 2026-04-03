@@ -9,6 +9,7 @@ struct SettingsTab: View {
     @State private var otpCode = ""
     @State private var serverInput = ""
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
+    @State private var helperEnabled = HelperLogin.isEnabled
     @State private var settingsSection: SettingsSection = .general
 
     enum SettingsSection: String, CaseIterable {
@@ -257,19 +258,49 @@ struct SettingsTab: View {
         }
     }
 
+    @State private var pairingInProgress = false
+    @State private var nativePairingError: String?
+
     private func setupStepsView(info: PairingInfo) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(L10n.onboarding.setupStepsTitle)
                 .font(.system(size: 12, weight: .bold))
 
-            // Step 1
-            setupStep(number: 1, title: "Open Terminal", desc: "Press ⌘+Space, type \"Terminal\", press Enter") {
-                EmptyView()
+            // Native helper: one-click setup
+            VStack(alignment: .leading, spacing: 8) {
+                Text("The background helper syncs your usage data to the cloud so you can see it on iOS, Watch, and Android.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    Task { await pairAndStartNativeHelper(code: info.code) }
+                } label: {
+                    HStack {
+                        if pairingInProgress { ProgressView().controlSize(.small) }
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 10))
+                        Text("Set Up Background Helper")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(PulseTheme.accent)
+                .disabled(pairingInProgress || state.isLoading)
+
+                if let error = nativePairingError {
+                    Text(error)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.red)
+                }
             }
 
-            // Step 2
-            setupStep(number: 2, title: "Copy & paste this command", desc: "It downloads the helper and pairs this account") {
-                VStack(alignment: .leading, spacing: 4) {
+            Divider()
+
+            // Manual fallback for users who prefer terminal
+            DisclosureGroup {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text(info.install_command)
                             .font(.system(size: 8.5, design: .monospaced))
@@ -281,26 +312,22 @@ struct SettingsTab: View {
                     .padding(8)
                     .background(Color.black.opacity(0.3))
                     .clipShape(RoundedRectangle(cornerRadius: 6))
-                }
-            }
 
-            // Step 3
-            setupStep(number: 3, title: "Start the helper daemon", desc: "Keeps running in the background to sync data every 2 minutes") {
-                HStack {
-                    Text("python3 /tmp/cli_pulse_helper.py daemon")
-                        .font(.system(size: 9, design: .monospaced))
-                        .textSelection(.enabled)
-                    Spacer(minLength: 4)
-                    copyButton(text: "python3 /tmp/cli_pulse_helper.py daemon")
+                    HStack {
+                        Text("python3 /tmp/cli_pulse_helper.py daemon")
+                            .font(.system(size: 9, design: .monospaced))
+                            .textSelection(.enabled)
+                        Spacer(minLength: 4)
+                        copyButton(text: "python3 /tmp/cli_pulse_helper.py daemon")
+                    }
+                    .padding(8)
+                    .background(Color.black.opacity(0.3))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
-                .padding(8)
-                .background(Color.black.opacity(0.3))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-            }
-
-            // Step 4
-            setupStep(number: 4, title: "Verify connection", desc: "Click below to check if the helper is sending data") {
-                EmptyView()
+            } label: {
+                Text("Manual setup (Terminal)")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
             }
 
             // Pairing code display
@@ -364,6 +391,29 @@ struct SettingsTab: View {
                 content()
             }
         }
+    }
+
+    /// Register the native helper via Supabase RPC, save config, and enable Login Item.
+    private func pairAndStartNativeHelper(code: String) async {
+        pairingInProgress = true
+        nativePairingError = nil
+        do {
+            let client = HelperAPIClient()
+            let deviceName = Host.current().localizedName ?? "Mac"
+            let config = try await client.registerHelper(
+                pairingCode: code,
+                deviceName: deviceName,
+                system: "\(ProcessInfo.processInfo.operatingSystemVersionString)"
+            )
+            HelperConfig.save(config)
+            HelperLogin.register()
+            helperEnabled = HelperLogin.isEnabled
+            // Check pairing status to update UI
+            await state.checkPairingStatus()
+        } catch {
+            nativePairingError = error.localizedDescription
+        }
+        pairingInProgress = false
     }
 
     private func copyButton(text: String) -> some View {
@@ -787,6 +837,47 @@ struct SettingsTab: View {
             .controlSize(.small)
             .onChange(of: launchAtLogin) { _ in
                 LaunchAtLogin.toggle()
+            }
+
+            Divider()
+
+            SectionHeader(title: "Background Helper", icon: "arrow.triangle.2.circlepath")
+
+            Toggle(isOn: $helperEnabled) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Enable background sync")
+                        .font(.system(size: 11))
+                    Text("Syncs usage data to cloud for iOS/Watch/Android")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .toggleStyle(.switch)
+            .controlSize(.small)
+            .onChange(of: helperEnabled) { _ in
+                HelperLogin.toggle()
+            }
+
+            if let status = HelperIPC.readStatus() {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(status.state == .running ? Color.green : (status.state == .error ? Color.red : Color.gray))
+                        .frame(width: 6, height: 6)
+                    if let lastSync = status.lastSync {
+                        let ago = Int(Date().timeIntervalSince(lastSync))
+                        Text(ago < 60 ? "Synced just now" : "Synced \(ago / 60)m ago")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                    } else if let error = status.error {
+                        Text(error)
+                            .font(.system(size: 9))
+                            .foregroundStyle(.red)
+                    } else {
+                        Text(status.state == .running ? "Running" : "Not running")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
 
             Divider()
