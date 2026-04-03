@@ -816,14 +816,15 @@ public final class AppState: ObservableObject {
     #if os(macOS)
     /// Merge cloud provider data with local collector results.
     ///
-    /// **Richness rule**: the source with more tiers wins for quota/tier fields.
-    /// This ensures a local collector returning 4-5 detailed tiers (5h Window,
-    /// Weekly, Opus, Sonnet, Extra Usage) is not overridden by a cloud source
-    /// with only 1-2 coarse tiers or a bare top-level quota.
+    /// **Freshness rule**: local collectors run as part of each `refreshAll()`
+    /// cycle, so their quota/tier data is always fresher than cloud data
+    /// (which depends on the last helper daemon sync to Supabase). When a
+    /// local collector returns quota/tier data, it wins for those fields.
+    /// Cloud continues to supply trend, cost, session, and error fields.
     ///
-    /// - If local tiers are strictly richer (more tiers), use local quota data.
-    /// - If cloud has no quota AND no tiers, use local data (original rule).
-    /// - If cloud tiers >= local tiers, keep cloud data (backward-compatible).
+    /// - If local returned quota or tier data, use local quota/tier fields.
+    /// - If cloud has no quota AND no tiers, use local data.
+    /// - If local has no data for a provider, keep cloud data as-is.
     /// - statusOnly results are never merged into cloud data.
     /// - Providers not in cloud are added from local.
     ///
@@ -842,11 +843,16 @@ public final class AppState: ObservableObject {
                 let cloudHasQuota = existing.quota != nil && (existing.quota ?? 0) > 0
                 let cloudHasTiers = !existing.tiers.isEmpty
                 let cloudIsEmpty = !cloudHasQuota && !cloudHasTiers
-                // Richness: local wins if it has strictly more tiers than cloud
-                let localIsRicher = result.usage.tiers.count > existing.tiers.count
+                // Freshness tiebreaker: when local has tiers and at least
+                // as many as cloud, prefer local because it was just fetched
+                // (seconds ago) vs cloud data from the last helper sync
+                // (potentially hours stale). Cloud only wins when it has
+                // strictly more tiers than local.
+                let localWins = !result.usage.tiers.isEmpty
+                    && result.usage.tiers.count >= existing.tiers.count
 
-                if cloudIsEmpty || localIsRicher {
-                    // Cloud is incomplete OR local has richer tier data — use local quota/tiers
+                if cloudIsEmpty || localWins {
+                    // Cloud is incomplete OR local has equal/richer tier data — use local quota/tiers (fresher)
                     merged[name] = ProviderUsage(
                         provider: existing.provider,
                         today_usage: existing.today_usage > 0 ? existing.today_usage : result.usage.today_usage,
@@ -868,7 +874,7 @@ public final class AppState: ObservableObject {
                     )
                     supplemented.insert(name)
                 }
-                // If cloud tiers >= local tiers, keep cloud data as-is
+                // Local had no quota/tier data — keep cloud as-is
             } else {
                 // Provider not in cloud results — add local-only data
                 merged[name] = result.usage
