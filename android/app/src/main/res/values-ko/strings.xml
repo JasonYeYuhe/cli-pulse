@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CLI Pulse</string>
+    <string name="tab_overview">개요</string>
+    <string name="tab_providers">제공자</string>
+    <string name="tab_sessions">세션</string>
+    <string name="tab_alerts">알림</string>
+    <string name="tab_settings">설정</string>
+    <string name="sign_in_google">Google로 로그인</string>
+    <string name="sign_in_email">이메일로 로그인</string>
+    <string name="sign_in_password">비밀번호로 로그인</string>
+    <string name="enter_otp">인증 코드 입력</string>
+    <string name="send_code">코드 전송</string>
+    <string name="verify">확인</string>
+    <string name="sign_out">로그아웃</string>
+    <string name="delete_account">계정 삭제</string>
+    <string name="loading">로딩 중…</string>
+    <string name="error_generic">문제가 발생했습니다</string>
+    <string name="today_usage">오늘 사용량</string>
+    <string name="estimated_cost">예상 비용</string>
+    <string name="active_sessions">활성 세션</string>
+    <string name="online_devices">온라인 기기</string>
+    <string name="unresolved_alerts">미해결 알림</string>
+</resources>

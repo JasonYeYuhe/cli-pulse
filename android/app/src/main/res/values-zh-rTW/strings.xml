@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CLI Pulse</string>
+    <string name="tab_overview">總覽</string>
+    <string name="tab_providers">服務商</string>
+    <string name="tab_sessions">工作階段</string>
+    <string name="tab_alerts">警告</string>
+    <string name="tab_settings">設定</string>
+    <string name="sign_in_google">使用 Google 登入</string>
+    <string name="sign_in_email">使用電子郵件登入</string>
+    <string name="sign_in_password">使用密碼登入</string>
+    <string name="enter_otp">輸入驗證碼</string>
+    <string name="send_code">傳送驗證碼</string>
+    <string name="verify">驗證</string>
+    <string name="sign_out">登出</string>
+    <string name="delete_account">刪除帳號</string>
+    <string name="loading">載入中…</string>
+    <string name="error_generic">發生錯誤</string>
+    <string name="today_usage">今日用量</string>
+    <string name="estimated_cost">預估費用</string>
+    <string name="active_sessions">活躍工作階段</string>
+    <string name="online_devices">線上裝置</string>
+    <string name="unresolved_alerts">未處理警告</string>
+</resources>
