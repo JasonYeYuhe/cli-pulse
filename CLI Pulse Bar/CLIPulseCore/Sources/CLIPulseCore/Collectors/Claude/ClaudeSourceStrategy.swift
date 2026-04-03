@@ -162,7 +162,20 @@ public enum ClaudeCredentials {
     }
 
     /// Read credentials from macOS Keychain (Claude Code's keychain item).
+    ///
+    /// The sandboxed app cannot access cross-app keychain items without
+    /// triggering a macOS authorization dialog. To avoid prompting the
+    /// user on every launch, we cache the credentials in the app's own
+    /// keychain after the first successful read.
     public static func readKeychainCredentials() -> Creds? {
+        // 1. Try the app's own keychain cache (never triggers a prompt)
+        if let cached = KeychainHelper.load(key: keychainCacheKey),
+           let data = cached.data(using: .utf8),
+           let creds = parseCredentialsJSON(data) {
+            return creds
+        }
+
+        // 2. Read from Claude Code's keychain (may trigger one-time prompt)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: "Claude Code-credentials",
@@ -172,8 +185,24 @@ public enum ClaudeCredentials {
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
         guard status == errSecSuccess, let data = item as? Data else { return nil }
-        return parseCredentialsJSON(data)
+        guard let creds = parseCredentialsJSON(data) else { return nil }
+
+        // 3. Cache in the app's own keychain so the prompt never recurs
+        if let jsonStr = String(data: data, encoding: .utf8) {
+            KeychainHelper.save(key: keychainCacheKey, value: jsonStr)
+        }
+        return creds
     }
+
+    /// Clear the cached Claude Code credentials.
+    /// Call this when the cached token is known to be invalid (e.g. after
+    /// an OAuth 401) so the next `readKeychainCredentials()` re-reads
+    /// from the real keychain.
+    public static func clearCachedKeychainCredentials() {
+        KeychainHelper.delete(key: keychainCacheKey)
+    }
+
+    private static let keychainCacheKey = "claude-code-creds-cache"
 
     /// Resolve an OAuth token from all available sources.
     public static func resolveToken(config: ProviderConfig) -> (token: String, tier: String?) {

@@ -19,7 +19,15 @@ public struct ClaudeOAuthStrategy: ClaudeSourceStrategy, Sendable {
         let (token, tier) = ClaudeCredentials.resolveToken(config: config)
         guard !token.isEmpty else { throw ClaudeStrategyError.noToken }
 
-        let usage = try await fetchUsage(token: token)
+        let usage: OAuthUsageResponse
+        do {
+            usage = try await fetchUsage(token: token)
+        } catch ClaudeStrategyError.httpError(let status, _) where status == 401 || status == 403 {
+            // Token may have rotated — clear the keychain cache so the next
+            // attempt re-reads from Claude Code's real keychain item.
+            ClaudeCredentials.clearCachedKeychainCredentials()
+            throw ClaudeStrategyError.httpError(status: status, provider: "Claude")
+        }
         return ClaudeSnapshot(
             sessionUsed: usage.fiveHour?.utilization,
             weeklyUsed: usage.sevenDay?.utilization,
