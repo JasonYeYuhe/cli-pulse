@@ -9,6 +9,8 @@ public actor APIClient {
     private var userId: String?
 
     private let session: URLSession
+    private let decoder = JSONDecoder()
+    private let encoder = JSONEncoder()
 
     /// Called after a successful token refresh with (newAccessToken, newRefreshToken).
     /// Set by AppState to persist rotated tokens to Keychain.
@@ -70,7 +72,7 @@ public actor APIClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.httpBody = try JSONSerialization.data(withJSONObject: ["refresh_token": currentRefreshToken])
+        request.httpBody = try encoder.encode(RefreshTokenRequest(refresh_token: currentRefreshToken))
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
@@ -80,9 +82,9 @@ public actor APIClient {
             throw APIError.tokenExpired
         }
 
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-        let newAccess = json["access_token"] as? String ?? ""
-        let newRefresh = json["refresh_token"] as? String ?? currentRefreshToken
+        let auth = try decode(SupabaseAuthResponse.self, from: data)
+        let newAccess = auth.access_token
+        let newRefresh = auth.refresh_token ?? currentRefreshToken
 
         self.accessToken = newAccess
         self.refreshToken = newRefresh
@@ -120,6 +122,187 @@ public actor APIClient {
         value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
     }
 
+    private struct EmptyBody: Codable {}
+
+    private struct RefreshTokenRequest: Encodable {
+        let refresh_token: String
+    }
+
+    private struct AppleSignInRequest: Encodable {
+        let provider: String
+        let id_token: String
+        let nonce: String?
+        let name: String?
+    }
+
+    private struct SendOTPRequest: Encodable {
+        let email: String
+        let create_user: Bool
+    }
+
+    private struct VerifyOTPRequest: Encodable {
+        let email: String
+        let token: String
+        let type: String
+    }
+
+    private struct PasswordSignInRequest: Encodable {
+        let email: String
+        let password: String
+    }
+
+    private struct PairingCodeRequest: Encodable {
+        let code: String
+        let user_id: String
+        let created_at: String
+        let expires_at: String
+    }
+
+    private struct AcknowledgeAlertRequest: Encodable {
+        let acknowledged_at: String
+        let is_read: Bool
+    }
+
+    private struct ResolveAlertRequest: Encodable {
+        let is_resolved: Bool
+    }
+
+    private struct SnoozeAlertRequest: Encodable {
+        let snoozed_until: String
+    }
+
+    private struct SupabaseUserMetadata: Decodable {
+        let name: String?
+    }
+
+    private struct SupabaseUser: Decodable {
+        let id: String
+        let email: String?
+        let user_metadata: SupabaseUserMetadata?
+    }
+
+    private struct SupabaseAuthResponse: Decodable {
+        let access_token: String
+        let refresh_token: String?
+        let user: SupabaseUser?
+    }
+
+    private struct SupabaseProfileRecord: Decodable {
+        let paired: Bool?
+        let name: String?
+        let email: String?
+    }
+
+    private struct DashboardSummaryPayload: Decodable {
+        let today_usage: Int?
+        let today_cost: Double?
+        let active_sessions: Int?
+        let online_devices: Int?
+        let unresolved_alerts: Int?
+        let today_sessions: Int?
+    }
+
+    private struct ProviderSummaryPayload: Decodable {
+        let provider: String?
+        let today_usage: Int?
+        let total_usage: Int?
+        let estimated_cost: Double?
+        let quota: Int?
+        let remaining: Int?
+        let plan_type: String?
+        let reset_time: String?
+        let tiers: [TierDTO]?
+    }
+
+    private struct SessionDevicePayload: Decodable {
+        let name: String?
+    }
+
+    private struct SessionRecordPayload: Decodable {
+        let id: String?
+        let name: String?
+        let provider: String?
+        let project: String?
+        let devices: SessionDevicePayload?
+        let started_at: String?
+        let last_active_at: String?
+        let status: String?
+        let total_usage: Int?
+        let estimated_cost: Double?
+        let requests: Int?
+        let error_count: Int?
+        let collection_confidence: String?
+    }
+
+    private struct DeviceRecordPayload: Decodable {
+        let id: String?
+        let name: String?
+        let type: String?
+        let system: String?
+        let status: String?
+        let last_seen_at: String?
+        let helper_version: String?
+        let cpu_usage: Int?
+        let memory_usage: Int?
+    }
+
+    private struct AlertRecordPayload: Decodable {
+        let id: String?
+        let type: String?
+        let severity: String?
+        let title: String?
+        let message: String?
+        let created_at: String?
+        let is_read: Bool?
+        let is_resolved: Bool?
+        let acknowledged_at: String?
+        let snoozed_until: String?
+        let related_project_id: String?
+        let related_project_name: String?
+        let related_session_id: String?
+        let related_session_name: String?
+        let related_provider: String?
+        let related_device_name: String?
+        let source_kind: String?
+        let source_id: String?
+        let grouping_key: String?
+        let suppression_key: String?
+    }
+
+    private struct SettingsPayload: Decodable {
+        let notifications_enabled: Bool?
+        let push_policy: String?
+        let digest_notifications_enabled: Bool?
+        let digest_interval_minutes: Int?
+        let usage_spike_threshold: Int?
+        let project_budget_threshold_usd: Double?
+        let session_too_long_threshold_minutes: Int?
+        let offline_grace_period_minutes: Int?
+        let repeated_failure_threshold: Int?
+        let alert_cooldown_minutes: Int?
+        let data_retention_days: Int?
+    }
+
+    private struct UserTierPayload: Decodable {
+        let tier: String?
+    }
+
+    private func decode<Response: Decodable>(_ type: Response.Type, from data: Data) throws -> Response {
+        do {
+            return try decoder.decode(type, from: data)
+        } catch {
+            throw APIError.invalidResponse
+        }
+    }
+
+    private func fetchProfile(select: String) async throws -> SupabaseProfileRecord? {
+        let safeUserId = Self.sanitizeParam(userId ?? "")
+        let profiles: [SupabaseProfileRecord] = try await restGet(
+            "/rest/v1/profiles?id=eq.\(safeUserId)&select=\(select)"
+        )
+        return profiles.first
+    }
+
     // MARK: - Auth (Sign in with Apple via Supabase)
 
     public func signInWithApple(identityToken: String, nonce: String? = nil, fullName: String?, email: String?) async throws -> AuthResponse {
@@ -129,17 +312,14 @@ public actor APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
 
-        var body: [String: Any] = [
-            "provider": "apple",
-            "id_token": identityToken
-        ]
-        if let nonce = nonce {
-            body["nonce"] = nonce
-        }
-        if let fullName = fullName {
-            body["name"] = fullName
-        }
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        request.httpBody = try encoder.encode(
+            AppleSignInRequest(
+                provider: "apple",
+                id_token: identityToken,
+                nonce: nonce,
+                name: fullName
+            )
+        )
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
@@ -147,26 +327,25 @@ public actor APIClient {
             throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: body)
         }
 
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-        let token = json["access_token"] as? String ?? ""
-        let refresh = json["refresh_token"] as? String
-        let user = json["user"] as? [String: Any] ?? [:]
+        let auth = try decode(SupabaseAuthResponse.self, from: data)
+        let token = auth.access_token
+        let refresh = auth.refresh_token
+        let user = auth.user
 
         self.accessToken = token
         self.refreshToken = refresh
-        self.userId = user["id"] as? String
+        self.userId = user?.id
 
-        let safeUserId = Self.sanitizeParam(userId ?? "")
-        let profile: [[String: Any]] = try await restGet("/rest/v1/profiles?id=eq.\(safeUserId)&select=paired")
-        let paired = profile.first?["paired"] as? Bool ?? false
+        let profile = try await fetchProfile(select: "paired")
+        let paired = profile?.paired ?? false
 
-        let name = fullName ?? (user["user_metadata"] as? [String: Any])?["name"] as? String ?? ""
-        let userEmail = email ?? user["email"] as? String ?? ""
+        let name = fullName ?? user?.user_metadata?.name ?? ""
+        let userEmail = email ?? user?.email ?? ""
 
         return AuthResponse(
             access_token: token,
             refresh_token: refresh,
-            user: UserDTO(id: userId ?? "", name: name, email: userEmail),
+            user: UserDTO(id: user?.id ?? "", name: name, email: userEmail),
             paired: paired
         )
     }
@@ -179,11 +358,7 @@ public actor APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
 
-        let body: [String: Any] = [
-            "email": email,
-            "create_user": true
-        ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        request.httpBody = try encoder.encode(SendOTPRequest(email: email, create_user: true))
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
@@ -200,12 +375,7 @@ public actor APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
 
-        let body: [String: String] = [
-            "email": email,
-            "token": code,
-            "type": "email"
-        ]
-        request.httpBody = try JSONEncoder().encode(body)
+        request.httpBody = try encoder.encode(VerifyOTPRequest(email: email, token: code, type: "email"))
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
@@ -213,25 +383,24 @@ public actor APIClient {
             throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: errorBody)
         }
 
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-        let token = json["access_token"] as? String ?? ""
-        let refresh = json["refresh_token"] as? String
-        let user = json["user"] as? [String: Any] ?? [:]
+        let auth = try decode(SupabaseAuthResponse.self, from: data)
+        let token = auth.access_token
+        let refresh = auth.refresh_token
+        let user = auth.user
 
         self.accessToken = token
         self.refreshToken = refresh
-        self.userId = user["id"] as? String
+        self.userId = user?.id
 
-        let safeUserId = Self.sanitizeParam(userId ?? "")
-        let profile: [[String: Any]] = try await restGet("/rest/v1/profiles?id=eq.\(safeUserId)&select=paired,name,email")
-        let paired = profile.first?["paired"] as? Bool ?? false
-        let profileName = profile.first?["name"] as? String ?? ""
-        let profileEmail = profile.first?["email"] as? String ?? email
+        let profile = try await fetchProfile(select: "paired,name,email")
+        let paired = profile?.paired ?? false
+        let profileName = profile?.name ?? ""
+        let profileEmail = profile?.email ?? email
 
         return AuthResponse(
             access_token: token,
             refresh_token: refresh,
-            user: UserDTO(id: userId ?? "", name: profileName, email: profileEmail),
+            user: UserDTO(id: user?.id ?? "", name: profileName, email: profileEmail),
             paired: paired
         )
     }
@@ -244,8 +413,7 @@ public actor APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
 
-        let body: [String: String] = ["email": email, "password": password]
-        request.httpBody = try JSONEncoder().encode(body)
+        request.httpBody = try encoder.encode(PasswordSignInRequest(email: email, password: password))
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
@@ -253,25 +421,24 @@ public actor APIClient {
             throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: errorBody)
         }
 
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-        let token = json["access_token"] as? String ?? ""
-        let refresh = json["refresh_token"] as? String
-        let user = json["user"] as? [String: Any] ?? [:]
+        let auth = try decode(SupabaseAuthResponse.self, from: data)
+        let token = auth.access_token
+        let refresh = auth.refresh_token
+        let user = auth.user
 
         self.accessToken = token
         self.refreshToken = refresh
-        self.userId = user["id"] as? String
+        self.userId = user?.id
 
-        let safeUserId = Self.sanitizeParam(userId ?? "")
-        let profile: [[String: Any]] = try await restGet("/rest/v1/profiles?id=eq.\(safeUserId)&select=paired,name,email")
-        let paired = profile.first?["paired"] as? Bool ?? false
-        let profileName = profile.first?["name"] as? String ?? ""
-        let profileEmail = profile.first?["email"] as? String ?? email
+        let profile = try await fetchProfile(select: "paired,name,email")
+        let paired = profile?.paired ?? false
+        let profileName = profile?.name ?? ""
+        let profileEmail = profile?.email ?? email
 
         return AuthResponse(
             access_token: token,
             refresh_token: refresh,
-            user: UserDTO(id: userId ?? "", name: profileName, email: profileEmail),
+            user: UserDTO(id: user?.id ?? "", name: profileName, email: profileEmail),
             paired: paired
         )
     }
@@ -296,20 +463,18 @@ public actor APIClient {
             throw APIError.httpError(status: http?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
         }
 
-        let user = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-        self.userId = user["id"] as? String
-        let metadata = user["user_metadata"] as? [String: Any] ?? [:]
+        let user = try decode(SupabaseUser.self, from: data)
+        self.userId = user.id
 
-        let safeUserId = Self.sanitizeParam(userId ?? "")
-        let profile: [[String: Any]] = try await restGet("/rest/v1/profiles?id=eq.\(safeUserId)&select=paired,name,email")
-        let paired = profile.first?["paired"] as? Bool ?? false
-        let name = profile.first?["name"] as? String ?? metadata["name"] as? String ?? ""
-        let email = profile.first?["email"] as? String ?? user["email"] as? String ?? ""
+        let profile = try await fetchProfile(select: "paired,name,email")
+        let paired = profile?.paired ?? false
+        let name = profile?.name ?? user.user_metadata?.name ?? ""
+        let email = profile?.email ?? user.email ?? ""
 
         return AuthResponse(
             access_token: accessToken ?? "",
             refresh_token: refreshToken,
-            user: UserDTO(id: userId ?? "", name: name, email: email),
+            user: UserDTO(id: user.id, name: name, email: email),
             paired: paired
         )
     }
@@ -317,14 +482,14 @@ public actor APIClient {
     // MARK: - Dashboard
 
     public func dashboard() async throws -> DashboardSummary {
-        let json: [String: Any] = try await rpc("dashboard_summary", params: [:])
+        let summary: DashboardSummaryPayload = try await rpc("dashboard_summary")
 
-        let todayUsage = json["today_usage"] as? Int ?? 0
-        let todayCost = (json["today_cost"] as? NSNumber)?.doubleValue ?? 0
-        let activeSessions = json["active_sessions"] as? Int ?? 0
-        let onlineDevices = json["online_devices"] as? Int ?? 0
-        let unresolvedAlerts = json["unresolved_alerts"] as? Int ?? 0
-        let todaySessions = json["today_sessions"] as? Int ?? 0
+        let todayUsage = summary.today_usage ?? 0
+        let todayCost = summary.today_cost ?? 0
+        let activeSessions = summary.active_sessions ?? 0
+        let onlineDevices = summary.online_devices ?? 0
+        let unresolvedAlerts = summary.unresolved_alerts ?? 0
+        let todaySessions = summary.today_sessions ?? 0
 
         return DashboardSummary(
             total_usage_today: todayUsage,
@@ -346,33 +511,21 @@ public actor APIClient {
     // MARK: - Providers
 
     public func providers() async throws -> [ProviderUsage] {
-        let json: [[String: Any]] = try await rpc("provider_summary", params: [:])
-        return json.map { p in
-            // Parse tiers array from API response
-            var tiers: [TierDTO] = []
-            if let tiersArray = p["tiers"] as? [[String: Any]] {
-                tiers = tiersArray.map { t in
-                    TierDTO(
-                        name: t["name"] as? String ?? "Default",
-                        quota: t["quota"] as? Int ?? 0,
-                        remaining: t["remaining"] as? Int ?? 0,
-                        reset_time: t["reset_time"] as? String
-                    )
-                }
-            }
+        let providers: [ProviderSummaryPayload] = try await rpc("provider_summary")
+        return providers.map { provider in
             return ProviderUsage(
-                provider: p["provider"] as? String ?? "",
-                today_usage: p["today_usage"] as? Int ?? 0,
-                week_usage: p["total_usage"] as? Int ?? 0,
+                provider: provider.provider ?? "",
+                today_usage: provider.today_usage ?? 0,
+                week_usage: provider.total_usage ?? 0,
                 estimated_cost_today: 0,
-                estimated_cost_week: (p["estimated_cost"] as? NSNumber)?.doubleValue ?? 0,
+                estimated_cost_week: provider.estimated_cost ?? 0,
                 cost_status_today: "Estimated",
                 cost_status_week: "Estimated",
-                quota: p["quota"] as? Int,
-                remaining: p["remaining"] as? Int,
-                plan_type: p["plan_type"] as? String,
-                reset_time: p["reset_time"] as? String,
-                tiers: tiers,
+                quota: provider.quota,
+                remaining: provider.remaining,
+                plan_type: provider.plan_type,
+                reset_time: provider.reset_time,
+                tiers: provider.tiers ?? [],
                 status_text: "Operational",
                 trend: [],
                 recent_sessions: [],
@@ -385,26 +538,25 @@ public actor APIClient {
 
     public func sessions() async throws -> [SessionRecord] {
         let safeUserId = Self.sanitizeParam(userId ?? "")
-        let rows: [[String: Any]] = try await restGet(
+        let rows: [SessionRecordPayload] = try await restGet(
             "/rest/v1/sessions?user_id=eq.\(safeUserId)&select=*,devices(name)&order=last_active_at.desc&limit=50"
         )
-        return rows.map { r in
-            let device = r["devices"] as? [String: Any]
+        return rows.map { row in
             return SessionRecord(
-                id: r["id"] as? String ?? "",
-                name: r["name"] as? String ?? "",
-                provider: r["provider"] as? String ?? "",
-                project: r["project"] as? String ?? "",
-                device_name: device?["name"] as? String ?? "",
-                started_at: r["started_at"] as? String ?? "",
-                last_active_at: r["last_active_at"] as? String ?? "",
-                status: r["status"] as? String ?? "Running",
-                total_usage: r["total_usage"] as? Int ?? 0,
-                estimated_cost: (r["estimated_cost"] as? NSNumber)?.doubleValue ?? 0,
+                id: row.id ?? "",
+                name: row.name ?? "",
+                provider: row.provider ?? "",
+                project: row.project ?? "",
+                device_name: row.devices?.name ?? "",
+                started_at: row.started_at ?? "",
+                last_active_at: row.last_active_at ?? "",
+                status: row.status ?? "Running",
+                total_usage: row.total_usage ?? 0,
+                estimated_cost: row.estimated_cost ?? 0,
                 cost_status: "Estimated",
-                requests: r["requests"] as? Int ?? 0,
-                error_count: r["error_count"] as? Int ?? 0,
-                collection_confidence: r["collection_confidence"] as? String
+                requests: row.requests ?? 0,
+                error_count: row.error_count ?? 0,
+                collection_confidence: row.collection_confidence
             )
         }
     }
@@ -413,21 +565,21 @@ public actor APIClient {
 
     public func devices() async throws -> [DeviceRecord] {
         let safeUserId = Self.sanitizeParam(userId ?? "")
-        let rows: [[String: Any]] = try await restGet(
+        let rows: [DeviceRecordPayload] = try await restGet(
             "/rest/v1/devices?user_id=eq.\(safeUserId)&select=*&order=last_seen_at.desc"
         )
-        return rows.map { r in
+        return rows.map { row in
             DeviceRecord(
-                id: r["id"] as? String ?? "",
-                name: r["name"] as? String ?? "",
-                type: r["type"] as? String ?? "macOS",
-                system: r["system"] as? String ?? "",
-                status: r["status"] as? String ?? "Offline",
-                last_sync_at: r["last_seen_at"] as? String,
-                helper_version: r["helper_version"] as? String ?? "",
+                id: row.id ?? "",
+                name: row.name ?? "",
+                type: row.type ?? "macOS",
+                system: row.system ?? "",
+                status: row.status ?? "Offline",
+                last_sync_at: row.last_seen_at,
+                helper_version: row.helper_version ?? "",
                 current_session_count: 0,
-                cpu_usage: r["cpu_usage"] as? Int,
-                memory_usage: r["memory_usage"] as? Int
+                cpu_usage: row.cpu_usage,
+                memory_usage: row.memory_usage
             )
         }
     }
@@ -436,31 +588,31 @@ public actor APIClient {
 
     public func alerts() async throws -> [AlertRecord] {
         let safeUserId = Self.sanitizeParam(userId ?? "")
-        let rows: [[String: Any]] = try await restGet(
+        let rows: [AlertRecordPayload] = try await restGet(
             "/rest/v1/alerts?user_id=eq.\(safeUserId)&select=*&order=created_at.desc&limit=50"
         )
-        return rows.map { r in
+        return rows.map { row in
             AlertRecord(
-                id: r["id"] as? String ?? "",
-                type: r["type"] as? String ?? "",
-                severity: r["severity"] as? String ?? "Info",
-                title: r["title"] as? String ?? "",
-                message: r["message"] as? String ?? "",
-                created_at: r["created_at"] as? String ?? "",
-                is_read: r["is_read"] as? Bool ?? false,
-                is_resolved: r["is_resolved"] as? Bool ?? false,
-                acknowledged_at: r["acknowledged_at"] as? String,
-                snoozed_until: r["snoozed_until"] as? String,
-                related_project_id: r["related_project_id"] as? String,
-                related_project_name: r["related_project_name"] as? String,
-                related_session_id: r["related_session_id"] as? String,
-                related_session_name: r["related_session_name"] as? String,
-                related_provider: r["related_provider"] as? String,
-                related_device_name: r["related_device_name"] as? String,
-                source_kind: r["source_kind"] as? String,
-                source_id: r["source_id"] as? String,
-                grouping_key: r["grouping_key"] as? String,
-                suppression_key: r["suppression_key"] as? String
+                id: row.id ?? "",
+                type: row.type ?? "",
+                severity: row.severity ?? "Info",
+                title: row.title ?? "",
+                message: row.message ?? "",
+                created_at: row.created_at ?? "",
+                is_read: row.is_read ?? false,
+                is_resolved: row.is_resolved ?? false,
+                acknowledged_at: row.acknowledged_at,
+                snoozed_until: row.snoozed_until,
+                related_project_id: row.related_project_id,
+                related_project_name: row.related_project_name,
+                related_session_id: row.related_session_id,
+                related_session_name: row.related_session_name,
+                related_provider: row.related_provider,
+                related_device_name: row.related_device_name,
+                source_kind: row.source_kind,
+                source_id: row.source_id,
+                grouping_key: row.grouping_key,
+                suppression_key: row.suppression_key
             )
         }
     }
@@ -474,14 +626,23 @@ public actor APIClient {
     public func acknowledgeAlert(id: String) async throws -> SuccessResponse {
         let safeId = Self.sanitizeParam(id)
         let safeUserId = Self.sanitizeParam(userId ?? "")
-        try await restPatch("/rest/v1/alerts?id=eq.\(safeId)&user_id=eq.\(safeUserId)", body: ["acknowledged_at": Self.isoFormatter.string(from: Date()), "is_read": true])
+        try await restPatch(
+            "/rest/v1/alerts?id=eq.\(safeId)&user_id=eq.\(safeUserId)",
+            body: AcknowledgeAlertRequest(
+                acknowledged_at: Self.isoFormatter.string(from: Date()),
+                is_read: true
+            )
+        )
         return SuccessResponse(ok: true)
     }
 
     public func resolveAlert(id: String) async throws -> SuccessResponse {
         let safeId = Self.sanitizeParam(id)
         let safeUserId = Self.sanitizeParam(userId ?? "")
-        try await restPatch("/rest/v1/alerts?id=eq.\(safeId)&user_id=eq.\(safeUserId)", body: ["is_resolved": true])
+        try await restPatch(
+            "/rest/v1/alerts?id=eq.\(safeId)&user_id=eq.\(safeUserId)",
+            body: ResolveAlertRequest(is_resolved: true)
+        )
         return SuccessResponse(ok: true)
     }
 
@@ -489,7 +650,10 @@ public actor APIClient {
         let safeId = Self.sanitizeParam(id)
         let safeUserId = Self.sanitizeParam(userId ?? "")
         let snoozeUntil = Self.isoFormatter.string(from: Date().addingTimeInterval(Double(minutes) * 60))
-        try await restPatch("/rest/v1/alerts?id=eq.\(safeId)&user_id=eq.\(safeUserId)", body: ["snoozed_until": snoozeUntil])
+        try await restPatch(
+            "/rest/v1/alerts?id=eq.\(safeId)&user_id=eq.\(safeUserId)",
+            body: SnoozeAlertRequest(snoozed_until: snoozeUntil)
+        )
         return SuccessResponse(ok: true)
     }
 
@@ -497,20 +661,20 @@ public actor APIClient {
 
     public func settings() async throws -> SettingsSnapshot {
         let safeUserId = Self.sanitizeParam(userId ?? "")
-        let rows: [[String: Any]] = try await restGet("/rest/v1/user_settings?user_id=eq.\(safeUserId)&select=*")
-        let s = rows.first ?? [:]
+        let rows: [SettingsPayload] = try await restGet("/rest/v1/user_settings?user_id=eq.\(safeUserId)&select=*")
+        let settings = rows.first
         return SettingsSnapshot(
-            notifications_enabled: s["notifications_enabled"] as? Bool ?? true,
-            push_policy: s["push_policy"] as? String ?? "Warnings + Critical",
-            digest_enabled: s["digest_notifications_enabled"] as? Bool ?? true,
-            digest_interval_hours: (s["digest_interval_minutes"] as? Int ?? 15) / 60,
-            usage_spike_threshold: s["usage_spike_threshold"] as? Int ?? 500,
-            project_budget_threshold_usd: (s["project_budget_threshold_usd"] as? NSNumber)?.doubleValue ?? 0.25,
-            session_too_long_threshold_minutes: s["session_too_long_threshold_minutes"] as? Int ?? 180,
-            offline_grace_period_minutes: s["offline_grace_period_minutes"] as? Int ?? 5,
-            repeated_failure_threshold: s["repeated_failure_threshold"] as? Int ?? 3,
-            alert_cooldown_minutes: s["alert_cooldown_minutes"] as? Int ?? 30,
-            data_retention_days: s["data_retention_days"] as? Int ?? 7
+            notifications_enabled: settings?.notifications_enabled ?? true,
+            push_policy: settings?.push_policy ?? "Warnings + Critical",
+            digest_enabled: settings?.digest_notifications_enabled ?? true,
+            digest_interval_hours: (settings?.digest_interval_minutes ?? 15) / 60,
+            usage_spike_threshold: settings?.usage_spike_threshold ?? 500,
+            project_budget_threshold_usd: settings?.project_budget_threshold_usd ?? 0.25,
+            session_too_long_threshold_minutes: settings?.session_too_long_threshold_minutes ?? 180,
+            offline_grace_period_minutes: settings?.offline_grace_period_minutes ?? 5,
+            repeated_failure_threshold: settings?.repeated_failure_threshold ?? 3,
+            alert_cooldown_minutes: settings?.alert_cooldown_minutes ?? 30,
+            data_retention_days: settings?.data_retention_days ?? 7
         )
     }
 
@@ -528,10 +692,14 @@ public actor APIClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         applyHeaders(&request)
-        request.httpBody = try JSONSerialization.data(withJSONObject: [
-            "code": code, "user_id": uid,
-            "created_at": now, "expires_at": expires
-        ])
+        request.httpBody = try encoder.encode(
+            PairingCodeRequest(
+                code: code,
+                user_id: uid,
+                created_at: now,
+                expires_at: expires
+            )
+        )
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
@@ -561,7 +729,7 @@ public actor APIClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         applyHeaders(&request)
-        request.httpBody = try JSONSerialization.data(withJSONObject: [:] as [String: Any])
+        request.httpBody = try encoder.encode(EmptyBody())
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
@@ -574,8 +742,8 @@ public actor APIClient {
 
     public func serverTier() async -> String {
         do {
-            let json: [String: Any] = try await rpc("get_user_tier", params: [:])
-            return (json["tier"] as? String) ?? "free"
+            let response: UserTierPayload = try await rpc("get_user_tier")
+            return response.tier ?? "free"
         } catch {
             return "free"
         }
@@ -596,7 +764,7 @@ public actor APIClient {
 
     // MARK: - Supabase REST Helpers
 
-    private func restGet<T>(_ path: String, retried: Bool = false) async throws -> T where T: Any {
+    private func restGet<Response: Decodable>(_ path: String, retried: Bool = false) async throws -> Response {
         guard let url = URL(string: supabaseURL + path) else {
             throw APIError.invalidResponse
         }
@@ -613,21 +781,18 @@ public actor APIClient {
         guard let httpOK = http, (200...299).contains(httpOK.statusCode) else {
             throw APIError.httpError(status: http?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
         }
-        guard let result = try JSONSerialization.jsonObject(with: data) as? T else {
-            throw APIError.invalidResponse
-        }
-        return result
+        return try decode(Response.self, from: data)
     }
 
     @discardableResult
-    private func restPatch(_ path: String, body: [String: Any], retried: Bool = false) async throws -> Data {
+    private func restPatch<Body: Encodable>(_ path: String, body: Body, retried: Bool = false) async throws -> Data {
         guard let url = URL(string: supabaseURL + path) else {
             throw APIError.invalidResponse
         }
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
         applyHeaders(&request)
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        request.httpBody = try encoder.encode(body)
         let (data, response) = try await dataWithRetry(for: request)
         let http = response as? HTTPURLResponse
         if http?.statusCode == 401, !retried {
@@ -640,14 +805,32 @@ public actor APIClient {
         return data
     }
 
-    private func rpc<T>(_ function: String, params: [String: Any], retried: Bool = false) async throws -> T where T: Any {
+    private func restPatch<Response: Decodable, Body: Encodable>(
+        _ path: String,
+        body: Body,
+        responseType: Response.Type,
+        retried: Bool = false
+    ) async throws -> Response {
+        let data = try await restPatch(path, body: body, retried: retried)
+        return try decode(responseType, from: data)
+    }
+
+    private func rpc<Response: Decodable>(_ function: String, retried: Bool = false) async throws -> Response {
+        try await rpc(function, params: EmptyBody(), retried: retried)
+    }
+
+    private func rpc<Response: Decodable, Params: Encodable>(
+        _ function: String,
+        params: Params,
+        retried: Bool = false
+    ) async throws -> Response {
         guard let url = URL(string: "\(supabaseURL)/rest/v1/rpc/\(function)") else {
             throw APIError.invalidResponse
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         applyHeaders(&request)
-        request.httpBody = try JSONSerialization.data(withJSONObject: params)
+        request.httpBody = try encoder.encode(params)
         let (data, response) = try await dataWithRetry(for: request)
         let http = response as? HTTPURLResponse
         if http?.statusCode == 401, !retried {
@@ -657,10 +840,7 @@ public actor APIClient {
         guard let httpOK = http, (200...299).contains(httpOK.statusCode) else {
             throw APIError.httpError(status: http?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
         }
-        guard let result = try JSONSerialization.jsonObject(with: data) as? T else {
-            throw APIError.invalidResponse
-        }
-        return result
+        return try decode(Response.self, from: data)
     }
 
     /// Execute a URLRequest with automatic retry on transient network errors.

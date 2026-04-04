@@ -76,8 +76,10 @@ public final class LocalScanner: @unchecked Sendable {
 
     private init() {}
 
-    /// Scan running processes and return detected AI sessions + provider summary
-    public func scan() -> LocalScanResult {
+    /// Scan running processes and return detected AI sessions + provider summary.
+    /// - Parameter costRateLookup: Optional closure to look up cost rate per 1K tokens by provider name.
+    ///   Falls back to `ProviderKind.defaultCostRate` if nil or if the closure returns nil.
+    public func scan(costRateLookup: ((String) -> Double?)? = nil) -> LocalScanResult {
         let rows = listProcesses()
         var sessions: [SessionRecord] = []
         var providerUsage: [String: (usage: Int, sessions: Int, cost: Double)] = [:]
@@ -107,7 +109,7 @@ public final class LocalScanner: @unchecked Sendable {
             let elapsed = elapsedToSeconds(row.etime)
             let cpu = Double(row.pcpu) ?? 0
             let usage = max(500, Int(Double(elapsed) * max(1.5, cpu + 1.0)))
-            let cost = estimateCost(provider: match.provider, usage: usage)
+            let cost = estimateCost(provider: match.provider, usage: usage, rateLookup: costRateLookup)
             let project = guessProject(row.command)
 
             let session = SessionRecord(
@@ -261,16 +263,10 @@ public final class LocalScanner: @unchecked Sendable {
         return max(1, seconds)
     }
 
-    private func estimateCost(provider: String, usage: Int) -> Double {
-        // Rough cost estimates per 1K tokens by provider
-        let rates: [String: Double] = [
-            "Claude": 0.003, "Codex": 0.002, "Gemini": 0.001,
-            "Cursor": 0.002, "Copilot": 0.001, "Ollama": 0,
-            "OpenRouter": 0.002, "Kilo": 0.001,
-            "Kimi": 0.001, "Kiro": 0.002, "Vertex AI": 0.003,
-            "Perplexity": 0.002,
-        ]
-        let rate = rates[provider] ?? 0.001
+    private func estimateCost(provider: String, usage: Int, rateLookup: ((String) -> Double?)? = nil) -> Double {
+        let rate = rateLookup?(provider)
+            ?? ProviderKind(rawValue: provider)?.defaultCostRate
+            ?? 0.001
         return Double(usage) / 1000.0 * rate
     }
 
