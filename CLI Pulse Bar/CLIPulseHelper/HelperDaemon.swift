@@ -12,10 +12,23 @@ final class HelperDaemon {
     private let queue = DispatchQueue(label: "com.clipulse.helper.daemon", qos: .utility)
     private let apiClient = HelperAPIClient()
     private var isRunning = false
-    /// Protected by `syncLock` to prevent concurrent sync cycles.
-    private var isSyncing = false
-    private let syncLock = NSLock()
+    /// Accessed only from `queue` or `syncActor` to prevent concurrent sync cycles.
+    private let syncGuard = SyncGuard()
     private var suspendCount = 0
+
+    /// Actor that replaces NSLock for async-safe mutual exclusion.
+    private actor SyncGuard {
+        private var isSyncing = false
+
+        /// Returns `true` if this call acquired the lock (was not already syncing).
+        func tryStart() -> Bool {
+            guard !isSyncing else { return false }
+            isSyncing = true
+            return true
+        }
+
+        func finish() { isSyncing = false }
+    }
 
     /// Default sync interval (seconds). Can be overridden via shared UserDefaults.
     private var syncInterval: Int {
@@ -80,16 +93,12 @@ final class HelperDaemon {
     // MARK: - Collection + Sync (fully async)
 
     private func collectAndSync() async {
-        // Thread-safe check-and-set to prevent concurrent sync cycles
-        syncLock.lock()
-        guard !isSyncing else {
-            syncLock.unlock()
+        // Async-safe check-and-set to prevent concurrent sync cycles
+        guard await syncGuard.tryStart() else {
             logger.debug("Sync already in progress — skipping")
             return
         }
-        isSyncing = true
-        syncLock.unlock()
-        defer { syncLock.lock(); isSyncing = false; syncLock.unlock() }
+        defer { Task { await syncGuard.finish() } }
 
         guard let config = HelperConfig.load() else {
             logger.warning("No helper config found — waiting for pairing")
