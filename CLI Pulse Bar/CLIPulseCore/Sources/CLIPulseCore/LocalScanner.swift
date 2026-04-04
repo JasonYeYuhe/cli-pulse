@@ -62,6 +62,18 @@ public final class LocalScanner: @unchecked Sendable {
 
     private static let confidenceRank: [String: Int] = ["high": 3, "medium": 2, "low": 1]
 
+    /// Pre-compiled regex patterns (compiled once, reused every scan)
+    private static let compiledProcessPatterns: [(provider: String, regex: NSRegularExpression, confidence: String)] = {
+        processPatterns.compactMap { entry in
+            guard let regex = try? NSRegularExpression(pattern: entry.pattern, options: .caseInsensitive) else { return nil }
+            return (entry.provider, regex, entry.confidence)
+        }
+    }()
+
+    private static let compiledIgnorePatterns: [NSRegularExpression] = {
+        ignoredPatterns.compactMap { try? NSRegularExpression(pattern: $0, options: .caseInsensitive) }
+    }()
+
     private init() {}
 
     /// Scan running processes and return detected AI sessions + provider summary
@@ -210,13 +222,12 @@ public final class LocalScanner: @unchecked Sendable {
         let lower = command.lowercased()
         var best: (String, String)? = nil
         var bestRank = 0
-        for pattern in Self.processPatterns {
-            guard let regex = try? NSRegularExpression(pattern: pattern.pattern, options: .caseInsensitive) else { continue }
-            let range = NSRange(lower.startIndex..., in: lower)
-            if regex.firstMatch(in: lower, range: range) != nil {
-                let rank = Self.confidenceRank[pattern.confidence] ?? 0
+        let range = NSRange(lower.startIndex..., in: lower)
+        for entry in Self.compiledProcessPatterns {
+            if entry.regex.firstMatch(in: lower, range: range) != nil {
+                let rank = Self.confidenceRank[entry.confidence] ?? 0
                 if rank > bestRank {
-                    best = (pattern.provider, pattern.confidence)
+                    best = (entry.provider, entry.confidence)
                     bestRank = rank
                 }
             }
@@ -226,12 +237,10 @@ public final class LocalScanner: @unchecked Sendable {
 
     private func shouldIgnore(_ command: String) -> Bool {
         let lower = command.lowercased()
-        for pattern in Self.ignoredPatterns {
-            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
-                let range = NSRange(lower.startIndex..., in: lower)
-                if regex.firstMatch(in: lower, range: range) != nil {
-                    return true
-                }
+        let range = NSRange(lower.startIndex..., in: lower)
+        for regex in Self.compiledIgnorePatterns {
+            if regex.firstMatch(in: lower, range: range) != nil {
+                return true
             }
         }
         return false
@@ -266,13 +275,19 @@ public final class LocalScanner: @unchecked Sendable {
     }
 
     private func guessProject(_ command: String) -> String {
-        // Try to extract project directory from command
+        // Extract only the leaf directory name — never transmit full paths
         let parts = command.split(separator: " ").map(String.init)
         for part in parts.reversed() {
             if part.contains("/") && !part.hasPrefix("-") && !part.hasPrefix("/usr") && !part.hasPrefix("/bin") && !part.hasPrefix("/opt") {
                 let components = part.split(separator: "/")
                 if let last = components.last, !last.isEmpty {
-                    return String(last)
+                    // Only return the basename, never the full path
+                    let name = String(last)
+                    // Skip names that look like secrets, tokens, or config files
+                    if name.contains("token") || name.contains("secret") || name.contains("key") || name.hasPrefix(".") {
+                        continue
+                    }
+                    return name
                 }
             }
         }

@@ -31,6 +31,7 @@ public actor APIClient {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 15
         config.timeoutIntervalForResource = 30
+        config.waitsForConnectivity = true
         self.session = URLSession(configuration: config)
     }
 
@@ -535,10 +536,20 @@ public actor APIClient {
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
         }
+        // The native Swift Login Item (CLIPulseHelper) is the primary helper.
+        // Provide the pairing code for the app to pass to the embedded helper.
+        // Legacy Python install command kept as fallback for non-App-Store builds.
+        #if os(macOS)
         return PairingInfo(
             code: code,
-            install_command: "curl -sfL https://raw.githubusercontent.com/JasonYeYuhe/cli-pulse/main/helper/cli_pulse_helper.py -o /tmp/cli_pulse_helper.py && curl -sfL https://raw.githubusercontent.com/JasonYeYuhe/cli-pulse/main/helper/system_collector.py -o /tmp/system_collector.py && python3 /tmp/cli_pulse_helper.py pair --pairing-code \(code)"
+            install_command: "open -a 'CLI Pulse Bar' --args --pair \(code)"
         )
+        #else
+        return PairingInfo(
+            code: code,
+            install_command: code
+        )
+        #endif
     }
 
     // MARK: - Account Deletion
@@ -650,6 +661,22 @@ public actor APIClient {
             throw APIError.invalidResponse
         }
         return result
+    }
+
+    /// Execute a URLRequest with automatic retry on transient network errors.
+    private func dataWithRetry(for request: URLRequest, maxRetries: Int = 2) async throws -> (Data, URLResponse) {
+        var lastError: Error?
+        for attempt in 0...maxRetries {
+            do {
+                return try await session.data(for: request)
+            } catch let error as URLError where [.timedOut, .networkConnectionLost, .notConnectedToInternet].contains(error.code) {
+                lastError = error
+                if attempt < maxRetries {
+                    try await Task.sleep(nanoseconds: UInt64(pow(2.0, Double(attempt))) * 1_000_000_000)
+                }
+            }
+        }
+        throw lastError!
     }
 
     private func applyHeaders(_ request: inout URLRequest) {

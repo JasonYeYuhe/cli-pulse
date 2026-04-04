@@ -57,6 +57,7 @@ def load_config() -> HelperConfig:
 
 def save_config(config: HelperConfig) -> None:
     CONFIG_PATH.write_text(json.dumps(asdict(config), indent=2))
+    CONFIG_PATH.chmod(0o600)
 
 
 def supabase_rpc(function_name: str, params: dict[str, Any]) -> Any:

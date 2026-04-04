@@ -57,6 +57,12 @@
 
   <p><strong>Local Provider Detection Data</strong></p>
   <p>On a Mac, the helper may inspect local process state, CLI configuration, browser cookies, Keychain items, or other locally available provider session artifacts in order to detect supported provider usage and quota information.</p>
+  <p>Specifically, the helper may:</p>
+  <ul>
+    <li>Read encrypted browser cookie databases (Chrome, Edge, Arc, Brave, Chromium) to extract session identifiers for supported AI providers. Only the session identifier is extracted; full cookie contents are not collected or transmitted.</li>
+    <li>Scan running process names to detect active AI coding tools. Only provider names and project directory names are transmitted; full command lines and file paths are not sent to the server.</li>
+    <li>Read CLI configuration files (e.g., auth tokens for Codex, Gemini) to fetch quota information from provider APIs on your behalf.</li>
+  </ul>
   <p>This local inspection happens on your device. CLI Pulse is designed to sync the resulting usage metadata, not raw secrets such as passwords, browser cookies, API keys, or refresh tokens.</p>
 
   <h2>How We Use Your Information</h2>
@@ -80,8 +86,9 @@
   <h2>Data Retention</h2>
   <ul>
     <li>Local snapshots and helper state remain on your device until removed, overwritten, or unpaired</li>
-    <li>Cloud-synced data may be retained as needed to provide account history, dashboards, alerts, and subscription functionality</li>
-    <li>Retention behavior may change as product tiers and sync features evolve</li>
+    <li>Ended sessions and usage snapshots older than 90 days are automatically deleted from cloud storage</li>
+    <li>Active account data (profile, devices, settings, active sessions) is retained while your account exists</li>
+    <li>You can delete all your data at any time by deleting your account within the app</li>
   </ul>
 
   <h2>Data Sharing</h2>
