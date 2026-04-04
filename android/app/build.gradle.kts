@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.google.services)
 }
 
 val localProps = Properties().apply {
@@ -112,6 +113,10 @@ dependencies {
 
     // Coroutines
     implementation(libs.coroutines.android)
+
+    // Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 
     // Room
     implementation(libs.room.runtime)

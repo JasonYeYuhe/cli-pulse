@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Transaction
 
 @Dao
 interface CacheDao {
@@ -16,6 +15,9 @@ interface CacheDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveDashboard(dashboard: CachedDashboard)
 
+    @Query("DELETE FROM cached_dashboard")
+    suspend fun clearDashboard()
+
     // Providers
     @Query("SELECT * FROM cached_providers")
     suspend fun getProviders(): List<CachedProvider>
@@ -25,12 +27,6 @@ interface CacheDao {
 
     @Query("DELETE FROM cached_providers")
     suspend fun clearProviders()
-
-    @Transaction
-    suspend fun replaceProviders(providers: List<CachedProvider>) {
-        clearProviders()
-        saveProviders(providers)
-    }
 
     // Sessions
     @Query("SELECT * FROM cached_sessions")
@@ -42,12 +38,6 @@ interface CacheDao {
     @Query("DELETE FROM cached_sessions")
     suspend fun clearSessions()
 
-    @Transaction
-    suspend fun replaceSessions(sessions: List<CachedSession>) {
-        clearSessions()
-        saveSessions(sessions)
-    }
-
     // Alerts
     @Query("SELECT * FROM cached_alerts")
     suspend fun getAlerts(): List<CachedAlert>
@@ -58,12 +48,6 @@ interface CacheDao {
     @Query("DELETE FROM cached_alerts")
     suspend fun clearAlerts()
 
-    @Transaction
-    suspend fun replaceAlerts(alerts: List<CachedAlert>) {
-        clearAlerts()
-        saveAlerts(alerts)
-    }
-
     // Devices
     @Query("SELECT * FROM cached_devices")
     suspend fun getDevices(): List<CachedDevice>
@@ -73,22 +57,4 @@ interface CacheDao {
 
     @Query("DELETE FROM cached_devices")
     suspend fun clearDevices()
-
-    @Transaction
-    suspend fun replaceDevices(devices: List<CachedDevice>) {
-        clearDevices()
-        saveDevices(devices)
-    }
-
-    // Clear all
-    @Query("DELETE FROM cached_dashboard")
-    suspend fun clearDashboard()
-
-    suspend fun clearAll() {
-        clearDashboard()
-        clearProviders()
-        clearSessions()
-        clearAlerts()
-        clearDevices()
-    }
 }

@@ -61,25 +61,29 @@ class DashboardRepository(
     suspend fun refreshProviders() {
         val data = supabase.providers()
         _providers.value = data
-        cache.replaceProviders(data.map { CachedProvider(provider = it.provider, json = serializeProvider(it)) })
+        cache.clearProviders()
+        cache.saveProviders(data.map { CachedProvider(provider = it.provider, json = serializeProvider(it)) })
     }
 
     suspend fun refreshSessions() {
         val data = supabase.sessions()
         _sessions.value = data
-        cache.replaceSessions(data.map { CachedSession(id = it.id, json = serializeSession(it)) })
+        cache.clearSessions()
+        cache.saveSessions(data.map { CachedSession(id = it.id, json = serializeSession(it)) })
     }
 
     suspend fun refreshDevices() {
         val data = supabase.devices()
         _devices.value = data
-        cache.replaceDevices(data.map { CachedDevice(id = it.id, json = serializeDevice(it)) })
+        cache.clearDevices()
+        cache.saveDevices(data.map { CachedDevice(id = it.id, json = serializeDevice(it)) })
     }
 
     suspend fun refreshAlerts() {
         val data = supabase.alerts()
         _alerts.value = data
-        cache.replaceAlerts(data.map { CachedAlert(id = it.id, json = serializeAlert(it)) })
+        cache.clearAlerts()
+        cache.saveAlerts(data.map { CachedAlert(id = it.id, json = serializeAlert(it)) })
     }
 
     suspend fun acknowledgeAlert(id: String) {
@@ -99,7 +103,11 @@ class DashboardRepository(
 
     /** Clear all cached data (e.g., on sign-out). */
     suspend fun clearCache() {
-        cache.clearAll()
+        cache.clearDashboard()
+        cache.clearProviders()
+        cache.clearSessions()
+        cache.clearAlerts()
+        cache.clearDevices()
     }
 
     // ── Serialization (lightweight JSON) ──
