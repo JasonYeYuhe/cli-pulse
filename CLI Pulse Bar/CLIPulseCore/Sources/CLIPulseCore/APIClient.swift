@@ -603,7 +603,7 @@ public actor APIClient {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         applyHeaders(&request)
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await dataWithRetry(for: request)
         let http = response as? HTTPURLResponse
         // Auto-retry on 401 with token refresh
         if http?.statusCode == 401, !retried {
@@ -628,7 +628,7 @@ public actor APIClient {
         request.httpMethod = "PATCH"
         applyHeaders(&request)
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await dataWithRetry(for: request)
         let http = response as? HTTPURLResponse
         if http?.statusCode == 401, !retried {
             let _ = try await refreshAccessToken()
@@ -648,7 +648,7 @@ public actor APIClient {
         request.httpMethod = "POST"
         applyHeaders(&request)
         request.httpBody = try JSONSerialization.data(withJSONObject: params)
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await dataWithRetry(for: request)
         let http = response as? HTTPURLResponse
         if http?.statusCode == 401, !retried {
             let _ = try await refreshAccessToken()
