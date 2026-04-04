@@ -255,7 +255,7 @@ public struct CodexCollector: ProviderCollector, Sendable {
 
         // Rate limit windows use percentage: quota=100, remaining=100-used
         if let pw = usage.primaryWindow {
-            let name = "Session"
+            let name = "5h Window"
             tiers.append(TierDTO(
                 name: name,
                 quota: 100,
