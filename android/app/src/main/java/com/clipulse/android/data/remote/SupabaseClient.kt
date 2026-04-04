@@ -314,6 +314,119 @@ class SupabaseClient(
         }
     }
 
+    // ── Receipt Validation ─────────────────────────────────
+
+    data class ReceiptResult(val verified: Boolean, val tier: String)
+
+    suspend fun validateReceipt(purchaseToken: String, productId: String): ReceiptResult =
+        withContext(Dispatchers.IO) {
+            try {
+                val body = JSONObject().apply {
+                    put("platform", "google")
+                    put("purchaseToken", purchaseToken)
+                    put("productId", productId)
+                    put("packageName", "com.clipulse.android")
+                }
+                val req = Request.Builder()
+                    .url("$supabaseUrl/functions/v1/validate-receipt")
+                    .post(body.toString().toRequestBody(jsonMedia))
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("apikey", supabaseAnonKey)
+                    .apply {
+                        tokenStore.accessToken?.let {
+                            addHeader("Authorization", "Bearer $it")
+                        }
+                    }
+                    .build()
+                val resp = client.newCall(req).execute()
+                resp.use { r ->
+                    if (!r.isSuccessful) return@withContext ReceiptResult(false, "free")
+                    val json = JSONObject(r.body?.string() ?: "{}")
+                    ReceiptResult(
+                        verified = json.optBoolean("verified", false),
+                        tier = json.optString("tier", "free"),
+                    )
+                }
+            } catch (_: Exception) {
+                ReceiptResult(false, "free")
+            }
+        }
+
+    // ── Device Registration ──────────────────────────────
+
+    suspend fun registerDevice(name: String, type: String = "Android", system: String): String =
+        withContext(Dispatchers.IO) {
+            val userId = tokenStore.userId ?: throw ApiError.TokenExpired
+            val body = JSONObject().apply {
+                put("user_id", userId)
+                put("name", name)
+                put("type", type)
+                put("system", system)
+                put("status", "Online")
+                put("helper_version", "1.0.0")
+            }
+            val req = Request.Builder()
+                .url("$supabaseUrl/rest/v1/devices")
+                .post(body.toString().toRequestBody(jsonMedia))
+                .addHeader("Content-Type", "application/json")
+                .addHeader("apikey", supabaseAnonKey)
+                .addHeader("Prefer", "return=representation")
+                .apply {
+                    tokenStore.accessToken?.let {
+                        addHeader("Authorization", "Bearer $it")
+                    }
+                }
+                .build()
+            val resp = client.newCall(req).execute()
+            resp.use { r ->
+                if (!r.isSuccessful) throw ApiError.Http(r.code, r.body?.string() ?: "")
+                val arr = JSONArray(r.body?.string() ?: "[]")
+                arr.getJSONObject(0).optString("id")
+            }
+        }
+
+    suspend fun syncProviderQuotas(results: List<ProviderQuotaPayload>): Unit =
+        withContext(Dispatchers.IO) {
+            val userId = tokenStore.userId ?: return@withContext
+            if (results.isEmpty()) return@withContext
+
+            val arr = JSONArray()
+            for (r in results) {
+                arr.put(JSONObject().apply {
+                    put("user_id", userId)
+                    put("provider", r.provider)
+                    put("remaining", r.remaining)
+                    put("quota", r.quota)
+                    if (r.planType != null) put("plan_type", r.planType)
+                    if (r.resetTime != null) put("reset_time", r.resetTime)
+                    put("tiers", JSONArray(r.tiersJson))
+                    put("updated_at", isoNow())
+                })
+            }
+            val req = Request.Builder()
+                .url("$supabaseUrl/rest/v1/provider_quotas")
+                .post(arr.toString().toRequestBody(jsonMedia))
+                .addHeader("Content-Type", "application/json")
+                .addHeader("apikey", supabaseAnonKey)
+                .addHeader("Prefer", "resolution=merge-duplicates")
+                .apply {
+                    tokenStore.accessToken?.let {
+                        addHeader("Authorization", "Bearer $it")
+                    }
+                }
+                .build()
+            client.newCall(req).execute().close()
+        }
+
+    data class ProviderQuotaPayload(
+        val provider: String,
+        val remaining: Int,
+        val quota: Int,
+        val planType: String? = null,
+        val resetTime: String? = null,
+        val tiersJson: String = "[]",
+    )
+
     // ── Health ────────────────────────────────────────────
 
     suspend fun health(): Boolean = withContext(Dispatchers.IO) {

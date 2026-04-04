@@ -23,6 +23,7 @@ import com.clipulse.android.ui.providers.ProviderDetailRoute
 import com.clipulse.android.ui.providers.ProvidersScreen
 import com.clipulse.android.ui.sessions.SessionsScreen
 import com.clipulse.android.ui.settings.SettingsScreen
+import com.clipulse.android.ui.settings.SubscriptionScreen
 
 enum class Screen(val route: String, val label: String, val icon: ImageVector) {
     Overview("overview", "Overview", Icons.Default.Dashboard),
@@ -98,7 +99,13 @@ fun AppNavigation() {
             composable(Screen.Sessions.route) { SessionsScreen() }
             composable(Screen.Alerts.route) { AlertsScreen() }
             composable(Screen.Settings.route) {
-                SettingsScreen(onSignOut = { isLoggedIn = false })
+                SettingsScreen(
+                    onSignOut = { isLoggedIn = false },
+                    onManageSubscription = { navController.navigate("subscription") },
+                )
+            }
+            composable("subscription") {
+                SubscriptionScreen(onBack = { navController.popBackStack() })
             }
         }
     }

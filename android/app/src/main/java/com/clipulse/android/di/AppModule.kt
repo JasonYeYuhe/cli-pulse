@@ -39,6 +39,9 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideBillingManager(@ApplicationContext context: Context): BillingManager =
-        BillingManager(context)
+    fun provideBillingManager(
+        @ApplicationContext context: Context,
+        supabase: SupabaseClient,
+    ): BillingManager =
+        BillingManager(context, supabase)
 }

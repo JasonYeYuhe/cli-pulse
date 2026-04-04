@@ -35,6 +35,10 @@ class TokenStore(
         get() = prefs.getString(KEY_USER_EMAIL, null)
         set(value) = prefs.edit().putString(KEY_USER_EMAIL, value).apply()
 
+    var deviceId: String?
+        get() = prefs.getString(KEY_DEVICE_ID, null)
+        set(value) = prefs.edit().putString(KEY_DEVICE_ID, value).apply()
+
     val isLoggedIn: Boolean get() = !accessToken.isNullOrBlank()
 
     fun clear() {
@@ -59,5 +63,6 @@ class TokenStore(
         private const val KEY_USER_ID = "user_id"
         private const val KEY_USER_NAME = "user_name"
         private const val KEY_USER_EMAIL = "user_email"
+        private const val KEY_DEVICE_ID = "device_id"
     }
 }
