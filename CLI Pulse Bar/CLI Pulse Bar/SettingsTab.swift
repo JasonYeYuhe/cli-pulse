@@ -882,6 +882,10 @@ struct SettingsTab: View {
 
             Divider()
 
+            FolderAccessView()
+
+            Divider()
+
             SectionHeader(title: "Privacy", icon: "lock.shield")
 
             Toggle(isOn: $state.hidePersonalInfo) {

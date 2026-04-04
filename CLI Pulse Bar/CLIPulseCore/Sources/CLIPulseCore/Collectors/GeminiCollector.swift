@@ -1,6 +1,5 @@
 #if os(macOS)
 import Foundation
-import os
 
 /// Fetches real per-model quota data from Google Gemini via OAuth credentials.
 ///
@@ -70,16 +69,8 @@ public struct GeminiCollector: ProviderCollector, Sendable {
         }
     }
 
-    /// Resolve the real user home directory, bypassing App Sandbox container path.
-    private static func realUserHome() -> String {
-        if let pw = getpwuid(getuid()), let home = pw.pointee.pw_dir {
-            return String(cString: home)
-        }
-        return NSHomeDirectory()
-    }
-
     private func credsPath() -> String {
-        (Self.realUserHome() as NSString).appendingPathComponent(".gemini/oauth_creds.json")
+        (realUserHome() as NSString).appendingPathComponent(".gemini/oauth_creds.json")
     }
 
     func readCredentials() -> GeminiCreds? {
@@ -100,7 +91,7 @@ public struct GeminiCollector: ProviderCollector, Sendable {
     /// Read credentials from `~/.gemini/oauth_creds.json` only.
     private func readFileCredentials() -> GeminiCreds? {
         let path = credsPath()
-        guard let data = FileManager.default.contents(atPath: path),
+        guard let data = SandboxFileAccess.read(path: path),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return nil
         }
@@ -215,12 +206,6 @@ public struct GeminiCollector: ProviderCollector, Sendable {
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw CollectorError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, provider: "Gemini")
-        }
-
-        // Debug: log raw API response to diagnose resetTime parsing
-        let debugLogger = Logger(subsystem: "yyh.CLI-Pulse", category: "GeminiCollector")
-        if let rawJSON = String(data: data, encoding: .utf8) {
-            debugLogger.debug("Gemini quota raw response: \(rawJSON, privacy: .public)")
         }
 
         return try GeminiCollector.parseQuota(data)

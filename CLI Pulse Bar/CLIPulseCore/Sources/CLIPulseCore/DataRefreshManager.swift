@@ -96,10 +96,13 @@ internal final class DataRefreshManager {
             )
 
             #if os(macOS)
+            // Sync credentials from bookmarked directories to app group
+            // so both main app collectors and helper can use them
+            CredentialBridge.syncCredentialsToAppGroup()
+
             var localResults = await runCollectors(providerConfigs: context.providerConfigs)
 
-            // Supplement with helper's collector results from app group (for sandboxed collectors
-            // that can't read ~/.codex/ or ~/.gemini/ directly)
+            // Supplement with helper's collector results from app group
             let helperResults = Self.readHelperCollectorResults()
             localResults.append(contentsOf: helperResults)
 

@@ -7,6 +7,11 @@ struct CLIPulseBarApp: App {
     @StateObject private var appState = AppState()
     @Environment(\.openWindow) private var openWindow
 
+    init() {
+        // Resolve stored security-scoped bookmarks on launch
+        BookmarkManager.shared.resolveAllBookmarks()
+    }
+
     var body: some Scene {
         MenuBarExtra {
             MenuBarView()
