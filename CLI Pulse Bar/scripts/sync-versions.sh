@@ -15,12 +15,12 @@ ANDROID_DIR="$REPO_ROOT/android"
 PBXPROJ="$PROJECT_DIR/CLI Pulse Bar.xcodeproj/project.pbxproj"
 GRADLE_FILE="$ANDROID_DIR/app/build.gradle.kts"
 
-# App Store Connect credentials
-API_KEY_ID="DMMFP6XTXX"
-API_ISSUER="c5671c11-49ec-47d9-bd38-5e3c1a249416"
-API_KEY_PATH="$HOME/Library/Mobile Documents/com~apple~CloudDocs/Downloads/AuthKey_${API_KEY_ID}.p8"
-TEAM_ID="KHMK6Q3L3K"
-APP_ID="6761163709"
+# App Store Connect credentials — set via environment or .env file
+API_KEY_ID="${ASC_API_KEY_ID:?Set ASC_API_KEY_ID environment variable}"
+API_ISSUER="${ASC_API_ISSUER:?Set ASC_API_ISSUER environment variable}"
+API_KEY_PATH="${ASC_API_KEY_PATH:-$HOME/Library/Mobile Documents/com~apple~CloudDocs/Downloads/AuthKey_${API_KEY_ID}.p8}"
+TEAM_ID="${ASC_TEAM_ID:?Set ASC_TEAM_ID environment variable}"
+APP_ID="${ASC_APP_ID:?Set ASC_APP_ID environment variable}"
 
 # Public repo for Android releases
 PUBLIC_REPO="JasonYeYuhe/cli-pulse"

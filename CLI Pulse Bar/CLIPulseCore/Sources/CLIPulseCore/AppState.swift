@@ -208,6 +208,8 @@ public final class AppState: ObservableObject {
         // Save non-sensitive fields to UserDefaults (apiKey/manualCookieHeader excluded via CodingKeys)
         if let data = try? JSONEncoder().encode(providerConfigs) {
             UserDefaults.standard.set(data, forKey: "cli_pulse_provider_configs")
+            // Also write to shared app group so the helper Login Item can read them
+            UserDefaults(suiteName: HelperIPC.suiteName)?.set(data, forKey: HelperIPC.providerConfigsKey)
         }
         // Save secrets to Keychain
         for config in providerConfigs {
@@ -765,7 +767,9 @@ public final class AppState: ObservableObject {
             locallySupplementedProviders = supplemented
 
             // Runtime diagnostic: dump before/after merge state for verification
+            #if DEBUG
             Self.dumpMergeDiagnostic(cloud: provs, local: localResults, merged: merged)
+            #endif
             #else
             providers = provs
             locallySupplementedProviders = []
