@@ -963,43 +963,44 @@ def _parse_codex_usage_response(data: dict) -> dict | None:
     }
 
 
-def _extract_gemini_cli_credentials() -> tuple[str, str]:
-    """Extract OAuth client_id/secret from installed Gemini CLI binary."""
-    import glob
-    patterns = [
-        "/opt/homebrew/Cellar/gemini-cli/*/libexec/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/code_assist/oauth2.js",
-        "/usr/local/Cellar/gemini-cli/*/libexec/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/code_assist/oauth2.js",
-    ]
-    for pattern in patterns:
-        for path in glob.glob(pattern):
-            try:
-                content = Path(path).read_text()
-                cid_match = re.search(r"OAUTH_CLIENT_ID\s*=\s*['\"]([^'\"]+)['\"]", content)
-                csecret_match = re.search(r"OAUTH_CLIENT_SECRET\s*=\s*['\"]([^'\"]+)['\"]", content)
-                if cid_match and csecret_match:
-                    return cid_match.group(1), csecret_match.group(1)
-            except (OSError, ValueError) as e:
-                logger.debug("Gemini credential extraction failed for %s: %s", path, e)
-                continue
-    return "", ""
+def _get_clipulse_gemini_client_id() -> str:
+    """Return CLI Pulse's own OAuth client_id for Gemini token refresh.
+
+    Reads from ~/.config/clipulse/gemini_tokens.json (written by the Swift app
+    after the user completes the OAuth flow in the macOS UI).  Returns "" if the
+    file is absent or unreadable.
+    """
+    tokens_path = Path.home() / ".config" / "clipulse" / "gemini_tokens.json"
+    try:
+        data = _json.loads(tokens_path.read_text())
+        return data.get("client_id", "")
+    except (OSError, ValueError, _json.JSONDecodeError):
+        return ""
 
 
 def _refresh_gemini_token(creds_path: Path) -> str | None:
-    """Refresh expired Gemini OAuth token using refresh_token."""
+    """Refresh expired Gemini OAuth token using refresh_token.
+
+    Uses CLI Pulse's own OAuth client_id (public PKCE client – no secret
+    required).  Only works for tokens that originated from CLI Pulse's OAuth
+    flow.  Gemini-CLI-originated tokens cannot be refreshed without that CLI's
+    private credentials.
+    """
     try:
         creds = _json.loads(creds_path.read_text())
         refresh_token = creds.get("refresh_token")
         if not refresh_token:
             return None
-        # Extract Gemini CLI OAuth credentials from installed binary at runtime
-        client_id, client_secret = _extract_gemini_cli_credentials()
+        # Only refresh if the file contains its own client_id (CLI Pulse tokens).
+        # Gemini CLI tokens require the CLI's own credentials which we no longer extract.
+        client_id = creds.get("client_id", "")
         if not client_id:
+            logger.debug("Gemini token refresh skipped: no client_id in credential file")
             return None
         body = urllib.parse.urlencode({
             "grant_type": "refresh_token",
             "refresh_token": refresh_token,
             "client_id": client_id,
-            "client_secret": client_secret,
         }).encode()
         req = urllib.request.Request(
             "https://oauth2.googleapis.com/token",
@@ -1024,26 +1025,42 @@ def _refresh_gemini_token(creds_path: Path) -> str | None:
     return None
 
 
-def _fetch_gemini_usage() -> dict | None:
-    """Read Gemini usage via OAuth token → Google quota API."""
-    creds_path = Path.home() / ".gemini" / "oauth_creds.json"
-    if not creds_path.exists():
-        return None
-    try:
+def _try_read_gemini_token(creds_path: Path) -> str | None:
+    """Try to read and return a valid access token from a credential file.
 
+    Refreshes the token if expired (only works for CLI Pulse tokens that have a
+    client_id).  Returns None on any failure so the caller can fall back.
+    """
+    try:
         creds = _json.loads(creds_path.read_text())
         access_token = creds.get("access_token", "")
-
-        # Check if token is expired and refresh
         expiry = creds.get("expiry_date", 0)
         if isinstance(expiry, (int, float)):
             exp_ts = expiry / 1000 if expiry > 1e12 else expiry
             if exp_ts < datetime.now(timezone.utc).timestamp():
-                access_token = _refresh_gemini_token(creds_path) or access_token
+                access_token = _refresh_gemini_token(creds_path) or ""
+        return access_token or None
+    except (OSError, ValueError, _json.JSONDecodeError) as e:
+        logger.debug("Gemini credential read failed for %s: %s", creds_path, e)
+        return None
 
-        if not access_token:
-            return None
 
+def _fetch_gemini_usage() -> dict | None:
+    """Read Gemini usage via OAuth token → Google quota API."""
+    # Priority 1: CLI Pulse's own OAuth tokens (written by the Swift app)
+    clipulse_path = Path.home() / ".config" / "clipulse" / "gemini_tokens.json"
+    # Priority 2: Gemini CLI's credential file (compatibility fallback)
+    gemini_cli_path = Path.home() / ".gemini" / "oauth_creds.json"
+
+    # Try CLI Pulse tokens first, then fall back to Gemini CLI tokens
+    access_token = None
+    if clipulse_path.exists():
+        access_token = _try_read_gemini_token(clipulse_path)
+    if not access_token and gemini_cli_path.exists():
+        access_token = _try_read_gemini_token(gemini_cli_path)
+    if not access_token:
+        return None
+    try:
         project_id = _load_gemini_project_id(access_token)
         if project_id is None:
             project_id = ""
