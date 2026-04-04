@@ -1,5 +1,6 @@
 #if os(macOS)
 import Foundation
+import os
 
 /// Fetches real per-model quota data from Google Gemini via OAuth credentials.
 ///
@@ -206,6 +207,12 @@ public struct GeminiCollector: ProviderCollector, Sendable {
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw CollectorError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, provider: "Gemini")
+        }
+
+        // Debug: log raw API response to diagnose resetTime parsing
+        let debugLogger = Logger(subsystem: "yyh.CLI-Pulse", category: "GeminiCollector")
+        if let rawJSON = String(data: data, encoding: .utf8) {
+            debugLogger.debug("Gemini quota raw response: \(rawJSON, privacy: .public)")
         }
 
         return try GeminiCollector.parseQuota(data)

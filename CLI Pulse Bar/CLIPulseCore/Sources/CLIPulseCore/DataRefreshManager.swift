@@ -324,13 +324,17 @@ internal final class DataRefreshManager {
 
             let name = result.usage.provider
             if let existing = merged[name] {
-                let cloudHasQuota = existing.quota != nil && (existing.quota ?? 0) > 0
-                let cloudHasTiers = !existing.tiers.isEmpty
-                let cloudIsEmpty = !cloudHasQuota && !cloudHasTiers
-                let localWins = !result.usage.tiers.isEmpty
-                    && result.usage.tiers.count >= existing.tiers.count
+                // Local collector data is fresher than cloud cache.
+                // Merge field-by-field: prefer local when it has data, keep cloud otherwise.
+                let localHasTiers = !result.usage.tiers.isEmpty
+                let localHasQuota = result.usage.quota != nil && (result.usage.quota ?? 0) > 0
 
-                if cloudIsEmpty || localWins {
+                if localHasTiers || localHasQuota {
+                    let mergedTiers = localHasTiers ? result.usage.tiers : existing.tiers
+                    let mergedQuota = localHasQuota ? result.usage.quota : existing.quota
+                    let mergedRemaining = localHasQuota ? result.usage.remaining : existing.remaining
+                    let mergedResetTime = result.usage.reset_time ?? existing.reset_time
+
                     merged[name] = ProviderUsage(
                         provider: existing.provider,
                         today_usage: existing.today_usage > 0 ? existing.today_usage : result.usage.today_usage,
@@ -339,11 +343,11 @@ internal final class DataRefreshManager {
                         estimated_cost_week: existing.estimated_cost_week,
                         cost_status_today: existing.cost_status_today,
                         cost_status_week: existing.cost_status_week,
-                        quota: result.usage.quota,
-                        remaining: result.usage.remaining,
+                        quota: mergedQuota,
+                        remaining: mergedRemaining,
                         plan_type: result.usage.plan_type ?? existing.plan_type,
-                        reset_time: result.usage.reset_time ?? existing.reset_time,
-                        tiers: result.usage.tiers,
+                        reset_time: mergedResetTime,
+                        tiers: mergedTiers,
                         status_text: result.usage.status_text,
                         trend: existing.trend,
                         recent_sessions: existing.recent_sessions,

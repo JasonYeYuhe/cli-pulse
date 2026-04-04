@@ -1,5 +1,6 @@
 #if os(macOS)
 import Foundation
+import os
 
 /// Fetches real quota/rate-limit data from Codex (OpenAI) via the local OAuth
 /// credentials stored in `~/.codex/auth.json`.
@@ -164,6 +165,12 @@ public struct CodexCollector: ProviderCollector, Sendable {
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             throw CollectorError.httpError(status: status, provider: "Codex")
+        }
+
+        // Debug: log raw API response to diagnose parsing issues
+        let debugLogger = Logger(subsystem: "yyh.CLI-Pulse", category: "CodexCollector")
+        if let rawJSON = String(data: data, encoding: .utf8) {
+            debugLogger.debug("Codex /wham/usage raw response: \(rawJSON, privacy: .public)")
         }
 
         return try CodexCollector.parseUsage(data)
