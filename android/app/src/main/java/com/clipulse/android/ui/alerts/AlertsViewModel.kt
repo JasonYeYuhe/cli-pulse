@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.clipulse.android.data.model.AlertRecord
 import com.clipulse.android.data.remote.SupabaseClient
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -27,6 +28,19 @@ class AlertsViewModel @Inject constructor(
 
     init {
         refresh()
+        startAutoRefresh()
+    }
+
+    private fun startAutoRefresh() {
+        viewModelScope.launch {
+            while (true) {
+                delay(30_000)
+                try {
+                    val alerts = supabase.alerts()
+                    _state.value = _state.value.copy(alerts = alerts, error = null)
+                } catch (_: Exception) { }
+            }
+        }
     }
 
     fun refresh() {

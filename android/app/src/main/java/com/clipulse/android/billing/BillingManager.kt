@@ -3,18 +3,24 @@ package com.clipulse.android.billing
 import android.app.Activity
 import android.content.Context
 import com.android.billingclient.api.*
+import com.clipulse.android.data.remote.SupabaseClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 data class SubscriptionState(
     val tier: String = "free", // free, pro, team
     val isActive: Boolean = false,
+    val isPending: Boolean = false,
     val products: List<ProductDetails> = emptyList(),
     val isLoading: Boolean = false,
 )
 
 class BillingManager(
     private val context: Context,
+    private val supabase: SupabaseClient,
 ) : PurchasesUpdatedListener {
 
     companion object {
@@ -28,6 +34,8 @@ class BillingManager(
 
     private val _state = MutableStateFlow(SubscriptionState())
     val state: StateFlow<SubscriptionState> = _state
+
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     private var billingClient: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
@@ -75,7 +83,10 @@ class BillingManager(
 
         billingClient.queryPurchasesAsync(params) { result, purchases ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                val activePurchase = purchases.firstOrNull { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+                // Prioritize PURCHASED over PENDING (a user may have both)
+                val activePurchase = purchases.firstOrNull {
+                    it.purchaseState == Purchase.PurchaseState.PURCHASED
+                }
                 if (activePurchase != null) {
                     val productId = activePurchase.products.firstOrNull() ?: ""
                     val tier = when {
@@ -83,18 +94,51 @@ class BillingManager(
                         productId.contains("pro") -> "pro"
                         else -> "free"
                     }
-                    _state.value = _state.value.copy(tier = tier, isActive = true)
+                    _state.value = _state.value.copy(
+                        tier = tier,
+                        isActive = true,
+                        isPending = false,
+                    )
 
                     // Acknowledge if needed
                     if (!activePurchase.isAcknowledged) {
                         val ackParams = AcknowledgePurchaseParams.newBuilder()
                             .setPurchaseToken(activePurchase.purchaseToken)
                             .build()
-                        billingClient.acknowledgePurchase(ackParams) { }
+                        billingClient.acknowledgePurchase(ackParams) { ackResult ->
+                            if (ackResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                                // Server-side receipt validation after acknowledgment
+                                validateOnServer(activePurchase.purchaseToken, productId)
+                            }
+                        }
+                    } else {
+                        // Already acknowledged — still validate server-side
+                        validateOnServer(activePurchase.purchaseToken, productId)
                     }
                 } else {
-                    _state.value = _state.value.copy(tier = "free", isActive = false)
+                    // No active purchase — check for pending
+                    val hasPending = purchases.any {
+                        it.purchaseState == Purchase.PurchaseState.PENDING
+                    }
+                    _state.value = _state.value.copy(
+                        tier = "free",
+                        isActive = false,
+                        isPending = hasPending,
+                    )
                 }
+            }
+        }
+    }
+
+    private fun validateOnServer(purchaseToken: String, productId: String) {
+        scope.launch {
+            try {
+                val result = supabase.validateReceipt(purchaseToken, productId)
+                if (result.verified) {
+                    _state.value = _state.value.copy(tier = result.tier)
+                }
+            } catch (_: Exception) {
+                // Non-fatal: local tier already set
             }
         }
     }
@@ -114,9 +158,13 @@ class BillingManager(
         billingClient.launchBillingFlow(activity, params)
     }
 
+    fun restorePurchases() {
+        queryPurchases()
+    }
+
     override fun onPurchasesUpdated(result: BillingResult, purchases: List<Purchase>?) {
         if (result.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
-            queryPurchases() // Re-check to update state
+            queryPurchases()
         }
     }
 

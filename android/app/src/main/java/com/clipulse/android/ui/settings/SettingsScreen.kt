@@ -16,6 +16,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onSignOut: () -> Unit,
+    onManageSubscription: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -41,6 +42,10 @@ fun SettingsScreen(
                 }
                 Spacer(Modifier.height(8.dp))
                 Text("Tier: ${state.tier}", style = MaterialTheme.typography.labelMedium)
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(onClick = onManageSubscription) {
+                    Text("Manage Subscription")
+                }
             }
         }
 
