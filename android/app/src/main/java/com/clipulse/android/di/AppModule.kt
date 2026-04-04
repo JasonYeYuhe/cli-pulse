@@ -1,8 +1,11 @@
 package com.clipulse.android.di
 
 import android.content.Context
+import androidx.room.Room
 import com.clipulse.android.billing.BillingManager
 import com.clipulse.android.data.collector.CollectorManager
+import com.clipulse.android.data.local.AppDatabase
+import com.clipulse.android.data.local.CacheDao
 import com.clipulse.android.data.remote.SupabaseClient
 import com.clipulse.android.data.remote.TokenStore
 import com.clipulse.android.data.repository.DashboardRepository
@@ -34,8 +37,20 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideDashboardRepository(supabase: SupabaseClient): DashboardRepository =
-        DashboardRepository(supabase)
+    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
+        Room.databaseBuilder(context, AppDatabase::class.java, "cli_pulse_cache")
+            .fallbackToDestructiveMigration()
+            .build()
+
+    @Provides
+    @Singleton
+    fun provideCacheDao(db: AppDatabase): CacheDao =
+        db.cacheDao()
+
+    @Provides
+    @Singleton
+    fun provideDashboardRepository(supabase: SupabaseClient, cacheDao: CacheDao): DashboardRepository =
+        DashboardRepository(supabase, cacheDao)
 
     @Provides
     @Singleton

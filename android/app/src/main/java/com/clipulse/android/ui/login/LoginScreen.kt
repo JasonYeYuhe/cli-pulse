@@ -1,16 +1,24 @@
 package com.clipulse.android.ui.login
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -18,6 +26,8 @@ fun LoginScreen(
     onLoggedIn: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) { viewModel.tryRestoreSession() }
     LaunchedEffect(state.isLoggedIn) {
@@ -141,13 +151,37 @@ fun LoginScreen(
                 HorizontalDivider()
                 Spacer(Modifier.height(24.dp))
 
-                // Google sign-in — disabled until Credential Manager is configured
+                // Google Sign-In via Credential Manager
                 OutlinedButton(
-                    onClick = { /* TODO: Credential Manager flow */ },
+                    onClick = {
+                        scope.launch {
+                            try {
+                                val googleIdOption = GetGoogleIdOption.Builder()
+                                    .setFilterByAuthorizedAccounts(false)
+                                    .setServerClientId(com.clipulse.android.BuildConfig.GOOGLE_WEB_CLIENT_ID)
+                                    .build()
+                                val request = GetCredentialRequest.Builder()
+                                    .addCredentialOption(googleIdOption)
+                                    .build()
+                                val credentialManager = CredentialManager.create(context)
+                                val result = credentialManager.getCredential(context, request)
+                                val credential = result.credential
+                                val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data)
+                                viewModel.signInWithGoogle(
+                                    idToken = googleIdToken.idToken,
+                                    name = googleIdToken.displayName,
+                                    email = googleIdToken.id,
+                                )
+                            } catch (_: GetCredentialCancellationException) {
+                                // User cancelled
+                            } catch (e: Exception) {
+                                Log.w("LoginScreen", "Google Sign-In failed", e)
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = false,
                 ) {
-                    Text("Sign in with Google (coming soon)")
+                    Text("Sign in with Google")
                 }
                 Spacer(Modifier.height(12.dp))
                 TextButton(onClick = { showPasswordLogin = true }) {
