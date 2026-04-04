@@ -1,7 +1,12 @@
-"""Tests for Claude quota parsing in system_collector.py."""
+"""Tests for provider quota parsing and collection in system_collector.py."""
 from __future__ import annotations
 import unittest
-from system_collector import _parse_claude_api_response, _parse_claude_usage_output, _infer_claude_plan, _parse_gemini_quota_response, _load_gemini_project_id
+from unittest.mock import patch
+from system_collector import (
+    _parse_claude_api_response, _parse_claude_usage_output, _infer_claude_plan,
+    _parse_gemini_quota_response, _load_gemini_project_id,
+    _parse_codex_usage_response, collect_device_snapshot, collect_all,
+)
 
 
 class TestInferClaudePlan(unittest.TestCase):
@@ -173,6 +178,70 @@ class TestGeminiLoadCodeAssist(unittest.TestCase):
             self.assertEqual(_load_gemini_project_id("token"), "centering-invention-98n20")
         finally:
             sc.urllib.request.urlopen = original
+
+
+class TestParseCodexUsageResponse(unittest.TestCase):
+    def test_full_response(self):
+        data = {
+            "plan_type": "plus",
+            "rate_limit": {
+                "primary_window": {
+                    "used_percent": 23,
+                    "reset_after_seconds": 2391,
+                    "reset_at": 1775054266,
+                },
+                "secondary_window": {
+                    "used_percent": 10,
+                    "reset_after_seconds": 100000,
+                    "reset_at": 1775200000,
+                },
+            },
+        }
+        result = _parse_codex_usage_response(data)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["plan_type"], "Plus")
+        self.assertEqual(len(result["tiers"]), 2)
+        self.assertEqual(result["tiers"][0]["name"], "Session")
+        self.assertEqual(result["tiers"][0]["remaining"], 77)
+        self.assertEqual(result["tiers"][1]["name"], "Weekly")
+        self.assertEqual(result["tiers"][1]["remaining"], 90)
+
+    def test_primary_only(self):
+        data = {
+            "plan_type": "pro",
+            "rate_limit": {
+                "primary_window": {"used_percent": 50, "reset_at": 1775054266},
+            },
+        }
+        result = _parse_codex_usage_response(data)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["remaining"], 50)
+        self.assertEqual(len(result["tiers"]), 1)
+
+    def test_empty_rate_limit(self):
+        self.assertIsNone(_parse_codex_usage_response({"plan_type": "free", "rate_limit": {}}))
+
+    def test_no_rate_limit(self):
+        self.assertIsNone(_parse_codex_usage_response({}))
+
+
+class TestCollectDeviceSnapshot(unittest.TestCase):
+    def test_returns_valid_snapshot(self):
+        snapshot = collect_device_snapshot()
+        self.assertGreaterEqual(snapshot.cpu_usage, 0)
+        self.assertLessEqual(snapshot.cpu_usage, 100)
+        self.assertGreaterEqual(snapshot.memory_usage, 0)
+        self.assertLessEqual(snapshot.memory_usage, 100)
+
+
+class TestCollectAll(unittest.TestCase):
+    def test_returns_result_with_no_crash(self):
+        result = collect_all()
+        self.assertIsNotNone(result.device)
+        self.assertIsInstance(result.sessions, list)
+        self.assertIsInstance(result.alerts, list)
+        self.assertIsInstance(result.provider_remaining, dict)
+        self.assertIsInstance(result.collection_errors, list)
 
 
 if __name__ == "__main__":

@@ -530,6 +530,7 @@ def _write_claude_snapshot(result: dict, tier_raw: str, source: str) -> None:
                 target_dir.mkdir(parents=True, exist_ok=True)
                 snapshot_path = target_dir / "claude_snapshot.json"
                 snapshot_path.write_text(snapshot_json)
+                snapshot_path.chmod(0o600)
                 wrote_any = True
                 logger.debug(f"Wrote Claude snapshot to {snapshot_path}")
             except Exception as path_error:
@@ -556,7 +557,9 @@ def _write_claude_session_key(session_key: str, source: str) -> None:
         for target_dir in target_dirs:
             try:
                 target_dir.mkdir(parents=True, exist_ok=True)
-                (target_dir / "claude_session.json").write_text(payload)
+                session_file = target_dir / "claude_session.json"
+                session_file.write_text(payload)
+                session_file.chmod(0o600)
             except Exception as path_error:
                 logger.debug(f"Failed to write Claude session key to {target_dir}: {path_error}")
     except Exception as e:
@@ -915,7 +918,11 @@ def _fetch_codex_usage() -> dict | None:
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = _json.loads(resp.read())
             return _parse_codex_usage_response(data)
-    except Exception:
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as e:
+        logger.debug("Codex usage fetch failed: %s", e)
+        return None
+    except (KeyError, ValueError, _json.JSONDecodeError) as e:
+        logger.debug("Codex usage parse failed: %s", e)
         return None
 
 
@@ -971,7 +978,8 @@ def _extract_gemini_cli_credentials() -> tuple[str, str]:
                 csecret_match = re.search(r"OAUTH_CLIENT_SECRET\s*=\s*['\"]([^'\"]+)['\"]", content)
                 if cid_match and csecret_match:
                     return cid_match.group(1), csecret_match.group(1)
-            except Exception:
+            except (OSError, ValueError) as e:
+                logger.debug("Gemini credential extraction failed for %s: %s", path, e)
                 continue
     return "", ""
 
@@ -1007,9 +1015,12 @@ def _refresh_gemini_token(creds_path: Path) -> str | None:
                 if "expires_in" in data:
                     creds["expiry_date"] = int((datetime.now(timezone.utc).timestamp() + data["expires_in"]) * 1000)
                 creds_path.write_text(_json.dumps(creds, indent=2))
+                creds_path.chmod(0o600)
                 return new_token
-    except Exception:
-        pass
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as e:
+        logger.debug("Gemini token refresh failed: %s", e)
+    except (KeyError, ValueError, _json.JSONDecodeError) as e:
+        logger.debug("Gemini token refresh parse error: %s", e)
     return None
 
 
@@ -1049,7 +1060,11 @@ def _fetch_gemini_usage() -> dict | None:
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = _json.loads(resp.read())
             return _parse_gemini_quota_response(data)
-    except Exception:
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as e:
+        logger.debug("Gemini usage fetch failed: %s", e)
+        return None
+    except (KeyError, ValueError, _json.JSONDecodeError) as e:
+        logger.debug("Gemini usage parse error: %s", e)
         return None
 
 

@@ -23,10 +23,7 @@ SUPPORTED_PROVIDERS = {
 }
 
 SUPABASE_URL = os.environ.get("CLI_PULSE_SUPABASE_URL", "https://gkjwsxotmwrgqsvfijzs.supabase.co")
-SUPABASE_ANON_KEY = os.environ.get(
-    "CLI_PULSE_SUPABASE_ANON_KEY",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrandzeG90bXdyZ3FzdmZpanpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2OTAzNzAsImV4cCI6MjA5MDI2NjM3MH0.uPHYnh0psr2-KQynBw2NiQZOhz5eZiEaWpfCwdXrNQM",
-)
+SUPABASE_ANON_KEY = os.environ.get("CLI_PULSE_SUPABASE_ANON_KEY", "")
 
 
 @dataclass
@@ -60,6 +57,7 @@ def load_config() -> HelperConfig:
 
 def save_config(config: HelperConfig) -> None:
     CONFIG_PATH.write_text(json.dumps(asdict(config), indent=2))
+    CONFIG_PATH.chmod(0o600)
 
 
 def supabase_rpc(function_name: str, params: dict[str, Any]) -> Any:

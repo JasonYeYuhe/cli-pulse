@@ -129,11 +129,17 @@ public actor HelperAPIClient {
 public enum SupabaseConstants {
     public static let url = "https://gkjwsxotmwrgqsvfijzs.supabase.co"
     public static let anonKey: String = {
-        // Read from Info.plist if available, fall back to hardcoded
         if let key = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String, !key.isEmpty {
             return key
         }
-        return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrandzeG90bXdyZ3FzdmZpanpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2OTAzNzAsImV4cCI6MjA5MDI2NjM3MH0.uPHYnh0psr2-KQynBw2NiQZOhz5eZiEaWpfCwdXrNQM"
+        if let key = ProcessInfo.processInfo.environment["CLI_PULSE_SUPABASE_ANON_KEY"], !key.isEmpty {
+            return key
+        }
+        #if DEBUG
+        fatalError("SUPABASE_ANON_KEY missing from Info.plist and environment")
+        #else
+        return ""
+        #endif
     }()
 }
 

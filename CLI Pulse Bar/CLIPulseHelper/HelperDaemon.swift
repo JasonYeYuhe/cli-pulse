@@ -12,7 +12,9 @@ final class HelperDaemon {
     private let queue = DispatchQueue(label: "com.clipulse.helper.daemon", qos: .utility)
     private let apiClient = HelperAPIClient()
     private var isRunning = false
+    /// Protected by `syncLock` to prevent concurrent sync cycles.
     private var isSyncing = false
+    private let syncLock = NSLock()
     private var suspendCount = 0
 
     /// Default sync interval (seconds). Can be overridden via shared UserDefaults.
@@ -78,12 +80,16 @@ final class HelperDaemon {
     // MARK: - Collection + Sync (fully async)
 
     private func collectAndSync() async {
+        // Thread-safe check-and-set to prevent concurrent sync cycles
+        syncLock.lock()
         guard !isSyncing else {
+            syncLock.unlock()
             logger.debug("Sync already in progress — skipping")
             return
         }
         isSyncing = true
-        defer { isSyncing = false }
+        syncLock.unlock()
+        defer { syncLock.lock(); isSyncing = false; syncLock.unlock() }
 
         guard let config = HelperConfig.load() else {
             logger.warning("No helper config found — waiting for pairing")
@@ -155,7 +161,17 @@ final class HelperDaemon {
         let activeProviders = Set(sessions.map(\.provider))
         var result: [String: Any] = [:]
 
-        let configs = ProviderConfig.defaults()
+        // Read provider configs from shared app group (written by main app)
+        var configs: [ProviderConfig] = ProviderConfig.defaults()
+        if let defaults = UserDefaults(suiteName: HelperIPC.suiteName),
+           let data = defaults.data(forKey: HelperIPC.providerConfigsKey),
+           let saved = try? JSONDecoder().decode([ProviderConfig].self, from: data) {
+            configs = saved
+            // Hydrate secrets from Keychain
+            for i in configs.indices {
+                configs[i].loadSecrets()
+            }
+        }
 
         for collector in CollectorRegistry.collectors {
             let providerName = collector.kind.rawValue
