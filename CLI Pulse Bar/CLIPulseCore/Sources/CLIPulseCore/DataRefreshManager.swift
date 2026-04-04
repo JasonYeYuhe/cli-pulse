@@ -331,6 +331,9 @@ internal final class DataRefreshManager {
             guard let tierData = value as? [String: Any] else { continue }
             let quota = tierData["quota"] as? Int ?? 100
             let remaining = tierData["remaining"] as? Int ?? 100
+            let todayUsage = tierData["today_usage"] as? Int ?? 0
+            let weekUsage = tierData["week_usage"] as? Int ?? 0
+            let statusText = tierData["status_text"] as? String
             let planType = tierData["plan_type"] as? String
             let resetTime = tierData["reset_time"] as? String
 
@@ -348,13 +351,13 @@ internal final class DataRefreshManager {
 
             let usage = ProviderUsage(
                 provider: providerName,
-                today_usage: 0, week_usage: 0,
+                today_usage: todayUsage, week_usage: weekUsage,
                 estimated_cost_today: 0, estimated_cost_week: 0,
                 cost_status_today: "Unavailable", cost_status_week: "Unavailable",
                 quota: quota, remaining: remaining,
                 plan_type: planType, reset_time: resetTime,
                 tiers: tiers,
-                status_text: "\(100 - remaining)% used",
+                status_text: statusText ?? "\(100 - remaining)% used",
                 trend: [], recent_sessions: [], recent_errors: []
             )
             results.append(CollectorResult(usage: usage, dataKind: .quota))
@@ -381,10 +384,14 @@ internal final class DataRefreshManager {
                 let mergedRemaining = result.usage.remaining ?? existing.remaining
                 let mergedTiers = result.usage.tiers.isEmpty ? existing.tiers : result.usage.tiers
 
+                // Use local/helper usage data when available; fall back to cloud
+                let mergedTodayUsage = result.usage.today_usage > 0 ? result.usage.today_usage : existing.today_usage
+                let mergedWeekUsage = result.usage.week_usage > 0 ? result.usage.week_usage : existing.week_usage
+
                 merged[name] = ProviderUsage(
                     provider: existing.provider,
-                    today_usage: existing.today_usage,
-                    week_usage: existing.week_usage,
+                    today_usage: mergedTodayUsage,
+                    week_usage: mergedWeekUsage,
                     estimated_cost_today: existing.estimated_cost_today,
                     estimated_cost_week: existing.estimated_cost_week,
                     cost_status_today: existing.cost_status_today,

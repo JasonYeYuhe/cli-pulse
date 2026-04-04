@@ -202,6 +202,9 @@ final class HelperDaemon {
                 var tierData: [String: Any] = [
                     "quota": usage.quota ?? 100,
                     "remaining": usage.remaining ?? 100,
+                    "today_usage": usage.today_usage,
+                    "week_usage": usage.week_usage,
+                    "status_text": usage.status_text,
                 ]
                 if let planType = usage.plan_type { tierData["plan_type"] = planType }
                 if let resetTime = usage.reset_time { tierData["reset_time"] = resetTime }
