@@ -55,7 +55,19 @@ public final class BookmarkManager {
         KnownDirectory(id: "jetbrains", path: "~/Library/Application Support/JetBrains/", displayName: "JetBrains IDEs", detectionFile: nil),
     ]
 
-    private init() {}
+    private init() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appWillTerminate),
+            name: NSApplication.willTerminateNotification,
+            object: nil
+        )
+    }
+
+    @objc private func appWillTerminate() {
+        stopAccessingAll()
+        logger.info("Stopped accessing all security-scoped resources on termination")
+    }
 
     // MARK: - Bookmark Storage
 
