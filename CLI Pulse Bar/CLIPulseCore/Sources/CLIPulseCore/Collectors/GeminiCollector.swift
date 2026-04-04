@@ -1,16 +1,14 @@
 #if os(macOS)
 import Foundation
 
-/// Fetches real per-model quota data from Google Gemini via local OAuth credentials.
+/// Fetches real per-model quota data from Google Gemini via OAuth credentials.
 ///
-/// Auth: reads `~/.gemini/oauth_creds.json` for access_token/refresh_token.
-/// Token refresh: `POST https://oauth2.googleapis.com/token` with client ID/secret
-///   extracted from the local gemini CLI installation.
+/// Auth priority:
+///   1. Keychain — CLI Pulse's own OAuth tokens (via GeminiOAuthManager)
+///   2. File — `~/.gemini/oauth_creds.json` (Gemini CLI compatibility fallback)
+///
 /// Quota: `POST https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota`
 /// Tier:  `POST https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist`
-///
-/// Produces tiers per model family (Pro, Flash, Flash Lite) with remaining fraction
-/// and reset times.
 public struct GeminiCollector: ProviderCollector, Sendable {
     public let kind = ProviderKind.gemini
 
@@ -21,17 +19,25 @@ public struct GeminiCollector: ProviderCollector, Sendable {
 
     public func collect(config: ProviderConfig) async throws -> CollectorResult {
         guard var creds = readCredentials(), creds.accessToken != nil else {
-            throw CollectorError.missingCredentials("Gemini: ~/.gemini/oauth_creds.json not found or has no access token")
+            throw CollectorError.missingCredentials("Gemini: no credentials found")
         }
 
         // Refresh if expired
-        if creds.isExpired, let refreshed = try? await refreshToken(creds: creds) {
-            creds = refreshed
-            persistCredentials(creds)
+        if creds.isExpired {
+            if let refreshed = try? await refreshToken(creds: creds) {
+                creds = refreshed
+                // Only persist back to file for file-sourced credentials
+                if creds.source == .file { persistCredentials(creds) }
+            } else if creds.source == .keychain {
+                // Keychain refresh failed — fall back to file credentials
+                if let fileCreds = readFileCredentials(), !fileCreds.isExpired {
+                    creds = fileCreds
+                }
+            }
         }
 
-        guard let token = creds.accessToken else {
-            throw CollectorError.missingCredentials("Gemini: no access token after refresh")
+        guard let token = creds.accessToken, !creds.isExpired else {
+            throw CollectorError.missingCredentials("Gemini: token expired — reconnect via CLI Pulse OAuth")
         }
 
         // Fetch tier info for plan detection
@@ -48,11 +54,14 @@ public struct GeminiCollector: ProviderCollector, Sendable {
 
     // MARK: - Credentials
 
+    enum TokenSource { case keychain, file }
+
     struct GeminiCreds {
         var accessToken: String?
         var refreshToken: String?
         var idToken: String?
         var expiryDate: Date?
+        var source: TokenSource = .file
 
         var isExpired: Bool {
             guard let exp = expiryDate else { return true }
@@ -65,12 +74,28 @@ public struct GeminiCollector: ProviderCollector, Sendable {
     }
 
     func readCredentials() -> GeminiCreds? {
+        // Priority 1: Keychain tokens (CLI Pulse's own OAuth flow)
+        if let stored = GeminiOAuthManager.shared.loadTokens() {
+            return GeminiCreds(
+                accessToken: stored.accessToken,
+                refreshToken: stored.refreshToken,
+                expiryDate: stored.expiry,
+                source: .keychain
+            )
+        }
+
+        // Priority 2: Gemini CLI's credential file (compatibility fallback)
+        return readFileCredentials()
+    }
+
+    /// Read credentials from `~/.gemini/oauth_creds.json` only.
+    private func readFileCredentials() -> GeminiCreds? {
         let path = credsPath()
         guard let data = FileManager.default.contents(atPath: path),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return nil
         }
-        var creds = GeminiCreds()
+        var creds = GeminiCreds(source: .file)
         creds.accessToken = json["access_token"] as? String
         creds.refreshToken = json["refresh_token"] as? String
         creds.idToken = json["id_token"] as? String
@@ -94,95 +119,26 @@ public struct GeminiCollector: ProviderCollector, Sendable {
 
     // MARK: - Token refresh
 
-    /// Attempts to extract OAuth client ID/secret from the gemini CLI's oauth2.js.
-    /// Returns (clientId, clientSecret) or nil.
-    private func extractOAuthClient() -> (String, String)? {
-        // Try common gemini binary locations
-        let paths = ["/opt/homebrew/bin/gemini", "/usr/local/bin/gemini"]
-        var binaryPath: String?
-        for p in paths {
-            if FileManager.default.isExecutableFile(atPath: p) { binaryPath = p; break }
-        }
-        // Also check PATH
-        if binaryPath == nil, let pathEnv = ProcessInfo.processInfo.environment["PATH"] {
-            for dir in pathEnv.split(separator: ":") {
-                let p = "\(dir)/gemini"
-                if FileManager.default.isExecutableFile(atPath: p) { binaryPath = p; break }
-            }
-        }
-        guard let bin = binaryPath else { return nil }
-
-        let searchPaths = [
-            "../libexec/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/code_assist/oauth2.js",
-            "../lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/code_assist/oauth2.js",
-            "../share/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/code_assist/oauth2.js",
-            "../../gemini-cli-core/dist/src/code_assist/oauth2.js",
-            "../node_modules/@google/gemini-cli-core/dist/src/code_assist/oauth2.js",
-        ]
-        let binDir = (bin as NSString).deletingLastPathComponent
-        for relative in searchPaths {
-            let fullPath = (binDir as NSString).appendingPathComponent(relative)
-            let resolved = (fullPath as NSString).standardizingPath
-            if let contents = try? String(contentsOfFile: resolved, encoding: .utf8) {
-                let idPattern = #"OAUTH_CLIENT_ID\s*=\s*['"]([\w\-\.]+)['"]"#
-                let secretPattern = #"OAUTH_CLIENT_SECRET\s*=\s*['"]([\w\-]+)['"]"#
-                if let idMatch = contents.range(of: idPattern, options: .regularExpression),
-                   let secretMatch = contents.range(of: secretPattern, options: .regularExpression) {
-                    let idLine = String(contents[idMatch])
-                    let secretLine = String(contents[secretMatch])
-                    // Extract the quoted value
-                    if let id = extractQuotedValue(idLine), let secret = extractQuotedValue(secretLine) {
-                        return (id, secret)
-                    }
-                }
-            }
-        }
-        return nil
-    }
-
-    private func extractQuotedValue(_ line: String) -> String? {
-        let pattern = #"['"]([^'"]+)['"]"#
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)),
-              let range = Range(match.range(at: 1), in: line) else { return nil }
-        return String(line[range])
-    }
-
     private func refreshToken(creds: GeminiCreds) async throws -> GeminiCreds {
-        guard let refreshToken = creds.refreshToken else {
-            throw CollectorError.missingCredentials("Gemini: no refresh token")
-        }
-        guard let client = extractOAuthClient() else {
-            throw CollectorError.missingCredentials("Gemini: cannot extract OAuth client from CLI")
-        }
-        guard let url = URL(string: "https://oauth2.googleapis.com/token") else {
-            throw CollectorError.invalidURL("https://oauth2.googleapis.com/token")
-        }
+        switch creds.source {
+        case .keychain:
+            // Refresh via CLI Pulse's own OAuth client (PKCE, no secret needed)
+            let newToken = try await GeminiOAuthManager.shared.refreshAccessToken()
+            var updated = creds
+            updated.accessToken = newToken
+            // Reload expiry from Keychain after refresh
+            if let stored = GeminiOAuthManager.shared.loadTokens() {
+                updated.expiryDate = stored.expiry
+            }
+            return updated
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 15
-
-        let body = "client_id=\(client.0)&client_secret=\(client.1)&refresh_token=\(refreshToken)&grant_type=refresh_token"
-        request.httpBody = body.data(using: .utf8)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw CollectorError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, provider: "Gemini")
+        case .file:
+            // File-based tokens from Gemini CLI cannot be refreshed without the CLI's
+            // client credentials. User should connect via CLI Pulse OAuth instead.
+            throw CollectorError.missingCredentials(
+                "Gemini: file-based token expired — connect via CLI Pulse OAuth to enable auto-refresh"
+            )
         }
-
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw CollectorError.parseFailed("Gemini token refresh: invalid JSON")
-        }
-
-        var updated = creds
-        updated.accessToken = json["access_token"] as? String ?? creds.accessToken
-        updated.idToken = json["id_token"] as? String ?? creds.idToken
-        if let expiresIn = (json["expires_in"] as? NSNumber)?.doubleValue {
-            updated.expiryDate = Date().addingTimeInterval(expiresIn)
-        }
-        return updated
     }
 
     // MARK: - Tier info

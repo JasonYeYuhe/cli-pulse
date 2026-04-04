@@ -1,5 +1,8 @@
 import SwiftUI
 import CLIPulseCore
+#if os(macOS)
+import AuthenticationServices
+#endif
 
 /// Sheet editor for per-provider settings (source mode, credentials, account label).
 struct ProviderConfigEditor: View {
@@ -12,6 +15,11 @@ struct ProviderConfigEditor: View {
     @State private var cookieSource: CookieSource? = nil
     @State private var manualCookieHeader: String = ""
     @State private var accountLabel: String = ""
+    #if os(macOS)
+    @State private var isGeminiConnected: Bool = false
+    @State private var isConnecting: Bool = false
+    @State private var geminiError: String?
+    #endif
 
     private var descriptor: ProviderDescriptor {
         ProviderRegistry.descriptor(for: kind)
@@ -112,6 +120,13 @@ struct ProviderConfigEditor: View {
                 }
             }
 
+            // Gemini OAuth connection (macOS only)
+            #if os(macOS)
+            if kind == .gemini {
+                geminiOAuthSection
+            }
+            #endif
+
             // Capabilities summary
             VStack(alignment: .leading, spacing: 3) {
                 Text("Capabilities")
@@ -169,7 +184,88 @@ struct ProviderConfigEditor: View {
         cookieSource = config.cookieSource
         manualCookieHeader = config.manualCookieHeader ?? ""
         accountLabel = config.accountLabel ?? ""
+        #if os(macOS)
+        if kind == .gemini {
+            isGeminiConnected = GeminiOAuthManager.shared.isConnected
+        }
+        #endif
     }
+
+    // MARK: - Gemini OAuth
+
+    #if os(macOS)
+    @ViewBuilder
+    private var geminiOAuthSection: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("Google OAuth")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            if isGeminiConnected {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .font(.system(size: 12))
+                    Text("Connected")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.green)
+                    Spacer()
+                    Button("Disconnect") {
+                        GeminiOAuthManager.shared.clearTokens()
+                        isGeminiConnected = false
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.red)
+                    .font(.system(size: 10))
+                }
+            } else {
+                Button {
+                    isConnecting = true
+                    geminiError = nil
+                    Task { @MainActor in
+                        defer { isConnecting = false }
+                        do {
+                            _ = try await GeminiOAuthManager.shared.authorize()
+                            isGeminiConnected = true
+                        } catch is CancellationError {
+                            // User cancelled — ignore
+                        } catch let e as ASWebAuthenticationSessionError
+                                    where e.code == .canceledLogin {
+                            // User dismissed the browser sheet — ignore
+                        } catch {
+                            geminiError = error.localizedDescription
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        if isConnecting {
+                            ProgressView()
+                                .controlSize(.mini)
+                        } else {
+                            Image(systemName: "link")
+                        }
+                        Text("Connect Gemini")
+                    }
+                    .font(.system(size: 10, weight: .medium))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue)
+                .controlSize(.small)
+                .disabled(isConnecting)
+
+                if let err = geminiError {
+                    Text(err)
+                        .font(.system(size: 8))
+                        .foregroundStyle(.red)
+                } else {
+                    Text("Uses your Google account. No API key needed.")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.quaternary)
+                }
+            }
+        }
+    }
+    #endif
 
     private func save() {
         guard let idx = state.providerConfigs.firstIndex(where: { $0.kind == kind }) else { return }
