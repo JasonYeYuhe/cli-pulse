@@ -30,6 +30,22 @@ public enum HelperIPC {
     /// Sync interval in seconds (Int, written by main app, read by helper)
     public static let syncIntervalKey = "helper_sync_interval"
 
+    /// Collector results JSON (written by helper after each collection cycle, read by main app).
+    /// Format: JSON-encoded array of ProviderUsage-like dicts.
+    public static let collectorResultsKey = "helper_collector_results"
+
+    /// Write collector results to app group for the main app to read.
+    public static func writeCollectorResults(_ json: Data) {
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return }
+        defaults.set(json, forKey: collectorResultsKey)
+    }
+
+    /// Read collector results written by helper.
+    public static func readCollectorResults() -> Data? {
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return nil }
+        return defaults.data(forKey: collectorResultsKey)
+    }
+
     // MARK: - Status
 
     public enum State: String, Codable, Sendable {

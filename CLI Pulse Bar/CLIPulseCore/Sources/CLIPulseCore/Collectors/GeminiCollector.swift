@@ -70,8 +70,16 @@ public struct GeminiCollector: ProviderCollector, Sendable {
         }
     }
 
+    /// Resolve the real user home directory, bypassing App Sandbox container path.
+    private static func realUserHome() -> String {
+        if let pw = getpwuid(getuid()), let home = pw.pointee.pw_dir {
+            return String(cString: home)
+        }
+        return NSHomeDirectory()
+    }
+
     private func credsPath() -> String {
-        (NSHomeDirectory() as NSString).appendingPathComponent(".gemini/oauth_creds.json")
+        (Self.realUserHome() as NSString).appendingPathComponent(".gemini/oauth_creds.json")
     }
 
     func readCredentials() -> GeminiCreds? {

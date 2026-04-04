@@ -124,6 +124,9 @@ final class HelperDaemon {
         // Step 4: Provider quotas via collectors
         let providerTiers = await collectProviderQuotas(sessions: scanResult.sessions)
 
+        // Step 4.5: Write collector results to app group for main app
+        writeCollectorResultsToAppGroup(providerTiers)
+
         // Step 5-6: Sync to Supabase
         let sessionDicts = scanResult.sessions.map { sessionToDict($0) }
         let providerRemaining: [String: Int] = providerTiers.compactMapValues { dict in
@@ -184,7 +187,8 @@ final class HelperDaemon {
 
         for collector in CollectorRegistry.collectors {
             let providerName = collector.kind.rawValue
-            guard activeProviders.contains(providerName) else { continue }
+            // Run collector for any enabled provider (not just active sessions)
+            // so quota data is available even when no session is running.
 
             let config = configs.first(where: { $0.kind == collector.kind }) ?? ProviderConfig(kind: collector.kind)
             guard collector.isAvailable(config: config) else { continue }
@@ -219,6 +223,16 @@ final class HelperDaemon {
         }
 
         return result
+    }
+
+    // MARK: - App Group Collector Sharing
+
+    private func writeCollectorResultsToAppGroup(_ providerTiers: [String: Any]) {
+        guard !providerTiers.isEmpty else { return }
+        if let data = try? JSONSerialization.data(withJSONObject: providerTiers) {
+            HelperIPC.writeCollectorResults(data)
+            logger.debug("Wrote \(providerTiers.count) collector results to app group")
+        }
     }
 
     // MARK: - Helpers

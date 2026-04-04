@@ -96,7 +96,18 @@ internal final class DataRefreshManager {
             )
 
             #if os(macOS)
-            let localResults = await runCollectors(providerConfigs: context.providerConfigs)
+            var localResults = await runCollectors(providerConfigs: context.providerConfigs)
+
+            // Supplement with helper's collector results from app group (for sandboxed collectors
+            // that can't read ~/.codex/ or ~/.gemini/ directly)
+            let helperResults = Self.readHelperCollectorResults()
+            for hr in helperResults {
+                let alreadyHas = localResults.contains { $0.usage.provider == hr.usage.provider }
+                if !alreadyHas {
+                    localResults.append(hr)
+                }
+            }
+
             let (resolvedProviders, supplementedProviders) = Self.mergeCloudWithLocal(
                 cloud: providerData,
                 local: localResults
@@ -308,6 +319,51 @@ internal final class DataRefreshManager {
             }
         }
 
+        return results
+    }
+
+    /// Read collector results written by the helper daemon to app group UserDefaults.
+    /// These results come from collectors that need real file system access (Codex, Gemini, etc.)
+    /// which the sandboxed main app cannot do directly.
+    nonisolated static func readHelperCollectorResults() -> [CollectorResult] {
+        guard let data = HelperIPC.readCollectorResults(),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return []
+        }
+
+        var results: [CollectorResult] = []
+        for (providerName, value) in json {
+            guard let tierData = value as? [String: Any] else { continue }
+            let quota = tierData["quota"] as? Int ?? 100
+            let remaining = tierData["remaining"] as? Int ?? 100
+            let planType = tierData["plan_type"] as? String
+            let resetTime = tierData["reset_time"] as? String
+
+            var tiers: [TierDTO] = []
+            if let tiersArr = tierData["tiers"] as? [[String: Any]] {
+                for t in tiersArr {
+                    tiers.append(TierDTO(
+                        name: t["name"] as? String ?? "",
+                        quota: t["quota"] as? Int ?? 100,
+                        remaining: t["remaining"] as? Int ?? 0,
+                        reset_time: t["reset_time"] as? String
+                    ))
+                }
+            }
+
+            let usage = ProviderUsage(
+                provider: providerName,
+                today_usage: 0, week_usage: 0,
+                estimated_cost_today: 0, estimated_cost_week: 0,
+                cost_status_today: "Unavailable", cost_status_week: "Unavailable",
+                quota: quota, remaining: remaining,
+                plan_type: planType, reset_time: resetTime,
+                tiers: tiers,
+                status_text: "\(100 - remaining)% used",
+                trend: [], recent_sessions: [], recent_errors: []
+            )
+            results.append(CollectorResult(usage: usage, dataKind: .quota))
+        }
         return results
     }
 

@@ -55,9 +55,20 @@ public struct CodexCollector: ProviderCollector, Sendable {
         }
     }
 
+    /// Resolve the real user home directory, bypassing App Sandbox container path.
+    private static func realUserHome() -> String {
+        // getpwuid returns the real home even inside a sandbox
+        if let pw = getpwuid(getuid()), let home = pw.pointee.pw_dir {
+            return String(cString: home)
+        }
+        return NSHomeDirectory()
+    }
+
     private func codexHomePath() -> String {
-        ProcessInfo.processInfo.environment["CODEX_HOME"]
-            ?? (NSHomeDirectory() as NSString).appendingPathComponent(".codex")
+        if let env = ProcessInfo.processInfo.environment["CODEX_HOME"], !env.isEmpty {
+            return env
+        }
+        return (Self.realUserHome() as NSString).appendingPathComponent(".codex")
     }
 
     func readAuthFile() -> CodexAuth? {
