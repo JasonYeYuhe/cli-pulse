@@ -2,6 +2,7 @@ import SwiftUI
 import AuthenticationServices
 import CryptoKit
 import CLIPulseCore
+import os
 
 struct iOSLoginView: View {
     @EnvironmentObject var state: AppState
@@ -77,6 +78,38 @@ struct iOSLoginView: View {
                     .frame(height: 50)
                     .padding(.horizontal)
 
+                    // Sign in with Google (via Supabase OAuth)
+                    Button {
+                        signInWithProvider("google")
+                    } label: {
+                        HStack {
+                            Image(systemName: "globe")
+                            Text("Sign in with Google")
+                                .font(.headline)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                    .padding(.horizontal)
+
+                    // Sign in with GitHub
+                    Button {
+                        signInWithProvider("github")
+                    } label: {
+                        HStack {
+                            Image(systemName: "chevron.left.forwardslash.chevron.right")
+                            Text("Sign in with GitHub")
+                                .font(.headline)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.primary)
+                    .padding(.horizontal)
+
                     if let error = state.lastError {
                         Text(error)
                             .font(.caption)
@@ -136,6 +169,40 @@ struct iOSLoginView: View {
                     state.resetOTP()
                 }
             }
+        }
+    }
+
+    // MARK: - OAuth Sign-In (Google / GitHub) via ASWebAuthenticationSession + PKCE
+
+    private func signInWithProvider(_ provider: String) {
+        Task {
+            guard let (authURL, codeVerifier) = await state.oauthURL(provider: provider) else {
+                state.lastError = "Failed to build \(provider) authorization URL"
+                return
+            }
+            let webSession = ASWebAuthenticationSession(
+                url: authURL,
+                callbackURLScheme: "clipulse"
+            ) { callbackURL, error in
+                if let error {
+                    if (error as NSError).code == ASWebAuthenticationSessionError.canceledLogin.rawValue {
+                        return
+                    }
+                    Task { @MainActor in self.state.lastError = error.localizedDescription }
+                    return
+                }
+                guard let callbackURL,
+                      let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false),
+                      let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
+                    Task { @MainActor in self.state.lastError = "OAuth sign-in failed: no authorization code" }
+                    return
+                }
+                Task {
+                    await self.state.exchangeOAuthCode(code: code, codeVerifier: codeVerifier)
+                }
+            }
+            webSession.prefersEphemeralWebBrowserSession = false
+            webSession.start()
         }
     }
 

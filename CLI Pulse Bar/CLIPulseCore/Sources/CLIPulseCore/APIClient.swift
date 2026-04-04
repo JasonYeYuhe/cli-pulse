@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 public actor APIClient {
     private let supabaseURL: String
@@ -758,6 +759,135 @@ public actor APIClient {
         } catch {
             return "free"
         }
+    }
+
+    // MARK: - OAuth (Google / GitHub via Supabase)
+
+    /// Build the Supabase OAuth authorization URL for a given provider with PKCE.
+    /// Returns (authorizationURL, codeVerifier) — caller opens URL in browser/ASWebAuthenticationSession.
+    public func oauthAuthorizeURL(provider: String, redirectTo: String) -> (URL, String)? {
+        // Generate PKCE code verifier + challenge
+        let verifier = generateCodeVerifier()
+        guard let challenge = sha256Base64URL(verifier) else { return nil }
+
+        var components = URLComponents(string: "\(supabaseURL)/auth/v1/authorize")
+        components?.queryItems = [
+            URLQueryItem(name: "provider", value: provider),
+            URLQueryItem(name: "redirect_to", value: redirectTo),
+            URLQueryItem(name: "code_challenge", value: challenge),
+            URLQueryItem(name: "code_challenge_method", value: "S256"),
+        ]
+        guard let url = components?.url else { return nil }
+        return (url, verifier)
+    }
+
+    /// Exchange an OAuth authorization code for a Supabase session (PKCE flow).
+    public func exchangeOAuthCode(code: String, codeVerifier: String) async throws -> AuthResponse {
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=pkce") else {
+            throw APIError.invalidResponse
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+
+        struct PKCEExchange: Encodable {
+            let auth_code: String
+            let code_verifier: String
+        }
+        request.httpBody = try encoder.encode(PKCEExchange(auth_code: code, code_verifier: codeVerifier))
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: body)
+        }
+
+        let auth = try decode(SupabaseAuthResponse.self, from: data)
+        let token = auth.access_token
+        let refresh = auth.refresh_token
+        let user = auth.user
+
+        self.accessToken = token
+        self.refreshToken = refresh
+        self.userId = user?.id
+
+        let profile = try await fetchProfile(select: "paired,name,email")
+        let paired = profile?.paired ?? false
+        let name = profile?.name ?? user?.user_metadata?.name ?? ""
+        let userEmail = profile?.email ?? user?.email ?? ""
+
+        return AuthResponse(
+            access_token: token,
+            refresh_token: refresh,
+            user: UserDTO(id: user?.id ?? "", name: name, email: userEmail),
+            paired: paired
+        )
+    }
+
+    /// Exchange a Google ID token for a Supabase session (same as Apple flow).
+    public func signInWithGoogle(idToken: String, nonce: String? = nil, name: String?, email: String?) async throws -> AuthResponse {
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=id_token") else {
+            throw APIError.invalidResponse
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+
+        struct GoogleSignInRequest: Encodable {
+            let provider: String
+            let id_token: String
+            let nonce: String?
+            let name: String?
+        }
+        request.httpBody = try encoder.encode(GoogleSignInRequest(provider: "google", id_token: idToken, nonce: nonce, name: name))
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw APIError.httpError(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: body)
+        }
+
+        let auth = try decode(SupabaseAuthResponse.self, from: data)
+        let token = auth.access_token
+        let refresh = auth.refresh_token
+        let user = auth.user
+
+        self.accessToken = token
+        self.refreshToken = refresh
+        self.userId = user?.id
+
+        let profile = try await fetchProfile(select: "paired,name,email")
+        let paired = profile?.paired ?? false
+        let userName = name ?? profile?.name ?? user?.user_metadata?.name ?? ""
+        let userEmail = email ?? profile?.email ?? user?.email ?? ""
+
+        return AuthResponse(
+            access_token: token,
+            refresh_token: refresh,
+            user: UserDTO(id: user?.id ?? "", name: userName, email: userEmail),
+            paired: paired
+        )
+    }
+
+    // PKCE helpers
+    private func generateCodeVerifier() -> String {
+        var buffer = [UInt8](repeating: 0, count: 32)
+        _ = SecRandomCopyBytes(kSecRandomDefault, buffer.count, &buffer)
+        return Data(buffer).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+    }
+
+    private func sha256Base64URL(_ input: String) -> String? {
+        guard let data = input.data(using: .utf8) else { return nil }
+        let hash = SHA256.hash(data: data)
+        return Data(hash).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
     }
 
     // MARK: - Receipt Validation

@@ -94,6 +94,18 @@ internal final class AuthManager {
         storeAuthTokens(access: "", refresh: nil)
     }
 
+    func signInWithGoogle(idToken: String, name: String?, email: String?) async throws -> AuthSessionState {
+        let response = try await api.signInWithGoogle(idToken: idToken, name: name, email: email)
+        storeAuthTokens(access: response.access_token, refresh: response.refresh_token)
+        return authSessionState(from: response)
+    }
+
+    func exchangeOAuthCode(code: String, codeVerifier: String) async throws -> AuthSessionState {
+        let response = try await api.exchangeOAuthCode(code: code, codeVerifier: codeVerifier)
+        storeAuthTokens(access: response.access_token, refresh: response.refresh_token)
+        return authSessionState(from: response)
+    }
+
     func storeAuthTokens(access: String, refresh: String?) {
         persistTokens(access, refresh)
     }
@@ -174,6 +186,42 @@ extension AppState {
             lastError = error.localizedDescription
         }
         isLoading = false
+    }
+
+    /// Sign in with a Google ID token (from Google Sign-In SDK or Credential Manager).
+    public func signInWithGoogle(idToken: String, name: String?, email: String?) async {
+        isLoading = true
+        lastError = nil
+        do {
+            let authState = try await authManager.signInWithGoogle(idToken: idToken, name: name, email: email)
+            applyAuthenticatedState(authState)
+            startRefreshLoop()
+            await refreshAll()
+        } catch {
+            lastError = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    /// Exchange an OAuth authorization code (from GitHub ASWebAuthenticationSession) for a session.
+    public func exchangeOAuthCode(code: String, codeVerifier: String) async {
+        isLoading = true
+        lastError = nil
+        do {
+            let authState = try await authManager.exchangeOAuthCode(code: code, codeVerifier: codeVerifier)
+            applyAuthenticatedState(authState)
+            startRefreshLoop()
+            await refreshAll()
+        } catch {
+            lastError = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    /// Build an OAuth URL for a given provider (PKCE flow).
+    public func oauthURL(provider: String) async -> (URL, String)? {
+        let redirectTo = "clipulse://auth/callback"
+        return await api.oauthAuthorizeURL(provider: provider, redirectTo: redirectTo)
     }
 
     public func generatePairingCode() async {
