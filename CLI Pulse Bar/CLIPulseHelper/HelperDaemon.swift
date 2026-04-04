@@ -233,7 +233,12 @@ final class HelperDaemon {
     // MARK: - App Group Collector Sharing
 
     private func writeCollectorResultsToAppGroup(_ providerTiers: [String: Any]) {
-        if let data = try? JSONSerialization.data(withJSONObject: providerTiers) {
+        // Wrap with timestamp so main app can reject stale data
+        let payload: [String: Any] = [
+            "timestamp": ISO8601DateFormatter().string(from: Date()),
+            "providers": providerTiers,
+        ]
+        if let data = try? JSONSerialization.data(withJSONObject: payload) {
             HelperIPC.writeCollectorResults(data)
             logger.debug("Wrote \(providerTiers.count) collector results to app group")
         } else {

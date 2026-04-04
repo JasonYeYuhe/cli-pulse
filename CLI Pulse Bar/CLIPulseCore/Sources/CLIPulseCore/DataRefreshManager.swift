@@ -326,8 +326,21 @@ internal final class DataRefreshManager {
             return []
         }
 
+        // Reject stale data older than 5 minutes
+        if let timestampStr = json["timestamp"] as? String,
+           let timestamp = ISO8601DateFormatter().date(from: timestampStr) {
+            if Date().timeIntervalSince(timestamp) > 300 {
+                return [] // Data too old, skip
+            }
+        }
+
+        // New format: { "timestamp": "...", "providers": { ... } }
+        // Old format (no wrapper): { "Codex": { ... }, "Gemini": { ... } }
+        let providers = (json["providers"] as? [String: Any]) ?? json
+
         var results: [CollectorResult] = []
-        for (providerName, value) in json {
+        for (providerName, value) in providers {
+            guard providerName != "timestamp" else { continue }
             guard let tierData = value as? [String: Any] else { continue }
             let quota = tierData["quota"] as? Int ?? 100
             let remaining = tierData["remaining"] as? Int ?? 100
