@@ -6,7 +6,7 @@ public enum HelperIPC {
 
     // MARK: - DistributedNotificationCenter names
 
-    /// Posted by the helper after each successful sync cycle.
+    /// Posted by the helper after refreshing local collector data and after sync-capable cycles.
     /// The main app can observe this to trigger an immediate refresh.
     /// Note: treat as a hint — always validate data freshness from app group files.
     public static let didSyncNotificationName = Notification.Name("CLIPulseHelperDidSync")
@@ -31,13 +31,14 @@ public enum HelperIPC {
     public static let syncIntervalKey = "helper_sync_interval"
 
     /// Collector results JSON (written by helper after each collection cycle, read by main app).
-    /// Format: JSON-encoded array of ProviderUsage-like dicts.
+    /// Format: JSON-encoded dictionary keyed by provider name.
     public static let collectorResultsKey = "helper_collector_results"
 
     /// Write collector results to app group for the main app to read.
     public static func writeCollectorResults(_ json: Data) {
         guard let defaults = UserDefaults(suiteName: suiteName) else { return }
         defaults.set(json, forKey: collectorResultsKey)
+        defaults.synchronize()
     }
 
     /// Read collector results written by helper.
@@ -80,6 +81,7 @@ public enum HelperIPC {
         guard let defaults = UserDefaults(suiteName: suiteName),
               let data = try? JSONEncoder().encode(status) else { return }
         defaults.set(data, forKey: statusKey)
+        defaults.synchronize()
     }
 
     /// Post a sync notification via DistributedNotificationCenter.

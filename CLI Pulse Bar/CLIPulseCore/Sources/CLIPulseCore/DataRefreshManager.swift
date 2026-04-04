@@ -101,12 +101,7 @@ internal final class DataRefreshManager {
             // Supplement with helper's collector results from app group (for sandboxed collectors
             // that can't read ~/.codex/ or ~/.gemini/ directly)
             let helperResults = Self.readHelperCollectorResults()
-            for hr in helperResults {
-                let alreadyHas = localResults.contains { $0.usage.provider == hr.usage.provider }
-                if !alreadyHas {
-                    localResults.append(hr)
-                }
-            }
+            localResults.append(contentsOf: helperResults)
 
             let (resolvedProviders, supplementedProviders) = Self.mergeCloudWithLocal(
                 cloud: providerData,
@@ -380,38 +375,32 @@ internal final class DataRefreshManager {
 
             let name = result.usage.provider
             if let existing = merged[name] {
-                // Local collector data is fresher than cloud cache.
-                // Merge field-by-field: prefer local when it has data, keep cloud otherwise.
-                let localHasTiers = !result.usage.tiers.isEmpty
-                let localHasQuota = result.usage.quota != nil && (result.usage.quota ?? 0) > 0
+                // Collector data is fresher than cloud cache for quota providers.
+                // Preserve cloud activity/cost series, but always replace quota/tier state.
+                let mergedQuota = result.usage.quota ?? existing.quota
+                let mergedRemaining = result.usage.remaining ?? existing.remaining
+                let mergedTiers = result.usage.tiers.isEmpty ? existing.tiers : result.usage.tiers
 
-                if localHasTiers || localHasQuota {
-                    let mergedTiers = localHasTiers ? result.usage.tiers : existing.tiers
-                    let mergedQuota = localHasQuota ? result.usage.quota : existing.quota
-                    let mergedRemaining = localHasQuota ? result.usage.remaining : existing.remaining
-                    let mergedResetTime = result.usage.reset_time ?? existing.reset_time
-
-                    merged[name] = ProviderUsage(
-                        provider: existing.provider,
-                        today_usage: existing.today_usage > 0 ? existing.today_usage : result.usage.today_usage,
-                        week_usage: existing.week_usage > 0 ? existing.week_usage : result.usage.week_usage,
-                        estimated_cost_today: existing.estimated_cost_today,
-                        estimated_cost_week: existing.estimated_cost_week,
-                        cost_status_today: existing.cost_status_today,
-                        cost_status_week: existing.cost_status_week,
-                        quota: mergedQuota,
-                        remaining: mergedRemaining,
-                        plan_type: result.usage.plan_type ?? existing.plan_type,
-                        reset_time: mergedResetTime,
-                        tiers: mergedTiers,
-                        status_text: result.usage.status_text,
-                        trend: existing.trend,
-                        recent_sessions: existing.recent_sessions,
-                        recent_errors: existing.recent_errors,
-                        metadata: existing.metadata ?? result.usage.metadata
-                    )
-                    supplemented.insert(name)
-                }
+                merged[name] = ProviderUsage(
+                    provider: existing.provider,
+                    today_usage: existing.today_usage,
+                    week_usage: existing.week_usage,
+                    estimated_cost_today: existing.estimated_cost_today,
+                    estimated_cost_week: existing.estimated_cost_week,
+                    cost_status_today: existing.cost_status_today,
+                    cost_status_week: existing.cost_status_week,
+                    quota: mergedQuota,
+                    remaining: mergedRemaining,
+                    plan_type: result.usage.plan_type ?? existing.plan_type,
+                    reset_time: result.usage.reset_time ?? existing.reset_time,
+                    tiers: mergedTiers,
+                    status_text: result.usage.status_text.isEmpty ? existing.status_text : result.usage.status_text,
+                    trend: existing.trend,
+                    recent_sessions: existing.recent_sessions,
+                    recent_errors: existing.recent_errors,
+                    metadata: result.usage.metadata ?? existing.metadata
+                )
+                supplemented.insert(name)
             } else {
                 merged[name] = result.usage
                 supplemented.insert(name)

@@ -100,11 +100,6 @@ final class HelperDaemon {
         }
         defer { Task { await syncGuard.finish() } }
 
-        guard let config = HelperConfig.load() else {
-            logger.warning("No helper config found — waiting for pairing")
-            return
-        }
-
         logger.info("Starting collection cycle")
 
         // Step 1: Device metrics
@@ -122,10 +117,19 @@ final class HelperDaemon {
         )
 
         // Step 4: Provider quotas via collectors
-        let providerTiers = await collectProviderQuotas(sessions: scanResult.sessions)
+        let providerTiers = await collectProviderQuotas()
 
         // Step 4.5: Write collector results to app group for main app
         writeCollectorResultsToAppGroup(providerTiers)
+        HelperIPC.postSyncNotification()
+
+        guard let config = HelperConfig.load() else {
+            logger.info("No helper config found — collected local provider data only")
+            HelperIPC.writeStatus(HelperIPC.Status(
+                state: .running, lastSync: Date(), helperVersion: "1.0.0"
+            ))
+            return
+        }
 
         // Step 5-6: Sync to Supabase
         let sessionDicts = scanResult.sessions.map { sessionToDict($0) }
@@ -156,7 +160,6 @@ final class HelperDaemon {
             HelperIPC.writeStatus(HelperIPC.Status(
                 state: .running, lastSync: Date(), helperVersion: "1.0.0"
             ))
-            HelperIPC.postSyncNotification()
 
         } catch {
             logger.error("Sync failed: \(error.localizedDescription)")
@@ -169,8 +172,7 @@ final class HelperDaemon {
     // MARK: - Provider Quota Collection
 
     /// Run the same collectors the main app uses, producing tier data for Supabase.
-    private func collectProviderQuotas(sessions: [SessionRecord]) async -> [String: Any] {
-        let activeProviders = Set(sessions.map(\.provider))
+    private func collectProviderQuotas() async -> [String: Any] {
         var result: [String: Any] = [:]
 
         // Read provider configs from shared app group (written by main app)
@@ -228,10 +230,11 @@ final class HelperDaemon {
     // MARK: - App Group Collector Sharing
 
     private func writeCollectorResultsToAppGroup(_ providerTiers: [String: Any]) {
-        guard !providerTiers.isEmpty else { return }
         if let data = try? JSONSerialization.data(withJSONObject: providerTiers) {
             HelperIPC.writeCollectorResults(data)
             logger.debug("Wrote \(providerTiers.count) collector results to app group")
+        } else {
+            logger.error("Failed to encode collector results for app group write")
         }
     }
 
