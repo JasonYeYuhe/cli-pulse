@@ -219,10 +219,20 @@ public struct GeminiCollector: ProviderCollector, Sendable {
             throw CollectorError.parseFailed("Gemini quota: no buckets array")
         }
 
+        // Global resetTime fallback (some responses put it at root level)
+        let globalResetTime = json["resetTime"] as? String
+            ?? json["reset_time"] as? String
+            ?? json["quotaResetTime"] as? String
+
         return buckets.compactMap { b in
             guard let modelId = b["modelId"] as? String else { return nil }
             let fraction = (b["remainingFraction"] as? NSNumber)?.doubleValue ?? 1.0
+            // Google API may use different key names for reset time
             let resetTime = b["resetTime"] as? String
+                ?? b["reset_time"] as? String
+                ?? b["resetAt"] as? String
+                ?? b["quotaResetTime"] as? String
+                ?? globalResetTime
             return QuotaBucket(modelId: modelId, remainingFraction: fraction, resetTime: resetTime)
         }
     }

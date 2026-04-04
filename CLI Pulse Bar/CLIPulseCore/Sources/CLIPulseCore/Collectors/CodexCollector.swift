@@ -220,12 +220,30 @@ public struct CodexCollector: ProviderCollector, Sendable {
 
     private static func parseWindow(_ dict: [String: Any]?) -> RateWindow? {
         guard let d = dict else { return nil }
-        let usedPercent = d["used_percent"] as? Int ?? 0
+        // API may return used_percent as Int or Double
+        let usedPercent: Int
+        if let intVal = d["used_percent"] as? Int {
+            usedPercent = intVal
+        } else if let numVal = (d["used_percent"] as? NSNumber)?.doubleValue {
+            usedPercent = Int(numVal.rounded())
+        } else {
+            usedPercent = 0
+        }
         var resetDate: Date? = nil
         if let resetAt = (d["reset_at"] as? NSNumber)?.doubleValue {
             resetDate = Date(timeIntervalSince1970: resetAt)
+        } else if let resetAtStr = d["reset_at"] as? String {
+            // ISO 8601 string format
+            resetDate = ISO8601DateFormatter().date(from: resetAtStr)
         }
-        let windowSecs = d["limit_window_seconds"] as? Int ?? 0
+        let windowSecs: Int
+        if let intSecs = d["limit_window_seconds"] as? Int {
+            windowSecs = intSecs
+        } else if let numSecs = (d["limit_window_seconds"] as? NSNumber)?.intValue {
+            windowSecs = numSecs
+        } else {
+            windowSecs = 0
+        }
         return RateWindow(usedPercent: usedPercent, resetAt: resetDate, limitWindowSeconds: windowSecs)
     }
 
@@ -237,7 +255,7 @@ public struct CodexCollector: ProviderCollector, Sendable {
 
         // Rate limit windows use percentage: quota=100, remaining=100-used
         if let pw = usage.primaryWindow {
-            let name = pw.limitWindowSeconds <= 18000 ? "5h Window" : "Window"
+            let name = "Session"
             tiers.append(TierDTO(
                 name: name,
                 quota: 100,
@@ -247,7 +265,7 @@ public struct CodexCollector: ProviderCollector, Sendable {
         }
 
         if let sw = usage.secondaryWindow {
-            let name = sw.limitWindowSeconds >= 604800 ? "Weekly" : "Window 2"
+            let name = "Weekly"
             tiers.append(TierDTO(
                 name: name,
                 quota: 100,
