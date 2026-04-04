@@ -124,6 +124,7 @@ public final class SubscriptionManager: ObservableObject {
     public func updateCurrentEntitlements() async {
         var activeSubs: [StoreKit.Transaction] = []
         var highestTier: SubscriptionTier = .free
+        var highestTransaction: StoreKit.Transaction?
 
         for await result in StoreKit.Transaction.currentEntitlements {
             guard let transaction = try? checkVerified(result) else { continue }
@@ -131,21 +132,45 @@ public final class SubscriptionManager: ObservableObject {
             if transaction.productType == .autoRenewable {
                 activeSubs.append(transaction)
 
+                let txTier: SubscriptionTier
                 if transaction.productID == Self.teamMonthlyID ||
                    transaction.productID == Self.teamYearlyID {
-                    highestTier = .team
+                    txTier = .team
                 } else if transaction.productID == Self.proMonthlyID ||
                           transaction.productID == Self.proYearlyID {
-                    if highestTier != .team {
-                        highestTier = .pro
-                    }
+                    txTier = .pro
+                } else {
+                    txTier = .free
+                }
+
+                if txTier.tierRank > highestTier.tierRank {
+                    highestTier = txTier
+                    highestTransaction = transaction
                 }
             }
         }
 
         purchasedSubscriptions = activeSubs
 
-        // Check server-side tier override (admin grant via profiles.tier)
+        // Server-side receipt validation: sync the highest active transaction
+        if let tx = highestTransaction, let api = apiClient {
+            let jwsData = tx.jsonRepresentation
+            let jwsString = String(data: jwsData, encoding: .utf8) ?? ""
+            if !jwsString.isEmpty {
+                let result = await api.validateReceipt(
+                    transactionJWS: jwsString,
+                    productId: tx.productID
+                )
+                if result.verified {
+                    // Server tier is authoritative
+                    let serverTier = SubscriptionTier(rawValue: result.tier) ?? .free
+                    currentTier = serverTier
+                    return
+                }
+            }
+        }
+
+        // Fallback: check server-side tier override (admin grant via profiles.tier)
         let serverTier = await fetchServerTier()
         if serverTier.tierRank > highestTier.tierRank {
             highestTier = serverTier

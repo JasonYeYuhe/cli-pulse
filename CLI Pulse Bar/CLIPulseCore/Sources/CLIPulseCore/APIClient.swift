@@ -287,6 +287,17 @@ public actor APIClient {
         let tier: String?
     }
 
+    private struct ValidateReceiptRequest: Encodable {
+        let transactionJWS: String
+        let productId: String
+    }
+
+    private struct ValidateReceiptResponse: Decodable {
+        let verified: Bool
+        let tier: String?
+        let error: String?
+    }
+
     private func decode<Response: Decodable>(_ type: Response.Type, from data: Data) throws -> Response {
         do {
             return try decoder.decode(type, from: data)
@@ -746,6 +757,32 @@ public actor APIClient {
             return response.tier ?? "free"
         } catch {
             return "free"
+        }
+    }
+
+    // MARK: - Receipt Validation
+
+    /// Validate a StoreKit 2 JWS signed transaction server-side.
+    /// Returns the verified tier from the server, or nil on failure.
+    public func validateReceipt(transactionJWS: String, productId: String) async -> (verified: Bool, tier: String) {
+        do {
+            guard let url = URL(string: "\(supabaseURL)/functions/v1/validate-receipt") else {
+                return (false, "free")
+            }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            applyHeaders(&request)
+            request.httpBody = try encoder.encode(
+                ValidateReceiptRequest(transactionJWS: transactionJWS, productId: productId)
+            )
+            let (data, response) = try await dataWithRetry(for: request)
+            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                return (false, "free")
+            }
+            let result = try decode(ValidateReceiptResponse.self, from: data)
+            return (result.verified, result.tier ?? "free")
+        } catch {
+            return (false, "free")
         }
     }
 
