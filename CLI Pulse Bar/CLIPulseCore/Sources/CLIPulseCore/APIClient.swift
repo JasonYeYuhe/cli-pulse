@@ -676,7 +676,7 @@ public actor APIClient {
                 }
             }
         }
-        throw lastError!
+        throw lastError ?? APIError.invalidResponse
     }
 
     private func applyHeaders(_ request: inout URLRequest) {
