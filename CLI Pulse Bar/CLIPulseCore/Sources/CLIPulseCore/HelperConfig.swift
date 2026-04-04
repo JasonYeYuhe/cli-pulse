@@ -93,6 +93,7 @@ public struct HelperConfig: Codable, Sendable {
     /// Attempt to import config from the legacy Python helper JSON file.
     /// Path: ~/.cli-pulse-helper.json
     public static func importFromLegacy() -> HelperConfig? {
+        #if os(macOS)
         let home = NSHomeDirectory()
         let path = (home as NSString).appendingPathComponent(".cli-pulse-helper.json")
         guard let data = FileManager.default.contents(atPath: path),
@@ -109,5 +110,8 @@ public struct HelperConfig: Codable, Sendable {
             helperVersion: json["helper_version"] as? String ?? "1.0.0",
             helperSecret: helperSecret
         )
+        #else
+        return nil
+        #endif
     }
 }
