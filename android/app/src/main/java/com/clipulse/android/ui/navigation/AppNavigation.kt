@@ -22,6 +22,7 @@ import com.clipulse.android.ui.overview.OverviewScreen
 import com.clipulse.android.ui.providers.ProviderDetailRoute
 import com.clipulse.android.ui.providers.ProvidersScreen
 import com.clipulse.android.ui.sessions.SessionsScreen
+import com.clipulse.android.ui.devices.DevicesScreen
 import com.clipulse.android.ui.settings.SettingsScreen
 import com.clipulse.android.ui.settings.SubscriptionScreen
 
@@ -102,10 +103,14 @@ fun AppNavigation() {
                 SettingsScreen(
                     onSignOut = { isLoggedIn = false },
                     onManageSubscription = { navController.navigate("subscription") },
+                    onViewDevices = { navController.navigate("devices") },
                 )
             }
             composable("subscription") {
                 SubscriptionScreen(onBack = { navController.popBackStack() })
+            }
+            composable("devices") {
+                DevicesScreen()
             }
         }
     }
