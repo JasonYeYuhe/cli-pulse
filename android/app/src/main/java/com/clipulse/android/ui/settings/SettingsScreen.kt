@@ -17,6 +17,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onSignOut: () -> Unit,
     onManageSubscription: () -> Unit = {},
+    onViewDevices: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -43,8 +44,13 @@ fun SettingsScreen(
                 Spacer(Modifier.height(8.dp))
                 Text("Tier: ${state.tier}", style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = onManageSubscription) {
-                    Text("Manage Subscription")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onManageSubscription, modifier = Modifier.weight(1f)) {
+                        Text("Subscription")
+                    }
+                    OutlinedButton(onClick = onViewDevices, modifier = Modifier.weight(1f)) {
+                        Text("Devices")
+                    }
                 }
             }
         }

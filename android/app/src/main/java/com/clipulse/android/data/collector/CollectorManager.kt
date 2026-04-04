@@ -19,6 +19,10 @@ class CollectorManager(
         ProviderKind.MiniMax to MiniMaxCollector(),
         ProviderKind.Copilot to CopilotCollector(),
         ProviderKind.Alibaba to AlibabaCollector(),
+        ProviderKind.VolcanoEngine to VolcanoEngineCollector(),
+        ProviderKind.Kimi to KimiCollector(),
+        ProviderKind.Claude to ClaudeCollector(),
+        ProviderKind.Gemini to GeminiCollector(),
     )
 
     fun availableCollectors(): List<ProviderKind> =
