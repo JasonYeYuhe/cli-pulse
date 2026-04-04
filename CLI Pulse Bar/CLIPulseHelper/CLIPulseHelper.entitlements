@@ -8,12 +8,5 @@
 	</array>
 	<key>com.apple.security.network.client</key>
 	<true/>
-	<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
-	<array>
-		<string>/.codex/</string>
-		<string>/.gemini/</string>
-		<string>/.claude/</string>
-		<string>/.config/clipulse/</string>
-	</array>
 </dict>
 </plist>

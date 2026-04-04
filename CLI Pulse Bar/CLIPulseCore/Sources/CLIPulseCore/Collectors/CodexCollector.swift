@@ -1,6 +1,5 @@
 #if os(macOS)
 import Foundation
-import os
 
 /// Fetches real quota/rate-limit data from Codex (OpenAI) via the local OAuth
 /// credentials stored in `~/.codex/auth.json`.
@@ -55,25 +54,19 @@ public struct CodexCollector: ProviderCollector, Sendable {
         }
     }
 
-    /// Resolve the real user home directory, bypassing App Sandbox container path.
-    private static func realUserHome() -> String {
-        // getpwuid returns the real home even inside a sandbox
-        if let pw = getpwuid(getuid()), let home = pw.pointee.pw_dir {
-            return String(cString: home)
-        }
-        return NSHomeDirectory()
-    }
-
     private func codexHomePath() -> String {
         if let env = ProcessInfo.processInfo.environment["CODEX_HOME"], !env.isEmpty {
             return env
         }
-        return (Self.realUserHome() as NSString).appendingPathComponent(".codex")
+        return (realUserHome() as NSString).appendingPathComponent(".codex")
     }
 
     func readAuthFile() -> CodexAuth? {
         let path = (codexHomePath() as NSString).appendingPathComponent("auth.json")
-        guard let data = FileManager.default.contents(atPath: path),
+
+        // Try sandbox-aware read first, then bridged credentials
+        guard let data = SandboxFileAccess.read(path: path)
+                ?? readFromBridgedCredentials(),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return nil
         }
@@ -95,6 +88,25 @@ public struct CodexCollector: ProviderCollector, Sendable {
         }
 
         return auth
+    }
+
+    /// Read Codex tokens from bridged credentials (app group) as fallback
+    private func readFromBridgedCredentials() -> Data? {
+        guard let creds = CredentialBridge.readBridgedCredentials(provider: "Codex"),
+              let accessToken = creds["access_token"] as? String, !accessToken.isEmpty else {
+            return nil
+        }
+        // Reconstruct the auth.json format so the existing parser works
+        let reconstructed: [String: Any] = [
+            "tokens": [
+                "access_token": accessToken,
+                "refresh_token": creds["refresh_token"] as? String ?? "",
+                "id_token": creds["id_token"] as? String ?? "",
+                "account_id": creds["account_id"] as? String ?? "",
+            ],
+            "last_refresh": creds["last_refresh"] as? String ?? "",
+        ]
+        return try? JSONSerialization.data(withJSONObject: reconstructed)
     }
 
     private func writeAuthFile(_ auth: CodexAuth) {
@@ -176,12 +188,6 @@ public struct CodexCollector: ProviderCollector, Sendable {
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             throw CollectorError.httpError(status: status, provider: "Codex")
-        }
-
-        // Debug: log raw API response to diagnose parsing issues
-        let debugLogger = Logger(subsystem: "yyh.CLI-Pulse", category: "CodexCollector")
-        if let rawJSON = String(data: data, encoding: .utf8) {
-            debugLogger.debug("Codex /wham/usage raw response: \(rawJSON, privacy: .public)")
         }
 
         return try CodexCollector.parseUsage(data)
