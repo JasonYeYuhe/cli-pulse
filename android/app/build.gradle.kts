@@ -28,6 +28,8 @@ android {
             "\"${localProps.getProperty("SUPABASE_URL", "https://gkjwsxotmwrgqsvfijzs.supabase.co")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY",
             "\"${localProps.getProperty("SUPABASE_ANON_KEY", System.getenv("SUPABASE_ANON_KEY") ?: "")}\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID",
+            "\"${localProps.getProperty("GOOGLE_WEB_CLIENT_ID", System.getenv("GOOGLE_WEB_CLIENT_ID") ?: "")}\"")
     }
 
     buildTypes {
@@ -110,6 +112,11 @@ dependencies {
 
     // Coroutines
     implementation(libs.coroutines.android)
+
+    // Room
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 
     // Image loading
     implementation(libs.coil.compose)
