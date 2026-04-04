@@ -187,13 +187,18 @@ final class HelperDaemon {
             }
         }
 
+        logger.info("Running \(CollectorRegistry.collectors.count) registered collectors")
         for collector in CollectorRegistry.collectors {
             let providerName = collector.kind.rawValue
             // Run collector for any enabled provider (not just active sessions)
             // so quota data is available even when no session is running.
 
             let config = configs.first(where: { $0.kind == collector.kind }) ?? ProviderConfig(kind: collector.kind)
-            guard collector.isAvailable(config: config) else { continue }
+            let available = collector.isAvailable(config: config)
+            if !available {
+                logger.debug("Skipping \(providerName): isAvailable=false")
+                continue
+            }
 
             do {
                 let collectorResult = try await collector.collect(config: config)
