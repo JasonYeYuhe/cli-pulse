@@ -31,6 +31,27 @@ public enum ProviderKind: String, Codable, CaseIterable, Identifiable, Sendable 
 
     public var id: String { rawValue }
 
+    /// Default estimated cost per 1K tokens for local process-based usage estimation.
+    /// Override via ProviderConfig.costRatePerKToken for user-customizable rates.
+    public var defaultCostRate: Double {
+        switch self {
+        case .claude: return 0.003
+        case .codex: return 0.002
+        case .gemini: return 0.001
+        case .cursor: return 0.002
+        case .copilot: return 0.001
+        case .ollama: return 0
+        case .openRouter: return 0.002
+        case .kilo: return 0.001
+        case .kimi, .kimiK2: return 0.001
+        case .kiro: return 0.002
+        case .vertexAI: return 0.003
+        case .perplexity: return 0.002
+        case .volcanoEngine: return 0.001
+        default: return 0.001
+        }
+    }
+
     public var iconName: String {
         switch self {
         case .codex: return "terminal"
