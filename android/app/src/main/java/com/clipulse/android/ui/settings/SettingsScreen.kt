@@ -57,7 +57,7 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // Settings from server
+        // Settings from server (editable)
         val settings = state.settings
         if (settings != null) {
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -69,15 +69,11 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text("Enabled")
-                        Text(if (settings.notificationsEnabled) "Yes" else "No")
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text("Policy")
-                        Text(settings.pushPolicy)
+                        Text("Enabled", modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = settings.notificationsEnabled,
+                            onCheckedChange = { viewModel.updateSetting("notifications_enabled", it) },
+                        )
                     }
                 }
             }
@@ -89,11 +85,21 @@ fun SettingsScreen(
                     Text("Thresholds", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
 
-                    SettingRow("Usage Spike", "${settings.usageSpikeThreshold} tokens")
-                    SettingRow("Project Budget", "$${settings.projectBudgetThresholdUsd}")
-                    SettingRow("Long Session", "${settings.sessionTooLongThresholdMinutes} min")
-                    SettingRow("Offline Grace", "${settings.offlineGracePeriodMinutes} min")
-                    SettingRow("Data Retention", "${settings.dataRetentionDays} days")
+                    EditableSettingRow("Usage Spike (tokens)", settings.usageSpikeThreshold) {
+                        viewModel.updateSetting("usage_spike_threshold", it)
+                    }
+                    EditableSettingRow("Project Budget ($)", settings.projectBudgetThresholdUsd.toInt()) {
+                        viewModel.updateSetting("project_budget_threshold_usd", it.toDouble() / 100.0 * 100.0)
+                    }
+                    EditableSettingRow("Long Session (min)", settings.sessionTooLongThresholdMinutes) {
+                        viewModel.updateSetting("session_too_long_threshold_minutes", it)
+                    }
+                    EditableSettingRow("Offline Grace (min)", settings.offlineGracePeriodMinutes) {
+                        viewModel.updateSetting("offline_grace_period_minutes", it)
+                    }
+                    EditableSettingRow("Data Retention (days)", settings.dataRetentionDays) {
+                        viewModel.updateSetting("data_retention_days", maxOf(1, it))
+                    }
                 }
             }
         }
@@ -162,14 +168,35 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingRow(label: String, value: String) {
+private fun EditableSettingRow(label: String, currentValue: Int, onUpdate: (Int) -> Unit) {
+    var editing by remember { mutableStateOf(false) }
+    var textValue by remember(currentValue) { mutableStateOf(currentValue.toString()) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
-        Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        if (editing) {
+            OutlinedTextField(
+                value = textValue,
+                onValueChange = { textValue = it.filter { c -> c.isDigit() } },
+                modifier = Modifier.width(100.dp),
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyMedium,
+            )
+            IconButton(onClick = {
+                editing = false
+                textValue.toIntOrNull()?.let { onUpdate(it) }
+            }) {
+                Icon(Icons.Filled.Check, contentDescription = "Save")
+            }
+        } else {
+            TextButton(onClick = { editing = true }) {
+                Text(currentValue.toString())
+            }
+        }
     }
 }

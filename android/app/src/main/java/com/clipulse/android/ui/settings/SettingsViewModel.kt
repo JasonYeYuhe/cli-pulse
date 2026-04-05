@@ -57,6 +57,19 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateSetting(key: String, value: Any) {
+        viewModelScope.launch {
+            try {
+                val patch = org.json.JSONObject().apply { put(key, value) }
+                supabase.updateSettings(patch)
+                // Reload to reflect server state
+                loadSettings()
+            } catch (_: Exception) {
+                // Silently fail — setting will revert on next load
+            }
+        }
+    }
+
     fun signOut() {
         viewModelScope.launch {
             try {

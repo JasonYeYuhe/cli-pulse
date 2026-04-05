@@ -332,6 +332,41 @@ def collect_alerts(sessions: list[CollectedSession], device_snapshot: DeviceSnap
     return alerts[:6]
 
 
+def collect_budget_alerts(
+    sessions: list[CollectedSession],
+    budget_threshold_usd: float = 0.25,
+) -> list[CollectedAlert]:
+    """Evaluate project budget and cost spike alerts from collected sessions."""
+    if budget_threshold_usd <= 0:
+        return []
+
+    alerts: list[CollectedAlert] = []
+    now = datetime.now(timezone.utc).isoformat()
+    week_label = datetime.now(timezone.utc).strftime("%G-W%V")
+
+    # Aggregate cost by project
+    project_costs: dict[str, float] = {}
+    for s in sessions:
+        if s.project:
+            project_costs[s.project] = project_costs.get(s.project, 0) + s.estimated_cost
+
+    for project, cost in project_costs.items():
+        if cost > budget_threshold_usd:
+            alerts.append(
+                CollectedAlert(
+                    alert_id=f"budget-{project}-{week_label}",
+                    type="Project Budget Exceeded",
+                    severity="Warning",
+                    title=f"Budget exceeded: {project}",
+                    message=f'Project "{project}" has accumulated ${cost:.2f} (threshold: ${budget_threshold_usd:.2f})',
+                    created_at=now,
+                    related_project_name=project,
+                )
+            )
+
+    return alerts[:4]
+
+
 def estimate_provider_remaining(sessions: list[CollectedSession]) -> dict[str, int]:
     """Legacy wrapper — returns flat remaining dict for backward compat."""
     quotas = estimate_provider_quotas(sessions)

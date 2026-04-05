@@ -761,6 +761,13 @@ public actor APIClient {
         }
     }
 
+    /// Evaluate budget alerts server-side. Returns number of new alerts created.
+    public func evaluateBudgetAlerts() async throws -> Int {
+        struct BudgetResult: Decodable { let alerts_created: Int? }
+        let result: BudgetResult = try await rpc("evaluate_budget_alerts")
+        return result.alerts_created ?? 0
+    }
+
     // MARK: - OAuth (Google / GitHub via Supabase)
 
     /// Build the Supabase OAuth authorization URL for a given provider with PKCE.

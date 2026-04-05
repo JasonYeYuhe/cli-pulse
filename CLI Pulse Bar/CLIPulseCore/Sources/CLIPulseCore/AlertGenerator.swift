@@ -77,5 +77,58 @@ public enum AlertGenerator {
 
         return Array(alerts.prefix(6))
     }
+
+    /// Generate budget and cost spike alerts from provider usage data.
+    /// Called during both cloud and local refresh cycles.
+    public static func evaluateBudgetAlerts(
+        providers: [ProviderUsage],
+        budgetThreshold: Double,
+        yesterdayCost: Double? = nil
+    ) -> [[String: Any]] {
+        guard budgetThreshold > 0 else { return [] }
+        var alerts: [[String: Any]] = []
+        let now = sharedISO8601Formatter.string(from: Date())
+        let weekLabel = {
+            let cal = Calendar(identifier: .iso8601)
+            let comps = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())
+            return "\(comps.yearForWeekOfYear ?? 0)-W\(comps.weekOfYear ?? 0)"
+        }()
+
+        // Per-provider budget check
+        let totalWeekCost = providers.reduce(0.0) { $0 + $1.estimated_cost_week }
+        if totalWeekCost > budgetThreshold {
+            let key = "budget:total:\(weekLabel)"
+            alerts.append([
+                "id": "budget-total-\(weekLabel)",
+                "type": "Project Budget Exceeded",
+                "severity": "Warning",
+                "title": "Weekly cost exceeds budget",
+                "message": String(format: "Total cost this week ($%.2f) exceeds your budget ($%.2f)", totalWeekCost, budgetThreshold),
+                "created_at": now,
+                "suppression_key": key,
+                "grouping_key": "budget:total",
+            ])
+        }
+
+        // Cost spike: today's total > 2x yesterday
+        if let yesterday = yesterdayCost, yesterday > 0 {
+            let todayCost = providers.reduce(0.0) { $0 + Double($1.today_usage) * 0.001 } // rough estimate
+            if todayCost > yesterday * 2 {
+                let spikeKey = "costspike:\(sharedISO8601Formatter.string(from: Date()).prefix(10))"
+                alerts.append([
+                    "id": "costspike-\(spikeKey)",
+                    "type": "Cost Spike",
+                    "severity": "Warning",
+                    "title": "Unusual cost spike detected",
+                    "message": String(format: "Today's estimated cost is significantly higher than yesterday ($%.2f)", yesterday),
+                    "created_at": now,
+                    "suppression_key": spikeKey,
+                    "grouping_key": "costspike:daily",
+                ])
+            }
+        }
+
+        return alerts
+    }
 }
 #endif

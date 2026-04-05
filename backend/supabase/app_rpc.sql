@@ -211,3 +211,110 @@ begin
   );
 end;
 $$ language plpgsql security definer;
+
+-- evaluate_budget_alerts: check project costs against budget thresholds
+-- Creates alerts for projects exceeding budget, with suppression to prevent spam.
+create or replace function public.evaluate_budget_alerts()
+returns jsonb as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_threshold numeric;
+  v_cooldown integer;
+  v_week_start date := current_date - interval '7 days';
+  v_project record;
+  v_alert_count integer := 0;
+  v_suppression_key text;
+  v_week_label text := to_char(current_date, 'IYYY-IW');
+begin
+  if v_user_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  -- Load user thresholds
+  select us.project_budget_threshold_usd, us.alert_cooldown_minutes
+  into v_threshold, v_cooldown
+  from public.user_settings us
+  where us.user_id = v_user_id;
+
+  if v_threshold is null or v_threshold <= 0 then
+    return jsonb_build_object('alerts_created', 0);
+  end if;
+
+  -- Check per-project weekly cost against threshold
+  for v_project in
+    select
+      s.project,
+      coalesce(sum(s.estimated_cost), 0) as week_cost,
+      max(s.provider) as top_provider
+    from public.sessions s
+    where s.user_id = v_user_id
+      and s.last_active_at >= v_week_start
+      and s.project != ''
+    group by s.project
+    having coalesce(sum(s.estimated_cost), 0) > v_threshold
+  loop
+    v_suppression_key := 'budget:' || v_user_id || ':' || v_project.project || ':' || v_week_label;
+
+    -- Skip if already alerted this week (suppression)
+    if not exists (
+      select 1 from public.alerts
+      where user_id = v_user_id
+        and suppression_key = v_suppression_key
+        and created_at > now() - (v_cooldown || ' minutes')::interval
+    ) then
+      insert into public.alerts (id, user_id, type, severity, title, message,
+        related_project_name, related_provider, suppression_key, grouping_key)
+      values (
+        gen_random_uuid()::text, v_user_id,
+        'Project Budget Exceeded', 'Warning',
+        'Budget exceeded: ' || v_project.project,
+        'Project "' || v_project.project || '" has accumulated $' ||
+          round(v_project.week_cost::numeric, 2) || ' this week (threshold: $' ||
+          round(v_threshold::numeric, 2) || ')',
+        v_project.project, v_project.top_provider,
+        v_suppression_key, 'budget:' || v_project.project
+      );
+      v_alert_count := v_alert_count + 1;
+    end if;
+  end loop;
+
+  -- Cost spike detection: today's total cost > 2x yesterday's
+  declare
+    v_today_cost numeric;
+    v_yesterday_cost numeric;
+    v_spike_key text := 'costspike:' || v_user_id || ':' || current_date;
+  begin
+    select coalesce(sum(estimated_cost), 0) into v_today_cost
+    from public.sessions
+    where user_id = v_user_id
+      and last_active_at >= current_date and last_active_at < current_date + interval '1 day';
+
+    select coalesce(sum(estimated_cost), 0) into v_yesterday_cost
+    from public.sessions
+    where user_id = v_user_id
+      and last_active_at >= current_date - interval '1 day'
+      and last_active_at < current_date;
+
+    if v_yesterday_cost > 0 and v_today_cost > v_yesterday_cost * 2 then
+      if not exists (
+        select 1 from public.alerts
+        where user_id = v_user_id and suppression_key = v_spike_key
+      ) then
+        insert into public.alerts (id, user_id, type, severity, title, message,
+          suppression_key, grouping_key)
+        values (
+          gen_random_uuid()::text, v_user_id,
+          'Cost Spike', 'Warning',
+          'Unusual cost spike detected',
+          'Today''s cost ($' || round(v_today_cost::numeric, 2) ||
+            ') is more than 2x yesterday ($' || round(v_yesterday_cost::numeric, 2) || ')',
+          v_spike_key, 'costspike:daily'
+        );
+        v_alert_count := v_alert_count + 1;
+      end if;
+    end if;
+  end;
+
+  return jsonb_build_object('alerts_created', v_alert_count);
+end;
+$$ language plpgsql security definer;

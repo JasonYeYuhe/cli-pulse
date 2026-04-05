@@ -142,6 +142,11 @@ internal final class DataRefreshManager {
             }
             previousAlertIDs = Set(alertData.map(\.id))
 
+            // Evaluate budget alerts server-side (non-blocking, best-effort)
+            Task {
+                _ = try? await api.evaluateBudgetAlerts()
+            }
+
             callbacks.applyPayload(
                 RefreshPayload(
                     dashboard: dashboardData,

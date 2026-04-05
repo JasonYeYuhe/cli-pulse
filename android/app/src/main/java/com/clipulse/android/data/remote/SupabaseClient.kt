@@ -314,6 +314,11 @@ class SupabaseClient(
         )
     }
 
+    suspend fun updateSettings(patch: JSONObject): Unit = withContext(Dispatchers.IO) {
+        val userId = enc(tokenStore.userId ?: return@withContext)
+        restPatch("/rest/v1/user_settings?user_id=eq.$userId", patch)
+    }
+
     // ── Server Tier ──────────────────────────────────────
 
     suspend fun serverTier(): String = withContext(Dispatchers.IO) {
