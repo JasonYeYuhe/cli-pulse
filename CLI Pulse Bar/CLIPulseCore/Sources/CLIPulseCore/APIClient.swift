@@ -690,6 +690,42 @@ public actor APIClient {
         )
     }
 
+    /// Update user settings on the server.
+    public func updateSettings(_ patch: SettingsPatch) async throws {
+        guard let uid = userId, Self.isValidUUID(uid) else { throw APIError.invalidResponse }
+        let safeUid = Self.sanitizeParam(uid)
+        _ = try await restPatch("/rest/v1/user_settings?user_id=eq.\(safeUid)", body: patch)
+    }
+
+    /// Encodable patch for user settings — only include fields you want to change.
+    public struct SettingsPatch: Encodable {
+        public var notifications_enabled: Bool?
+        public var push_policy: String?
+        public var usage_spike_threshold: Int?
+        public var project_budget_threshold_usd: Double?
+        public var session_too_long_threshold_minutes: Int?
+        public var offline_grace_period_minutes: Int?
+        public var data_retention_days: Int?
+
+        public init(
+            notifications_enabled: Bool? = nil,
+            push_policy: String? = nil,
+            usage_spike_threshold: Int? = nil,
+            project_budget_threshold_usd: Double? = nil,
+            session_too_long_threshold_minutes: Int? = nil,
+            offline_grace_period_minutes: Int? = nil,
+            data_retention_days: Int? = nil
+        ) {
+            self.notifications_enabled = notifications_enabled
+            self.push_policy = push_policy
+            self.usage_spike_threshold = usage_spike_threshold
+            self.project_budget_threshold_usd = project_budget_threshold_usd
+            self.session_too_long_threshold_minutes = session_too_long_threshold_minutes
+            self.offline_grace_period_minutes = offline_grace_period_minutes
+            self.data_retention_days = data_retention_days
+        }
+    }
+
     // MARK: - Pairing
 
     public func pairingCode() async throws -> PairingInfo {

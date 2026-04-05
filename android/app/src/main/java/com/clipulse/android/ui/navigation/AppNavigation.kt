@@ -25,6 +25,7 @@ import com.clipulse.android.ui.sessions.SessionsScreen
 import com.clipulse.android.ui.devices.DevicesScreen
 import com.clipulse.android.ui.settings.SettingsScreen
 import com.clipulse.android.ui.settings.SubscriptionScreen
+import com.clipulse.android.ui.team.TeamScreen
 
 enum class Screen(val route: String, val label: String, val icon: ImageVector) {
     Overview("overview", "Overview", Icons.Default.Dashboard),
@@ -104,6 +105,7 @@ fun AppNavigation() {
                     onSignOut = { isLoggedIn = false },
                     onManageSubscription = { navController.navigate("subscription") },
                     onViewDevices = { navController.navigate("devices") },
+                    onViewTeams = { navController.navigate("teams") },
                 )
             }
             composable("subscription") {
@@ -111,6 +113,9 @@ fun AppNavigation() {
             }
             composable("devices") {
                 DevicesScreen()
+            }
+            composable("teams") {
+                TeamScreen()
             }
         }
     }

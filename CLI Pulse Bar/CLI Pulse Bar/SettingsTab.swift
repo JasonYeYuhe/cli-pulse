@@ -149,6 +149,12 @@ struct SettingsTab: View {
             }
 
             Divider()
+
+            // Team management (Pro/Team subscription)
+            TeamView()
+                .environmentObject(state)
+
+            Divider()
             dangerZone
         }
     }

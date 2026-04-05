@@ -19,6 +19,7 @@ struct OverviewTab: View {
                         }
                     }
                     Spacer()
+                    exportMenu
                     serverStatus
                     refreshButton
                 }
@@ -67,6 +68,46 @@ struct OverviewTab: View {
                 .font(.system(size: 9))
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private var exportMenu: some View {
+        Menu {
+            Button {
+                if let url = ExportService.exportCostReportCSV(
+                    dashboard: state.dashboard,
+                    providers: state.providers,
+                    sessions: state.sessions
+                ) {
+                    #if os(macOS)
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                    #endif
+                }
+            } label: {
+                Label("Export Cost Report", systemImage: "doc.text")
+            }
+            Button {
+                if let url = ExportService.exportSessionsCSV(sessions: state.sessions) {
+                    #if os(macOS)
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                    #endif
+                }
+            } label: {
+                Label("Export Sessions", systemImage: "list.bullet")
+            }
+            Button {
+                if let url = ExportService.exportProviderSummaryCSV(providers: state.providers) {
+                    #if os(macOS)
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                    #endif
+                }
+            } label: {
+                Label("Export Providers", systemImage: "chart.bar")
+            }
+        } label: {
+            Image(systemName: "square.and.arrow.up")
+                .font(.system(size: 10))
+        }
+        .menuStyle(.borderlessButton)
     }
 
     private var refreshButton: some View {
