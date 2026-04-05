@@ -124,7 +124,8 @@ public final class SubscriptionManager: ObservableObject {
     public func updateCurrentEntitlements() async {
         var activeSubs: [StoreKit.Transaction] = []
         var highestTier: SubscriptionTier = .free
-        var highestTransaction: StoreKit.Transaction?
+        var highestJWS: String?
+        var highestProductID: String?
 
         for await result in StoreKit.Transaction.currentEntitlements {
             guard let transaction = try? checkVerified(result) else { continue }
@@ -145,28 +146,25 @@ public final class SubscriptionManager: ObservableObject {
 
                 if txTier.tierRank > highestTier.tierRank {
                     highestTier = txTier
-                    highestTransaction = transaction
+                    highestJWS = result.jwsRepresentation
+                    highestProductID = transaction.productID
                 }
             }
         }
 
         purchasedSubscriptions = activeSubs
 
-        // Server-side receipt validation: sync the highest active transaction
-        if let tx = highestTransaction, let api = apiClient {
-            let jwsData = tx.jsonRepresentation
-            let jwsString = String(data: jwsData, encoding: .utf8) ?? ""
-            if !jwsString.isEmpty {
-                let result = await api.validateReceipt(
-                    transactionJWS: jwsString,
-                    productId: tx.productID
-                )
-                if result.verified {
-                    // Server tier is authoritative
-                    let serverTier = SubscriptionTier(rawValue: result.tier) ?? .free
-                    currentTier = serverTier
-                    return
-                }
+        // Server-side receipt validation: send the signed JWS (not raw JSON)
+        if let jwsString = highestJWS, !jwsString.isEmpty,
+           let productID = highestProductID, let api = apiClient {
+            let result = await api.validateReceipt(
+                transactionJWS: jwsString,
+                productId: productID
+            )
+            if result.verified {
+                let serverTier = SubscriptionTier(rawValue: result.tier) ?? .free
+                currentTier = serverTier
+                return
             }
         }
 

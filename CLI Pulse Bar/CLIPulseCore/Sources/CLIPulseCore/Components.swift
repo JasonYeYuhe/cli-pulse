@@ -436,13 +436,15 @@ public enum CostFormatter {
 // MARK: - Relative Time
 
 public enum RelativeTime {
-    private static let formatterWithFractional: ISO8601DateFormatter = {
+    // Dedicated formatters — must NOT use sharedISO8601Formatter because
+    // mutating formatOptions on a shared instance causes nondeterministic parsing.
+    nonisolated(unsafe) private static let formatterWithFractional: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
     }()
 
-    private static let formatterBasic: ISO8601DateFormatter = {
+    nonisolated(unsafe) private static let formatterBasic: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime]
         return f

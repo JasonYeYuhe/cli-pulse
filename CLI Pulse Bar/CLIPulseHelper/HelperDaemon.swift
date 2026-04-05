@@ -240,7 +240,7 @@ final class HelperDaemon {
     private func writeCollectorResultsToAppGroup(_ providerTiers: [String: Any]) {
         // Wrap with timestamp so main app can reject stale data
         let payload: [String: Any] = [
-            "timestamp": ISO8601DateFormatter().string(from: Date()),
+            "timestamp": sharedISO8601Formatter.string(from: Date()),
             "providers": providerTiers,
         ]
         if let data = try? JSONSerialization.data(withJSONObject: payload) {

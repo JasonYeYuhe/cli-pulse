@@ -3,7 +3,8 @@ package com.clipulse.android.ui.overview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.clipulse.android.data.model.DashboardSummary
-import com.clipulse.android.data.remote.SupabaseClient
+import com.clipulse.android.data.remote.ApiError
+import com.clipulse.android.data.repository.DashboardRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,7 @@ data class OverviewUiState(
 
 @HiltViewModel
 class OverviewViewModel @Inject constructor(
-    private val supabase: SupabaseClient,
+    private val repository: DashboardRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(OverviewUiState())
@@ -34,8 +35,8 @@ class OverviewViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
-                val dashboard = supabase.dashboard()
-                _state.value = _state.value.copy(isLoading = false, dashboard = dashboard)
+                repository.refreshDashboard()
+                _state.value = _state.value.copy(isLoading = false, dashboard = repository.dashboard.value)
             } catch (e: Exception) {
                 _state.value = _state.value.copy(isLoading = false, error = e.message)
             }
@@ -45,10 +46,13 @@ class OverviewViewModel @Inject constructor(
     private fun startAutoRefresh() {
         viewModelScope.launch {
             while (true) {
-                delay(30_000)
+                delay(60_000) // Match iOS 60s minimum
                 try {
-                    val dashboard = supabase.dashboard()
-                    _state.value = _state.value.copy(dashboard = dashboard, error = null)
+                    repository.refreshDashboard()
+                    _state.value = _state.value.copy(dashboard = repository.dashboard.value, error = null)
+                } catch (e: ApiError.TokenExpired) {
+                    _state.value = _state.value.copy(error = "Session expired. Please sign in again.")
+                    break // Stop auto-refresh on auth failure
                 } catch (_: Exception) { }
             }
         }

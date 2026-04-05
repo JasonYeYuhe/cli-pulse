@@ -15,12 +15,17 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 class SupabaseClient(
     private val tokenStore: TokenStore,
 ) {
     private val supabaseUrl: String = BuildConfig.SUPABASE_URL
     private val supabaseAnonKey: String = BuildConfig.SUPABASE_ANON_KEY
     private val jsonMedia = "application/json; charset=utf-8".toMediaType()
+
+    private val refreshMutex = Mutex()
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -91,15 +96,21 @@ class SupabaseClient(
         )
     }
 
-    suspend fun refreshAccessToken(): Pair<String, String> = withContext(Dispatchers.IO) {
-        val rt = tokenStore.refreshToken ?: throw ApiError.TokenExpired
-        val body = JSONObject().apply { put("refresh_token", rt) }
-        val json = post("$supabaseUrl/auth/v1/token?grant_type=refresh_token", body, auth = false)
-        val newAccess = json.optString("access_token")
-        val newRefresh = json.optString("refresh_token", rt)
-        tokenStore.accessToken = newAccess
-        tokenStore.refreshToken = newRefresh
-        newAccess to newRefresh
+    suspend fun refreshAccessToken(staleToken: String? = null): Pair<String, String> = refreshMutex.withLock {
+        withContext(Dispatchers.IO) {
+            // If another coroutine already refreshed while we waited for the lock, skip
+            if (staleToken != null && tokenStore.accessToken != staleToken) {
+                return@withContext (tokenStore.accessToken ?: "") to (tokenStore.refreshToken ?: "")
+            }
+            val rt = tokenStore.refreshToken ?: throw ApiError.TokenExpired
+            val body = JSONObject().apply { put("refresh_token", rt) }
+            val json = post("$supabaseUrl/auth/v1/token?grant_type=refresh_token", body, auth = false)
+            val newAccess = json.optString("access_token")
+            val newRefresh = json.optString("refresh_token", rt)
+            tokenStore.accessToken = newAccess
+            tokenStore.refreshToken = newRefresh
+            newAccess to newRefresh
+        }
     }
 
     suspend fun signOut(): Unit = withContext(Dispatchers.IO) {
@@ -316,7 +327,7 @@ class SupabaseClient(
 
     // ── Receipt Validation ─────────────────────────────────
 
-    data class ReceiptResult(val verified: Boolean, val tier: String)
+    data class ReceiptResult(val verified: Boolean, val tier: String, val isNetworkError: Boolean = false)
 
     suspend fun validateReceipt(purchaseToken: String, productId: String): ReceiptResult =
         withContext(Dispatchers.IO) {
@@ -340,6 +351,10 @@ class SupabaseClient(
                     .build()
                 val resp = client.newCall(req).execute()
                 resp.use { r ->
+                    if (r.code >= 500) {
+                        // Server error (transient) — treat like network error for retry
+                        return@withContext ReceiptResult(false, "free", isNetworkError = true)
+                    }
                     if (!r.isSuccessful) return@withContext ReceiptResult(false, "free")
                     val json = JSONObject(r.body?.string() ?: "{}")
                     ReceiptResult(
@@ -347,6 +362,9 @@ class SupabaseClient(
                         tier = json.optString("tier", "free"),
                     )
                 }
+            } catch (_: java.io.IOException) {
+                // Network error — distinguishable from server rejection
+                ReceiptResult(false, "free", isNetworkError = true)
             } catch (_: Exception) {
                 ReceiptResult(false, "free")
             }
@@ -415,7 +433,13 @@ class SupabaseClient(
                     }
                 }
                 .build()
-            client.newCall(req).execute().close()
+            val resp = client.newCall(req).execute()
+            resp.use { r ->
+                if (!r.isSuccessful) {
+                    // Log but don't throw — quota sync is non-critical
+                    android.util.Log.w("SupabaseClient", "syncProviderQuotas failed: ${r.code}")
+                }
+            }
         }
 
     data class ProviderQuotaPayload(
@@ -452,38 +476,47 @@ class SupabaseClient(
 
     // ── HTTP Helpers (all suspend, no runBlocking) ─────
 
+    // NOTE: All callers must be on Dispatchers.IO (public methods enforce this via withContext)
     private suspend fun get(url: String, retried: Boolean = false): JSONObject {
+        val currentToken = tokenStore.accessToken
         val req = Request.Builder().url(url).get()
             .addHeader("apikey", supabaseAnonKey)
             .apply {
-                tokenStore.accessToken?.let {
+                currentToken?.let {
                     addHeader("Authorization", "Bearer $it")
                 }
             }
             .build()
         val resp = client.newCall(req).execute()
+        if (resp.code == 401 && !retried) {
+            resp.close() // Free connection before blocking on refresh
+            refreshAccessToken(staleToken = currentToken)
+            return get(url, retried = true)
+        }
         return resp.use { r ->
-            if (r.code == 401 && !retried) {
-                refreshAccessToken()
-                return get(url, retried = true)
-            }
             if (!r.isSuccessful) throw ApiError.Http(r.code, r.body?.string() ?: "")
             JSONObject(r.body?.string() ?: "{}")
         }
     }
 
-    private fun post(url: String, body: JSONObject, auth: Boolean = true): JSONObject {
+    private suspend fun post(url: String, body: JSONObject, auth: Boolean = true, retried: Boolean = false): JSONObject {
+        val currentToken = if (auth) tokenStore.accessToken else null
         val req = Request.Builder().url(url)
             .post(body.toString().toRequestBody(jsonMedia))
             .addHeader("Content-Type", "application/json")
             .addHeader("apikey", supabaseAnonKey)
             .apply {
-                if (auth) tokenStore.accessToken?.let {
+                if (auth) currentToken?.let {
                     addHeader("Authorization", "Bearer $it")
                 }
             }
             .build()
         val resp = client.newCall(req).execute()
+        if (resp.code == 401 && auth && !retried) {
+            resp.close()
+            refreshAccessToken(staleToken = currentToken)
+            return post(url, body, auth, retried = true)
+        }
         return resp.use { r ->
             if (!r.isSuccessful) throw ApiError.Http(r.code, r.body?.string() ?: "")
             val text = r.body?.string() ?: "{}"
@@ -492,65 +525,71 @@ class SupabaseClient(
     }
 
     private suspend fun restGetArray(path: String, retried: Boolean = false): JSONArray {
+        val currentToken = tokenStore.accessToken
         val req = Request.Builder().url("$supabaseUrl$path").get()
             .addHeader("Content-Type", "application/json")
             .addHeader("apikey", supabaseAnonKey)
             .apply {
-                tokenStore.accessToken?.let {
+                currentToken?.let {
                     addHeader("Authorization", "Bearer $it")
                 }
             }
             .build()
         val resp = client.newCall(req).execute()
+        if (resp.code == 401 && !retried) {
+            resp.close()
+            refreshAccessToken(staleToken = currentToken)
+            return restGetArray(path, retried = true)
+        }
         return resp.use { r ->
-            if (r.code == 401 && !retried) {
-                refreshAccessToken()
-                return restGetArray(path, retried = true)
-            }
             if (!r.isSuccessful) throw ApiError.Http(r.code, r.body?.string() ?: "")
             JSONArray(r.body?.string() ?: "[]")
         }
     }
 
     private suspend fun restPatch(path: String, body: JSONObject, retried: Boolean = false) {
+        val currentToken = tokenStore.accessToken
         val req = Request.Builder().url("$supabaseUrl$path")
             .patch(body.toString().toRequestBody(jsonMedia))
             .addHeader("Content-Type", "application/json")
             .addHeader("apikey", supabaseAnonKey)
             .apply {
-                tokenStore.accessToken?.let {
+                currentToken?.let {
                     addHeader("Authorization", "Bearer $it")
                 }
             }
             .build()
         val resp = client.newCall(req).execute()
+        if (resp.code == 401 && !retried) {
+            resp.close()
+            refreshAccessToken(staleToken = currentToken)
+            restPatch(path, body, retried = true)
+            return
+        }
         resp.use { r ->
-            if (r.code == 401 && !retried) {
-                refreshAccessToken()
-                restPatch(path, body, retried = true)
-                return
-            }
             if (!r.isSuccessful) throw ApiError.Http(r.code, r.body?.string() ?: "")
         }
     }
 
     private suspend fun rpc(function: String, params: JSONObject = JSONObject(), retried: Boolean = false): JSONObject {
+        val currentToken = tokenStore.accessToken
         val req = Request.Builder().url("$supabaseUrl/rest/v1/rpc/$function")
             .post(params.toString().toRequestBody(jsonMedia))
             .addHeader("Content-Type", "application/json")
             .addHeader("apikey", supabaseAnonKey)
             .apply {
-                tokenStore.accessToken?.let {
+                currentToken?.let {
                     addHeader("Authorization", "Bearer $it")
                 }
             }
             .build()
         val resp = client.newCall(req).execute()
+        if (resp.code == 401 && !retried) {
+            resp.close()
+            refreshAccessToken(staleToken = currentToken)
+            return rpc(function, params, retried = true)
+        }
         return resp.use { r ->
-            if (r.code == 401 && !retried) {
-                refreshAccessToken()
-                return rpc(function, params, retried = true)
-            }
             if (!r.isSuccessful) throw ApiError.Http(r.code, r.body?.string() ?: "")
             val text = r.body?.string() ?: "{}"
             if (text.isBlank() || text == "null") JSONObject()
@@ -561,22 +600,24 @@ class SupabaseClient(
     }
 
     private suspend fun rpcArray(function: String, params: JSONObject = JSONObject(), retried: Boolean = false): JSONArray {
+        val currentToken = tokenStore.accessToken
         val req = Request.Builder().url("$supabaseUrl/rest/v1/rpc/$function")
             .post(params.toString().toRequestBody(jsonMedia))
             .addHeader("Content-Type", "application/json")
             .addHeader("apikey", supabaseAnonKey)
             .apply {
-                tokenStore.accessToken?.let {
+                currentToken?.let {
                     addHeader("Authorization", "Bearer $it")
                 }
             }
             .build()
         val resp = client.newCall(req).execute()
+        if (resp.code == 401 && !retried) {
+            resp.close()
+            refreshAccessToken(staleToken = currentToken)
+            return rpcArray(function, params, retried = true)
+        }
         return resp.use { r ->
-            if (r.code == 401 && !retried) {
-                refreshAccessToken()
-                return rpcArray(function, params, retried = true)
-            }
             if (!r.isSuccessful) throw ApiError.Http(r.code, r.body?.string() ?: "")
             JSONArray(r.body?.string() ?: "[]")
         }
@@ -588,9 +629,7 @@ class SupabaseClient(
         val user = json.optJSONObject("user") ?: JSONObject()
         val userId = user.optString("id")
 
-        tokenStore.accessToken = token
-        tokenStore.refreshToken = refresh
-        tokenStore.userId = userId
+        tokenStore.updateAuthState(access = token, refresh = refresh, user = userId)
 
         val profile = try {
             restGetArray("/rest/v1/profiles?id=eq.${enc(userId)}&select=paired,name,email")

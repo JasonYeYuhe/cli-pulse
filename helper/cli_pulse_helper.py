@@ -19,7 +19,8 @@ CONFIG_PATH = Path.home() / ".cli-pulse-helper.json"
 SUPPORTED_PROVIDERS = {
     "Codex", "Gemini", "Claude", "Cursor", "OpenCode", "Droid", "Antigravity",
     "Copilot", "z.ai", "MiniMax", "Augment", "JetBrains AI", "Kimi K2",
-    "Amp", "Synthetic", "Warp", "Kilo", "Ollama", "OpenRouter", "Alibaba",
+    "Kimi", "Amp", "Synthetic", "Warp", "Kilo", "Ollama", "OpenRouter",
+    "Alibaba", "Kiro", "Vertex AI", "Perplexity", "Volcano Engine",
 }
 
 SUPABASE_URL = os.environ.get("CLI_PULSE_SUPABASE_URL", "https://gkjwsxotmwrgqsvfijzs.supabase.co")
@@ -41,11 +42,14 @@ def now_iso() -> str:
 
 def load_config() -> HelperConfig:
     if not CONFIG_PATH.exists():
-        raise SystemExit("helper is not paired yet — run 'pair' first")
-    data = json.loads(CONFIG_PATH.read_text())
+        raise ConfigError("helper is not paired yet — run 'pair' first")
+    try:
+        data = json.loads(CONFIG_PATH.read_text())
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise ConfigError(f"corrupted config at {CONFIG_PATH}: {exc}") from exc
     # Detect legacy v0 config (has 'server' or missing 'helper_secret')
     if "server" in data or "helper_secret" not in data:
-        raise SystemExit(
+        raise ConfigError(
             f"legacy config detected at {CONFIG_PATH} — please re-pair:\n"
             f"  rm {CONFIG_PATH}\n"
             f"  python3 cli_pulse_helper.py pair --pairing-code <CODE>"
@@ -60,6 +64,14 @@ def save_config(config: HelperConfig) -> None:
     CONFIG_PATH.chmod(0o600)
 
 
+class ConfigError(Exception):
+    """Fatal configuration error — daemon should exit."""
+    pass
+
+class SyncError(Exception):
+    """Transient sync/network error — daemon should retry."""
+    pass
+
 def supabase_rpc(function_name: str, params: dict[str, Any]) -> Any:
     url = f"{SUPABASE_URL}/rest/v1/rpc/{function_name}"
     headers = {
@@ -68,7 +80,7 @@ def supabase_rpc(function_name: str, params: dict[str, Any]) -> Any:
         "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
     }
     if not SUPABASE_ANON_KEY:
-        raise SystemExit("CLI_PULSE_SUPABASE_ANON_KEY environment variable is not set")
+        raise ConfigError("CLI_PULSE_SUPABASE_ANON_KEY environment variable is not set")
     body = json.dumps(params).encode("utf-8")
     request = urllib.request.Request(url=url, data=body, headers=headers, method="POST")
     try:
@@ -76,11 +88,11 @@ def supabase_rpc(function_name: str, params: dict[str, Any]) -> Any:
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8")
-        raise SystemExit(f"Supabase error {error.code}: {detail}") from error
+        raise SyncError(f"Supabase error {error.code}: {detail}") from error
     except urllib.error.URLError as error:
-        raise SystemExit(f"Network error: {error.reason}") from error
+        raise SyncError(f"Network error: {error.reason}") from error
     except TimeoutError as error:
-        raise SystemExit("Request timed out — check your network connection") from error
+        raise SyncError("Request timed out — check your network connection") from error
 
 
 def _infer_source_kind(alert: CollectedAlert) -> str:
@@ -185,14 +197,17 @@ def sync(_: argparse.Namespace) -> None:
 
 def daemon(args: argparse.Namespace) -> None:
     """Run continuously: heartbeat + sync every interval seconds."""
-    interval = max(args.interval, 10)
+    interval = max(args.interval, 60)  # Match Swift helper minimum (60s)
     print(f"CLI Pulse helper daemon started (interval={interval}s). Press Ctrl+C to stop.")
     try:
         while True:
             try:
                 heartbeat(args)
                 sync(args)
-            except (Exception, SystemExit) as exc:
+            except ConfigError:
+                raise  # Fatal config errors should stop the daemon
+            except (Exception, SyncError) as exc:
+                # Transient network/API errors — log and retry next cycle
                 print(f"[error] {exc}")
             time.sleep(interval)
     except KeyboardInterrupt:

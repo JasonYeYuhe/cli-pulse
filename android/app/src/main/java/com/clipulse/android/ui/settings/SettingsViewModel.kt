@@ -3,6 +3,7 @@ package com.clipulse.android.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.clipulse.android.data.model.SettingsSnapshot
+import com.clipulse.android.data.local.CacheDao
 import com.clipulse.android.data.remote.SupabaseClient
 import com.clipulse.android.data.remote.TokenStore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,6 +26,7 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(
     private val supabase: SupabaseClient,
     private val tokenStore: TokenStore,
+    private val cache: CacheDao,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -57,7 +59,17 @@ class SettingsViewModel @Inject constructor(
 
     fun signOut() {
         viewModelScope.launch {
-            try { supabase.signOut() } catch (_: Exception) { }
+            try {
+                supabase.signOut()
+            } catch (_: Exception) {
+            } finally {
+                // Always clear local cache — prevent data leakage to next user
+                cache.clearDashboard()
+                cache.clearProviders()
+                cache.clearSessions()
+                cache.clearAlerts()
+                cache.clearDevices()
+            }
         }
     }
 

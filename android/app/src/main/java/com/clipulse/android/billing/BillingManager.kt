@@ -9,6 +9,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 data class SubscriptionState(
     val tier: String = "free", // free, pro, team
@@ -36,6 +38,8 @@ class BillingManager(
     val state: StateFlow<SubscriptionState> = _state
 
     private val scope = CoroutineScope(Dispatchers.IO)
+    private val reconnectAttempts = AtomicInteger(0)
+    private val isReconnecting = AtomicBoolean(false)
 
     private var billingClient: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
@@ -46,13 +50,24 @@ class BillingManager(
         billingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                    reconnectAttempts.set(0)
+                    isReconnecting.set(false)
                     queryProducts()
                     queryPurchases()
                 }
             }
 
             override fun onBillingServiceDisconnected() {
-                // Retry on next user action
+                // Retry with exponential backoff, guarded against overlapping attempts
+                if (isReconnecting.compareAndSet(false, true)) {
+                    scope.launch {
+                        val attempt = reconnectAttempts.getAndIncrement()
+                        val delay = minOf(attempt * 2000L, 30_000L)
+                        kotlinx.coroutines.delay(delay)
+                        billingClient.startConnection(this@object)
+                        isReconnecting.set(false)
+                    }
+                }
             }
         })
     }
@@ -89,30 +104,23 @@ class BillingManager(
                 }
                 if (activePurchase != null) {
                     val productId = activePurchase.products.firstOrNull() ?: ""
-                    val tier = when {
-                        productId.contains("team") -> "team"
-                        productId.contains("pro") -> "pro"
-                        else -> "free"
-                    }
-                    _state.value = _state.value.copy(
-                        tier = tier,
-                        isActive = true,
-                        isPending = false,
-                    )
 
-                    // Acknowledge if needed
+                    // Enter pending state — do NOT grant tier until server verifies
+                    _state.value = _state.value.copy(isPending = true, isLoading = true)
+
+                    // Acknowledge if needed, then validate on server
                     if (!activePurchase.isAcknowledged) {
                         val ackParams = AcknowledgePurchaseParams.newBuilder()
                             .setPurchaseToken(activePurchase.purchaseToken)
                             .build()
                         billingClient.acknowledgePurchase(ackParams) { ackResult ->
                             if (ackResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                                // Server-side receipt validation after acknowledgment
                                 validateOnServer(activePurchase.purchaseToken, productId)
+                            } else {
+                                _state.value = _state.value.copy(isPending = false, isLoading = false)
                             }
                         }
                     } else {
-                        // Already acknowledged — still validate server-side
                         validateOnServer(activePurchase.purchaseToken, productId)
                     }
                 } else {
@@ -130,15 +138,42 @@ class BillingManager(
         }
     }
 
-    private fun validateOnServer(purchaseToken: String, productId: String) {
+    private fun validateOnServer(purchaseToken: String, productId: String, retryCount: Int = 0) {
         scope.launch {
             try {
                 val result = supabase.validateReceipt(purchaseToken, productId)
                 if (result.verified) {
-                    _state.value = _state.value.copy(tier = result.tier)
+                    _state.value = _state.value.copy(
+                        tier = result.tier,
+                        isActive = true,
+                        isPending = false,
+                        isLoading = false,
+                    )
+                } else if (result.isNetworkError && retryCount < 3) {
+                    // Network error — retry with backoff
+                    kotlinx.coroutines.delay((retryCount + 1) * 5000L)
+                    validateOnServer(purchaseToken, productId, retryCount + 1)
+                } else if (result.isNetworkError) {
+                    // Retries exhausted due to network — do NOT downgrade, keep current tier
+                    _state.value = _state.value.copy(
+                        isPending = false,
+                        isLoading = false,
+                    )
+                } else {
+                    // Server explicitly rejected the purchase — revert to free
+                    _state.value = _state.value.copy(
+                        tier = "free",
+                        isActive = false,
+                        isPending = false,
+                        isLoading = false,
+                    )
                 }
             } catch (_: Exception) {
-                // Non-fatal: local tier already set
+                // Unexpected error — stay pending, will retry on next queryPurchases
+                _state.value = _state.value.copy(
+                    isPending = true,
+                    isLoading = false,
+                )
             }
         }
     }

@@ -233,7 +233,7 @@ internal final class DataRefreshManager {
             type: "macOS",
             system: "macOS \(ProcessInfo.processInfo.operatingSystemVersionString)",
             status: "online",
-            last_sync_at: ISO8601DateFormatter().string(from: Date()),
+            last_sync_at: sharedISO8601Formatter.string(from: Date()),
             helper_version: "local",
             current_session_count: scanResult.activeSessionCount,
             cpu_usage: nil,
@@ -297,7 +297,7 @@ internal final class DataRefreshManager {
                         }
 
                         let logPath = NSTemporaryDirectory() + "clipulse_collector_errors.log"
-                        let entry = "\(ISO8601DateFormatter().string(from: Date())) \(message)\n"
+                        let entry = "\(sharedISO8601Formatter.string(from: Date())) \(message)\n"
                         if let fileHandle = FileHandle(forWritingAtPath: logPath) {
                             fileHandle.seekToEndOfFile()
                             fileHandle.write(entry.data(using: .utf8) ?? Data())
@@ -331,7 +331,7 @@ internal final class DataRefreshManager {
 
         // Reject stale data older than 5 minutes
         if let timestampStr = json["timestamp"] as? String,
-           let timestamp = ISO8601DateFormatter().date(from: timestampStr) {
+           let timestamp = sharedISO8601Formatter.date(from: timestampStr) {
             if Date().timeIntervalSince(timestamp) > 300 {
                 return [] // Data too old, skip
             }
@@ -455,7 +455,7 @@ internal final class DataRefreshManager {
         }
 
         let diagnostic: [String: Any] = [
-            "timestamp": ISO8601DateFormatter().string(from: Date()),
+            "timestamp": sharedISO8601Formatter.string(from: Date()),
             "cloud": cloud.map(snapshot),
             "local_collectors": local.map {
                 [
@@ -539,7 +539,7 @@ extension AppState {
                 alerts[idx] = demoUpdateAlert(
                     alerts[idx],
                     isRead: true,
-                    acknowledgedAt: ISO8601DateFormatter().string(from: Date())
+                    acknowledgedAt: sharedISO8601Formatter.string(from: Date())
                 )
             }
             return
@@ -570,7 +570,7 @@ extension AppState {
     public func snoozeAlert(_ alert: AlertRecord, minutes: Int) async {
         if isDemoMode {
             if let idx = alerts.firstIndex(where: { $0.id == alert.id }) {
-                let until = ISO8601DateFormatter().string(from: Date().addingTimeInterval(Double(minutes) * 60))
+                let until = sharedISO8601Formatter.string(from: Date().addingTimeInterval(Double(minutes) * 60))
                 alerts[idx] = demoUpdateAlert(alerts[idx], isRead: true, snoozedUntil: until)
             }
             return

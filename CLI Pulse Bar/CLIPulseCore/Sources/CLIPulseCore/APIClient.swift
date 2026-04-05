@@ -679,7 +679,7 @@ public actor APIClient {
             notifications_enabled: settings?.notifications_enabled ?? true,
             push_policy: settings?.push_policy ?? "Warnings + Critical",
             digest_enabled: settings?.digest_notifications_enabled ?? true,
-            digest_interval_hours: (settings?.digest_interval_minutes ?? 15) / 60,
+            digest_interval_hours: max(1, (settings?.digest_interval_minutes ?? 60) / 60),
             usage_spike_threshold: settings?.usage_spike_threshold ?? 500,
             project_budget_threshold_usd: settings?.project_budget_threshold_usd ?? 0.25,
             session_too_long_threshold_minutes: settings?.session_too_long_threshold_minutes ?? 180,
@@ -693,7 +693,7 @@ public actor APIClient {
     // MARK: - Pairing
 
     public func pairingCode() async throws -> PairingInfo {
-        let code = "PULSE-\(UUID().uuidString.prefix(6).uppercased())"
+        let code = "PULSE-\(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(10).uppercased())"
         let now = Self.isoFormatter.string(from: Date())
         let expires = Self.isoFormatter.string(from: Date().addingTimeInterval(600))
 

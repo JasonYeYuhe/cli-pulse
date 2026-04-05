@@ -89,7 +89,7 @@ public struct ZaiCollector: ProviderCollector, Sendable {
     }
 
     func buildResult(_ z: ZaiUsage) -> CollectorResult {
-        let iso = ISO8601DateFormatter()
+        let iso = sharedISO8601Formatter
         var tiers: [TierDTO] = []
 
         for limit in z.limits {

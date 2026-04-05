@@ -1,5 +1,10 @@
 import Foundation
 
+// MARK: - Shared Formatter
+
+/// Package-level shared ISO8601 formatter to avoid repeated allocations.
+nonisolated(unsafe) public let sharedISO8601Formatter = ISO8601DateFormatter()
+
 // MARK: - Enums
 
 public enum ProviderKind: String, Codable, CaseIterable, Identifiable, Sendable {
@@ -436,11 +441,11 @@ public struct SessionRecord: Codable, Identifiable, Sendable, Hashable {
     }
 
     public var startedDate: Date? {
-        ISO8601DateFormatter().date(from: started_at)
+        sharedISO8601Formatter.date(from: started_at)
     }
 
     public var lastActiveDate: Date? {
-        ISO8601DateFormatter().date(from: last_active_at)
+        sharedISO8601Formatter.date(from: last_active_at)
     }
 
     public init(
@@ -536,7 +541,7 @@ public struct AlertRecord: Codable, Identifiable, Sendable {
     }
 
     public var createdDate: Date? {
-        ISO8601DateFormatter().date(from: created_at)
+        sharedISO8601Formatter.date(from: created_at)
     }
 
     public init(

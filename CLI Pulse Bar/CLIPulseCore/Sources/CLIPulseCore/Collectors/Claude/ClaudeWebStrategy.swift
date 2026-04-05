@@ -173,7 +173,7 @@ public struct ClaudeWebStrategy: ClaudeSourceStrategy, Sendable {
             throw ClaudeStrategyError.parseFailed("usage response not a dictionary")
         }
 
-        let isoFormatter = ISO8601DateFormatter()
+        let isoFormatter = sharedISO8601Formatter
 
         func parsePercent(_ key: String) -> Int? {
             if let val = json[key] as? Double { return Int(val.rounded()) }

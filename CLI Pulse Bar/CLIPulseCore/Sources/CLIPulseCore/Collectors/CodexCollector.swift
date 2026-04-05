@@ -79,7 +79,7 @@ public struct CodexCollector: ProviderCollector, Sendable {
         auth.accountId = tokens["account_id"] as? String
 
         if let lrStr = json["last_refresh"] as? String {
-            auth.lastRefresh = ISO8601DateFormatter().date(from: lrStr)
+            auth.lastRefresh = sharedISO8601Formatter.date(from: lrStr)
         }
 
         // Fallback: check for direct API key
@@ -119,7 +119,7 @@ public struct CodexCollector: ProviderCollector, Sendable {
         if let rt = auth.refreshToken { tokens["refresh_token"] = rt }
         if let it = auth.idToken { tokens["id_token"] = it }
         json["tokens"] = tokens
-        json["last_refresh"] = ISO8601DateFormatter().string(from: Date())
+        json["last_refresh"] = sharedISO8601Formatter.string(from: Date())
 
         if let data = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted) {
             try? data.write(to: URL(fileURLWithPath: path))
@@ -258,7 +258,7 @@ public struct CodexCollector: ProviderCollector, Sendable {
             resetDate = Date(timeIntervalSince1970: resetAt)
         } else if let resetAtStr = d["reset_at"] as? String {
             // ISO 8601 string format
-            resetDate = ISO8601DateFormatter().date(from: resetAtStr)
+            resetDate = sharedISO8601Formatter.date(from: resetAtStr)
         }
         let windowSecs: Int
         if let intSecs = d["limit_window_seconds"] as? Int {
@@ -275,7 +275,7 @@ public struct CodexCollector: ProviderCollector, Sendable {
 
     func buildResult(usage: UsageResponse) -> CollectorResult {
         var tiers: [TierDTO] = []
-        let isoFormatter = ISO8601DateFormatter()
+        let isoFormatter = sharedISO8601Formatter
 
         // Rate limit windows use percentage: quota=100, remaining=100-used
         if let pw = usage.primaryWindow {

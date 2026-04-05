@@ -12,6 +12,7 @@ import os
 ///   2. Bookmark data stored in app group
 ///   3. `resolveBookmark(for:)` restores access on subsequent launches
 ///   4. `SandboxFileAccess.read(path:)` uses this to read files
+@MainActor
 public final class BookmarkManager {
     public static let shared = BookmarkManager()
 
@@ -64,9 +65,13 @@ public final class BookmarkManager {
         )
     }
 
-    @objc private func appWillTerminate() {
-        stopAccessingAll()
-        logger.info("Stopped accessing all security-scoped resources on termination")
+    @objc nonisolated private func appWillTerminate() {
+        // willTerminateNotification is delivered on main thread, so we're already on MainActor.
+        // Use assumeIsolated to bridge the nonisolated @objc boundary synchronously.
+        MainActor.assumeIsolated {
+            stopAccessingAll()
+            logger.info("Stopped accessing all security-scoped resources on termination")
+        }
     }
 
     // MARK: - Bookmark Storage

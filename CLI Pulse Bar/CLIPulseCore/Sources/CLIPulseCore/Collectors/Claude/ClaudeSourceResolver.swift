@@ -110,7 +110,7 @@ public struct ClaudeSourceResolver: Sendable {
         // Truly no data available — log and throw
         if let lastError = errors.last {
             let logPath = NSTemporaryDirectory() + "clipulse_claude_fallback.log"
-            let timestamp = ISO8601DateFormatter().string(from: Date())
+            let timestamp = sharedISO8601Formatter.string(from: Date())
             var msg = "[\(timestamp)] All Claude strategies failed (including cache):\n"
             for (source, err) in errors {
                 msg += "  - \(source): \(err.localizedDescription)\n"
@@ -167,7 +167,7 @@ public struct ClaudeSourceResolver: Sendable {
             }
 
             let fetchedAtStr = json["fetched_at"] as? String ?? "missing"
-            let date = ISO8601DateFormatter().date(from: fetchedAtStr)
+            let date = sharedISO8601Formatter.date(from: fetchedAtStr)
             let age = date.map { Date().timeIntervalSince($0) } ?? .infinity
             let liveFresh = age <= ClaudeHelperContract.maxSnapshotAge
             let cacheFresh = age <= cacheMaxAge
@@ -216,7 +216,7 @@ public struct ClaudeSourceResolver: Sendable {
 
     private static func appendToLog(_ message: String) {
         let logPath = NSTemporaryDirectory() + "clipulse_claude_resolver.log"
-        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let timestamp = sharedISO8601Formatter.string(from: Date())
         let entry = "[\(timestamp)] \(message)\n"
         if let fh = FileHandle(forWritingAtPath: logPath) {
             fh.seekToEndOfFile()

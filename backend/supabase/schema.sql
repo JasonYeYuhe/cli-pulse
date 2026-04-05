@@ -3,6 +3,9 @@
 -- Migrated from SQLite, with RLS and Supabase Auth integration
 -- ============================================================
 
+-- Required extensions
+create extension if not exists pgcrypto;
+
 -- ── Profiles (extends Supabase auth.users) ──
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -10,6 +13,8 @@ create table public.profiles (
   email text not null default '',
   paired boolean not null default false,
   tier text not null default 'free',
+  receipt_verified_at timestamptz,
+  last_transaction_id text,
   created_at timestamptz not null default now()
 );
 alter table public.profiles enable row level security;
@@ -91,10 +96,21 @@ create table public.devices (
 );
 alter table public.devices enable row level security;
 
-create policy "Users can manage own devices"
-  on public.devices for all using (auth.uid() = user_id);
+create policy "Users can view own devices"
+  on public.devices for select using (auth.uid() = user_id);
+create policy "Users can insert own devices"
+  on public.devices for insert with check (auth.uid() = user_id);
+create policy "Users can update own devices"
+  on public.devices for update using (auth.uid() = user_id);
+create policy "Users can delete own devices"
+  on public.devices for delete using (auth.uid() = user_id);
+
+-- Revoke direct SELECT on helper_secret from authenticated users;
+-- only SECURITY DEFINER RPCs (helper_heartbeat, helper_sync) can read it.
+revoke select (helper_secret) on public.devices from authenticated;
 
 create index idx_devices_user_id on public.devices(user_id);
+create index idx_devices_user_status on public.devices(user_id, status);
 
 -- ── Pairing Codes ──
 create table public.pairing_codes (
@@ -110,7 +126,7 @@ create policy "Users can manage own pairing codes"
 
 -- ── Sessions ──
 create table public.sessions (
-  id text not null,
+  id text not null check (length(id) <= 128),
   user_id uuid not null references public.profiles(id) on delete cascade,
   device_id uuid references public.devices(id) on delete set null,
   name text not null default '',
@@ -135,10 +151,12 @@ create policy "Users can manage own sessions"
 create index idx_sessions_user_id on public.sessions(user_id);
 create index idx_sessions_provider on public.sessions(provider);
 create index idx_sessions_started_at on public.sessions(started_at);
+create index idx_sessions_status on public.sessions(status);
+create index idx_sessions_user_last_active on public.sessions(user_id, last_active_at);
 
 -- ── Alerts ──
 create table public.alerts (
-  id text not null,
+  id text not null check (length(id) <= 128),
   user_id uuid not null references public.profiles(id) on delete cascade,
   type text not null,
   severity text not null default 'Info',
@@ -168,6 +186,7 @@ create policy "Users can manage own alerts"
 
 create index idx_alerts_user_id on public.alerts(user_id);
 create index idx_alerts_created_at on public.alerts(created_at);
+create index idx_alerts_user_resolved on public.alerts(user_id, is_resolved);
 
 -- ── Subscriptions ──
 create table public.subscriptions (
@@ -181,10 +200,18 @@ create table public.subscriptions (
   apple_transaction_id text,
   apple_original_transaction_id text,
   apple_product_id text,
+  play_order_id text,
+  play_purchase_token text,
+  platform text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 alter table public.subscriptions enable row level security;
+
+-- Unique constraints to enforce anti-replay at DB level (prevents concurrent race)
+create unique index idx_sub_apple_txn on public.subscriptions(apple_original_transaction_id) where apple_original_transaction_id is not null;
+create unique index idx_sub_play_order on public.subscriptions(play_order_id) where play_order_id is not null;
+create unique index idx_sub_play_token on public.subscriptions(play_purchase_token) where play_purchase_token is not null;
 
 create policy "Users can view own subscription"
   on public.subscriptions for select using (auth.uid() = user_id);
@@ -222,6 +249,7 @@ create table public.team_members (
   primary key (team_id, user_id)
 );
 alter table public.team_members enable row level security;
+create index idx_team_members_user_id on public.team_members(user_id);
 
 -- ── Team Invites ──
 create table public.team_invites (
@@ -233,6 +261,7 @@ create table public.team_invites (
   expires_at timestamptz not null default (now() + interval '7 days')
 );
 alter table public.team_invites enable row level security;
+create index idx_team_invites_team_id on public.team_invites(team_id);
 
 -- Team RLS policies (after all team tables exist)
 create policy "Team members can view team"
@@ -246,11 +275,27 @@ create policy "Team members can view members"
   on public.team_members for select using (
     team_id in (select team_id from public.team_members where user_id = auth.uid())
   );
-create policy "Owner/admin can manage members"
-  on public.team_members for all using (
+-- Admins can insert/delete members but only owners can update roles
+create policy "Owner/admin can add members (as member role only)"
+  on public.team_members for insert with check (
+    role = 'member' and team_id in (
+      select team_id from public.team_members
+      where user_id = auth.uid() and role in ('owner', 'admin')
+    )
+  );
+create policy "Owner/admin can delete members"
+  on public.team_members for delete using (
     team_id in (
       select team_id from public.team_members
       where user_id = auth.uid() and role in ('owner', 'admin')
+    )
+  );
+create policy "Only owner can update member roles"
+  on public.team_members for update using (
+    team_id in (
+      select tm.team_id from public.team_members tm
+      join public.teams t on t.id = tm.team_id
+      where t.owner_id = auth.uid()
     )
   );
 
@@ -306,7 +351,7 @@ select
   count(*) as session_count,
   coalesce(sum(s.estimated_cost), 0) as estimated_cost
 from public.sessions s
-where s.started_at >= (current_date at time zone 'UTC')
+where s.last_active_at >= current_date and s.last_active_at < current_date + interval '1 day'
 group by s.user_id, s.provider;
 
 -- This week's usage per provider

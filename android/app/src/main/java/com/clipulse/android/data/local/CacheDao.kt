@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 
 @Dao
 interface CacheDao {
@@ -57,4 +58,29 @@ interface CacheDao {
 
     @Query("DELETE FROM cached_devices")
     suspend fun clearDevices()
+
+    // Transactional replace operations (atomic clear + insert)
+    @Transaction
+    suspend fun replaceProviders(providers: List<CachedProvider>) {
+        clearProviders()
+        saveProviders(providers)
+    }
+
+    @Transaction
+    suspend fun replaceSessions(sessions: List<CachedSession>) {
+        clearSessions()
+        saveSessions(sessions)
+    }
+
+    @Transaction
+    suspend fun replaceAlerts(alerts: List<CachedAlert>) {
+        clearAlerts()
+        saveAlerts(alerts)
+    }
+
+    @Transaction
+    suspend fun replaceDevices(devices: List<CachedDevice>) {
+        clearDevices()
+        saveDevices(devices)
+    }
 }

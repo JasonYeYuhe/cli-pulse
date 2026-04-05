@@ -39,7 +39,8 @@ PROCESS_PATTERNS: list[tuple[str, str, str]] = [
     ("MiniMax", r"\bminimax\b", "high"),
     ("Augment", r"\baugment\b", "medium"),
     ("JetBrains AI", r"\bjetbrains[\s-]?ai\b|\bjbai\b", "high"),
-    ("Kimi K2", r"\bkimi\b|\bkimi[_-]?k2\b", "high"),
+    ("Kimi K2", r"\bkimi[\s_-]*k2\b", "high"),
+    ("Kimi", r"\bkimi\b", "medium"),
     ("Amp", r"\bamp\b", "low"),
     ("Synthetic", r"\bsynthetic\b", "medium"),
     ("Warp", r"\bwarp\b", "medium"),
@@ -47,6 +48,10 @@ PROCESS_PATTERNS: list[tuple[str, str, str]] = [
     ("Ollama", r"\bollama\b", "high"),
     ("OpenRouter", r"\bopenrouter\b", "high"),
     ("Alibaba", r"\balibaba\b|\bqwen\b|\btongyi\b", "high"),
+    ("Kiro", r"\bkiro\b", "high"),
+    ("Vertex AI", r"\bvertex[\s_-]?ai\b", "high"),
+    ("Perplexity", r"\bperplexity\b", "high"),
+    ("Volcano Engine", r"\bvolcano[\s_-]?engine\b|\bvolcengine\b", "high"),
 ]
 
 IGNORED_COMMAND_PATTERNS: list[str] = [

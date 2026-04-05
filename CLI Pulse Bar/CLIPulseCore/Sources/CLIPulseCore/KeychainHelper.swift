@@ -14,11 +14,18 @@ public enum KeychainHelper {
         if let group = accessGroup {
             query[kSecAttrAccessGroup as String] = group
         }
-        SecItemDelete(query as CFDictionary)
-        var addQuery = query
-        addQuery[kSecValueData as String] = data
-        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(addQuery as CFDictionary, nil)
+        // Atomic: try update first, fall back to add if item doesn't exist
+        // NOTE: kSecAttrAccessible must NOT be in update attrs — Apple rejects it with errSecParam
+        let updateAttrs: [String: Any] = [
+            kSecValueData as String: data,
+        ]
+        let status = SecItemUpdate(query as CFDictionary, updateAttrs as CFDictionary)
+        if status == errSecItemNotFound {
+            var addQuery = query
+            addQuery[kSecValueData as String] = data
+            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+            SecItemAdd(addQuery as CFDictionary, nil)
+        }
     }
 
     public static func load(key: String, accessGroup: String? = nil) -> String? {

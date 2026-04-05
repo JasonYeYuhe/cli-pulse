@@ -82,11 +82,14 @@ internal final class AuthManager {
         }
     }
 
-    func signOut() {
-        Task {
-            await api.signOutServer()
+    func signOut(currentAccessToken: String) async {
+        // Attempt server-side token revocation
+        await api.signOutServer()
+        // Only clear tokens if they haven't been replaced by a new sign-in
+        let storedToken = KeychainHelper.load(key: AppState.tokenKeychainKey)
+        if storedToken == nil || storedToken == currentAccessToken || storedToken?.isEmpty == true {
+            storeAuthTokens(access: "", refresh: nil)
         }
-        storeAuthTokens(access: "", refresh: nil)
     }
 
     func deleteAccount() async throws {
@@ -257,7 +260,10 @@ extension AppState {
     public func signOut() {
         stopRefreshLoop()
         dataRefreshManager.cancelInFlightRefresh()
-        authManager.signOut()
+        // Capture current token so async logout only clears the right session
+        let currentToken = storedToken
+        Task { await authManager.signOut(currentAccessToken: currentToken) }
+        // Clear local state immediately — don't block on network
         isDemoMode = false
         applySignedOutState()
     }

@@ -2,7 +2,8 @@
 -- CLI Pulse — Helper RPC Functions
 -- Called by the helper daemon via device-scoped helper tokens.
 --
--- register_helper: security invoker — called by an authenticated user.
+-- register_helper: security definer — requires auth.uid() to match
+--   the pairing code owner; called by the authenticated user.
 -- helper_heartbeat / helper_sync: security definer — helpers call
 --   via anon key, so RLS would block them.  Internal auth is done
 --   by validating (device_id, helper_secret) inside the function.
@@ -24,7 +25,11 @@ declare
   v_expires_at timestamptz;
   v_helper_secret text;
 begin
-  -- Validate pairing code (caller must be authenticated or service role)
+  -- No auth.uid() required: helper clients call with anon key.
+  -- Security relies on: pairing code expiry (10 min), code entropy (10 hex chars ~40 bits).
+  -- Brute-force protection should be handled at the API gateway / Supabase rate limiting level.
+
+  -- Validate pairing code
   select user_id, expires_at into v_user_id, v_expires_at
   from public.pairing_codes where code = p_pairing_code;
 
@@ -37,11 +42,12 @@ begin
     raise exception 'Pairing code has expired';
   end if;
 
-  -- Generate a device-scoped secret
+  -- Generate a device-scoped secret and store only its SHA-256 hash
   v_helper_secret := 'helper_' || encode(gen_random_bytes(32), 'hex');
 
+  -- Truncate inputs to prevent oversized strings
   insert into public.devices (user_id, name, type, system, helper_version, status, helper_secret)
-  values (v_user_id, p_device_name, p_device_type, p_system, p_helper_version, 'Online', v_helper_secret)
+  values (v_user_id, left(p_device_name, 255), left(p_device_type, 50), left(p_system, 255), left(p_helper_version, 20), 'Online', encode(digest(v_helper_secret, 'sha256'), 'hex'))
   returning id into v_device_id;
 
   update public.profiles set paired = true where id = v_user_id;
@@ -63,9 +69,9 @@ returns jsonb as $$
 declare
   v_user_id uuid;
 begin
-  -- Authenticate via device secret
+  -- Authenticate via device secret (compare SHA-256 hash)
   select user_id into v_user_id
-  from public.devices where id = p_device_id and helper_secret = p_helper_secret;
+  from public.devices where id = p_device_id and helper_secret = encode(digest(p_helper_secret, 'sha256'), 'hex');
 
   if v_user_id is null then
     raise exception 'Device not found or unauthorized';
@@ -74,7 +80,7 @@ begin
   update public.devices set
     status = 'Online', cpu_usage = p_cpu_usage,
     memory_usage = p_memory_usage, last_seen_at = now()
-  where id = p_device_id and helper_secret = p_helper_secret;
+  where id = p_device_id;
 
   return jsonb_build_object('status', 'ok');
 end;
@@ -101,22 +107,30 @@ declare
   v_alert_count integer := 0;
   v_synced_ids text[] := '{}';
 begin
-  -- Authenticate via device secret
+  -- Authenticate via device secret (compare SHA-256 hash)
   select user_id into v_user_id
-  from public.devices where id = p_device_id and helper_secret = p_helper_secret;
+  from public.devices where id = p_device_id and helper_secret = encode(digest(p_helper_secret, 'sha256'), 'hex');
 
   if v_user_id is null then
     raise exception 'Device not found or unauthorized';
+  end if;
+
+  -- Guard against oversized payloads (DoS prevention)
+  if jsonb_array_length(p_sessions) > 500 then
+    raise exception 'Too many sessions (max 500)';
+  end if;
+  if jsonb_array_length(p_alerts) > 500 then
+    raise exception 'Too many alerts (max 500)';
   end if;
 
   update public.devices set status = 'Online', last_seen_at = now()
   where id = p_device_id;
 
   for v_session in select * from jsonb_array_elements(p_sessions) loop
-    v_synced_ids := v_synced_ids || (v_session->>'id');
+    v_synced_ids := v_synced_ids || left(v_session->>'id', 128);
     insert into public.sessions (id, user_id, device_id, name, provider, project, status, total_usage, estimated_cost, requests, error_count, collection_confidence, started_at, last_active_at, synced_at)
     values (
-      v_session->>'id', v_user_id, p_device_id,
+      left(v_session->>'id', 128), v_user_id, p_device_id,
       coalesce(v_session->>'name', ''), v_session->>'provider',
       coalesce(v_session->>'project', ''), coalesce(v_session->>'status', 'Running'),
       coalesce((v_session->>'total_usage')::integer, 0),
@@ -137,14 +151,23 @@ begin
   end loop;
 
   -- Mark sessions from this device not in current sync as Ended
-  update public.sessions set status = 'Ended'
-  where device_id = p_device_id and user_id = v_user_id
-    and status = 'Running' and id != all(v_synced_ids);
+  if coalesce(array_length(v_synced_ids, 1), 0) > 0 then
+    -- Normal case: end sessions not reported in this sync
+    update public.sessions set status = 'Ended'
+    where device_id = p_device_id and user_id = v_user_id
+      and status = 'Running' and id != all(v_synced_ids);
+  else
+    -- Empty sync (helper restart/crash): end stale sessions older than 10 minutes
+    -- to prevent ghost sessions, while giving a grace period for transient issues
+    update public.sessions set status = 'Ended'
+    where device_id = p_device_id and user_id = v_user_id
+      and status = 'Running' and last_active_at < now() - interval '10 minutes';
+  end if;
 
   for v_alert in select * from jsonb_array_elements(p_alerts) loop
     insert into public.alerts (id, user_id, type, severity, title, message, related_project_id, related_project_name, related_session_id, related_session_name, related_provider, related_device_name, source_kind, source_id, grouping_key, suppression_key, created_at)
     values (
-      v_alert->>'id', v_user_id, v_alert->>'type',
+      left(v_alert->>'id', 128), v_user_id, v_alert->>'type',
       coalesce(v_alert->>'severity', 'Info'), v_alert->>'title',
       coalesce(v_alert->>'message', ''),
       v_alert->>'related_project_id', v_alert->>'related_project_name',

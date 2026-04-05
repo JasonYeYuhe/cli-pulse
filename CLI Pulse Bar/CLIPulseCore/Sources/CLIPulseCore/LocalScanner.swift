@@ -83,7 +83,7 @@ public final class LocalScanner: @unchecked Sendable {
         let rows = listProcesses()
         var sessions: [SessionRecord] = []
         var providerUsage: [String: (usage: Int, sessions: Int, cost: Double)] = [:]
-        let now = ISO8601DateFormatter().string(from: Date())
+        let now = sharedISO8601Formatter.string(from: Date())
         let hostName = ProcessInfo.processInfo.hostName
 
         // Track best match per PID to deduplicate
@@ -118,7 +118,7 @@ public final class LocalScanner: @unchecked Sendable {
                 provider: match.provider,
                 project: project,
                 device_name: hostName,
-                started_at: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-Double(elapsed))),
+                started_at: sharedISO8601Formatter.string(from: Date().addingTimeInterval(-Double(elapsed))),
                 last_active_at: now,
                 status: "Running",
                 total_usage: usage,

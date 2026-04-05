@@ -18,7 +18,7 @@ public enum AlertGenerator {
         sessionCPU: [String: Double] = [:]
     ) -> [[String: Any]] {
         var alerts: [[String: Any]] = []
-        let now = ISO8601DateFormatter().string(from: Date())
+        let now = sharedISO8601Formatter.string(from: Date())
 
         // Rule 1: Device CPU >= 85%
         if device.cpuUsage >= 85 {

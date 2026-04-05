@@ -162,25 +162,25 @@ final class MergeTests: XCTestCase {
         XCTAssertTrue(supplemented.contains("Claude"))
     }
 
-    /// When cloud has strictly more tiers than local, cloud is preserved.
-    func testCloudMoreTiersPreserved() {
+    /// Fresh local quota data should override stale cloud data even if cloud has more tiers.
+    func testCloudMoreTiersStillGetsOverriddenByFreshLocal() {
         let cloudTiers = [
             TierDTO(name: "5h Window", quota: 100, remaining: 90, reset_time: nil),
             TierDTO(name: "Weekly", quota: 100, remaining: 80, reset_time: nil),
         ]
         let cloud = [makeCloudUsage(provider: "Claude", quota: 100, remaining: 90, tiers: cloudTiers)]
-        // makeLocalResult creates 1 tier, so cloud (2) > local (1) → cloud wins
         let local = [makeLocalResult(provider: "Claude", quota: 100, remaining: 70)]
         let (merged, supplemented) = AppState.mergeCloudWithLocal(cloud: cloud, local: local)
 
         let claude = merged.first!
-        XCTAssertEqual(claude.tiers.count, 2, "Cloud tiers should be preserved when count > local")
+        XCTAssertEqual(claude.tiers.count, 1, "Fresh local tiers should override stale cloud tiers")
         XCTAssertEqual(claude.tiers[0].name, "5h Window")
-        XCTAssertFalse(supplemented.contains("Claude"))
+        XCTAssertEqual(claude.remaining, 70)
+        XCTAssertTrue(supplemented.contains("Claude"))
     }
 
-    /// Codex/Gemini regression: cloud with quota should not be overridden by local with fewer/equal tiers.
-    func testCodexNoRegression() {
+    /// Codex/Gemini regression: fresh local quota must override stale cloud cache.
+    func testCodexFreshLocalQuotaOverridesStaleCloud() {
         let cloud = [makeCloudUsage(provider: "Codex", quota: 500, remaining: 200)]
         let localUsage = ProviderUsage(
             provider: "Codex", today_usage: 50, week_usage: 200,
@@ -193,9 +193,40 @@ final class MergeTests: XCTestCase {
         let (merged, supplemented) = AppState.mergeCloudWithLocal(cloud: cloud, local: local)
 
         let codex = merged.first!
-        XCTAssertEqual(codex.quota, 500, "Cloud Codex quota must be preserved")
-        XCTAssertEqual(codex.remaining, 200)
-        XCTAssertFalse(supplemented.contains("Codex"))
+        XCTAssertEqual(codex.quota, 100, "Fresh local Codex quota must replace stale cloud quota")
+        XCTAssertEqual(codex.remaining, 70)
+        XCTAssertEqual(codex.status_text, "30% used")
+        XCTAssertTrue(supplemented.contains("Codex"))
+    }
+
+    func testCodexHelperShapeMatchesRealSessionAndWeeklyWindows() {
+        let cloud = [makeCloudUsage(provider: "Codex", quota: 100, remaining: 29, tiers: [
+            TierDTO(name: "5h Window", quota: 100, remaining: 29, reset_time: "2026-04-02T22:00:00Z"),
+            TierDTO(name: "Weekly", quota: 100, remaining: 29, reset_time: "2026-04-09T00:00:00Z"),
+        ])]
+        let localUsage = ProviderUsage(
+            provider: "Codex", today_usage: 0, week_usage: 58,
+            estimated_cost_today: 0, estimated_cost_week: 0,
+            cost_status_today: "Unavailable", cost_status_week: "Unavailable",
+            quota: 100, remaining: 100,
+            plan_type: "Pro", reset_time: "2026-04-05T10:00:00Z",
+            tiers: [
+                TierDTO(name: "5h Window", quota: 100, remaining: 100, reset_time: "2026-04-05T10:00:00Z"),
+                TierDTO(name: "Weekly", quota: 100, remaining: 42, reset_time: "2026-04-09T00:00:00Z"),
+            ],
+            status_text: "0% used", trend: [], recent_sessions: [], recent_errors: []
+        )
+
+        let (merged, supplemented) = AppState.mergeCloudWithLocal(
+            cloud: cloud,
+            local: [CollectorResult(usage: localUsage, dataKind: .quota)]
+        )
+
+        let codex = try XCTUnwrap(merged.first)
+        XCTAssertEqual(codex.remaining, 100)
+        XCTAssertEqual(codex.tiers.map(\.remaining), [100, 42])
+        XCTAssertEqual(codex.tiers.map(\.name), ["5h Window", "Weekly"])
+        XCTAssertTrue(supplemented.contains("Codex"))
     }
 }
 #endif

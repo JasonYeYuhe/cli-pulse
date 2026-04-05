@@ -128,7 +128,7 @@ public enum ClaudeHelperContract {
     public static func writeSnapshot(_ snapshot: ClaudeSnapshot) throws {
         ensureHelperDir()
         var dict: [String: Any] = [
-            "fetched_at": ISO8601DateFormatter().string(from: Date()),
+            "fetched_at": sharedISO8601Formatter.string(from: Date()),
             "source": snapshot.sourceLabel,
         ]
         if let v = snapshot.sessionUsed { dict["session_used"] = v }
@@ -156,7 +156,7 @@ public enum ClaudeHelperContract {
         let dict: [String: Any] = [
             "sessionKey": sessionKey,
             "source": source,
-            "fetched_at": ISO8601DateFormatter().string(from: Date()),
+            "fetched_at": sharedISO8601Formatter.string(from: Date()),
         ]
         let data = try JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted])
         try data.write(to: URL(fileURLWithPath: sessionKeyPath), options: .atomic)
@@ -176,7 +176,7 @@ public enum ClaudeHelperContract {
                 continue
             }
 
-            let fetchedDate = (json["fetched_at"] as? String).flatMap { ISO8601DateFormatter().date(from: $0) }
+            let fetchedDate = (json["fetched_at"] as? String).flatMap { sharedISO8601Formatter.date(from: $0) }
             if let date = fetchedDate,
                Date().timeIntervalSince(date) > maxAge {
                 continue
@@ -229,14 +229,14 @@ public enum ClaudeHelperContract {
         guard let raw,
               let parsed = parseISO8601(raw)
         else {
-            return ISO8601DateFormatter().string(from: canonical)
+            return sharedISO8601Formatter.string(from: canonical)
         }
 
         let delta = abs(parsed.timeIntervalSince(canonical))
         if delta <= 6 * 3600 {
-            return ISO8601DateFormatter().string(from: parsed)
+            return sharedISO8601Formatter.string(from: parsed)
         }
-        return ISO8601DateFormatter().string(from: canonical)
+        return sharedISO8601Formatter.string(from: canonical)
     }
 
     /// Session resets are rolling; if a cached reset is already behind the snapshot fetch time,
@@ -250,7 +250,7 @@ public enum ClaudeHelperContract {
         guard parsed.timeIntervalSince(reference) > 60 else {
             return nil
         }
-        return ISO8601DateFormatter().string(from: parsed)
+        return sharedISO8601Formatter.string(from: parsed)
     }
 
     static func canonicalWeeklyReset(after reference: Date, calendar: Calendar = .current) -> Date? {
@@ -269,12 +269,14 @@ public enum ClaudeHelperContract {
     }
 
     private static func parseISO8601(_ raw: String) -> Date? {
-        let iso = ISO8601DateFormatter()
-        if let date = iso.date(from: raw) {
+        // Try default format first via shared (immutable) formatter
+        if let date = sharedISO8601Formatter.date(from: raw) {
             return date
         }
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return iso.date(from: raw)
+        // Fall back to fractional seconds with a local formatter — do NOT mutate the shared one
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return fractional.date(from: raw)
     }
 
     /// Diagnostic: summarize helper file state.
@@ -288,7 +290,7 @@ public enum ClaudeHelperContract {
             if let data = FileManager.default.contents(atPath: diagnosticPath),
                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let fetchedAt = json["fetched_at"] as? String,
-               let fetched = ISO8601DateFormatter().date(from: fetchedAt) {
+               let fetched = sharedISO8601Formatter.date(from: fetchedAt) {
                 let age = Int(Date().timeIntervalSince(fetched))
                 let liveFresh = age < Int(maxSnapshotAge)
                 let cacheFresh = age < Int(cacheSnapshotAge)

@@ -10,7 +10,7 @@ internal struct DemoData {
 
 internal enum DemoDataProvider {
     static func generate() -> DemoData {
-        let formatter = ISO8601DateFormatter()
+        let formatter = sharedISO8601Formatter
         let now = Date()
 
         func timestamp(_ offset: TimeInterval = 0) -> String {

@@ -50,10 +50,17 @@ const PRODUCT_TIER_MAP: Record<string, string> = {
   "com.clipulse.team.yearly": "team",
 };
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "https://clipulse.app",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
 }
 
@@ -194,12 +201,7 @@ serve(async (req: Request) => {
   // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers":
-          "authorization, x-client-info, apikey, content-type",
-      },
+      headers: CORS_HEADERS,
     });
   }
 
@@ -350,24 +352,24 @@ serve(async (req: Request) => {
         );
       }
 
-      // Anti-replay for Google
-      if (result.orderId) {
-        const { data: existingSub } = await adminClient
-          .from("subscriptions")
-          .select("user_id")
-          .eq("play_order_id", result.orderId)
-          .neq("user_id", user.id)
-          .maybeSingle();
+      // Anti-replay for Google — check both orderId and purchaseToken
+      const replayCheckField = result.orderId ? "play_order_id" : "play_purchase_token";
+      const replayCheckValue = result.orderId ?? purchaseToken;
+      const { data: existingSub } = await adminClient
+        .from("subscriptions")
+        .select("user_id")
+        .eq(replayCheckField, replayCheckValue)
+        .neq("user_id", user.id)
+        .maybeSingle();
 
-        if (existingSub) {
-          return jsonResponse(
-            {
-              verified: false,
-              error: "Purchase already associated with another account",
-            },
-            403,
-          );
-        }
+      if (existingSub) {
+        return jsonResponse(
+          {
+            verified: false,
+            error: "Purchase already associated with another account",
+          },
+          403,
+        );
       }
 
       tier = PRODUCT_TIER_MAP[productId] ?? "free";
@@ -403,14 +405,17 @@ serve(async (req: Request) => {
       status: "active",
       platform,
       current_period_end: expiresDate,
-      apple_product_id: productId,
       updated_at: new Date().toISOString(),
     };
+    if (platform === "apple") {
+      subRecord.apple_product_id = productId;
+    }
     if (platform === "apple") {
       subRecord.apple_transaction_id = transactionId;
       subRecord.apple_original_transaction_id = originalTransactionId;
     } else if (platform === "google") {
       subRecord.play_order_id = playOrderId;
+      subRecord.play_purchase_token = body.purchaseToken ?? null;
     }
 
     const { error: subError } = await adminClient
@@ -419,6 +424,12 @@ serve(async (req: Request) => {
 
     if (subError) {
       console.error("Subscription upsert error:", subError);
+      // Do NOT revert profile tier — the user may have a valid existing subscription.
+      // Log the error and return 500 so the client can retry.
+      return jsonResponse(
+        { verified: false, error: "Failed to record subscription, please retry" },
+        500,
+      );
     }
 
     return jsonResponse({ verified: true, tier });

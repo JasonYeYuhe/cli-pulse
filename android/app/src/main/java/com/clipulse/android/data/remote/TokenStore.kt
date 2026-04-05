@@ -41,6 +41,15 @@ class TokenStore(
 
     val isLoggedIn: Boolean get() = !accessToken.isNullOrBlank()
 
+    /** Atomically update auth tokens + userId in a single write transaction. */
+    fun updateAuthState(access: String?, refresh: String?, user: String?) {
+        prefs.edit()
+            .putString(KEY_ACCESS_TOKEN, access)
+            .putString(KEY_REFRESH_TOKEN, refresh)
+            .putString(KEY_USER_ID, user)
+            .apply()
+    }
+
     fun clear() {
         prefs.edit().clear().apply()
     }

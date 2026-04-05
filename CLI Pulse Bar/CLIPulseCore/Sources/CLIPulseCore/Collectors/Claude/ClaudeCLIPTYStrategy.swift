@@ -306,7 +306,7 @@ public struct ClaudeCLIPTYStrategy: ClaudeSourceStrategy, Sendable {
     private static func dumpRawOutput(_ output: String) {
         let clean = ClaudeCredentials.stripANSI(output)
         let path = NSTemporaryDirectory() + "clipulse_claude_pty_raw.txt"
-        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let timestamp = sharedISO8601Formatter.string(from: Date())
         let entry = "=== PTY dump \(timestamp) ===\n\(clean)\n=== END ===\n\n"
         if let fh = FileHandle(forWritingAtPath: path) {
             fh.seekToEndOfFile()

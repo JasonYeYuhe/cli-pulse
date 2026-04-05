@@ -95,35 +95,17 @@ final class WatchSessionManager: NSObject, ObservableObject {
     private func processContext(_ context: [String: Any]) {
         let decoder = JSONDecoder()
 
-        if let dashData = context["dashboard"] as? Data,
-           let dash = try? decoder.decode(DashboardSummary.self, from: dashData) {
-            DispatchQueue.main.async {
-                self.lastReceivedDashboard = dash
-            }
-        }
-
-        if let provData = context["providers"] as? Data,
-           let providers = try? decoder.decode([ProviderUsage].self, from: provData) {
-            DispatchQueue.main.async {
-                self.lastReceivedProviders = providers
-            }
-        }
-
-        if let sessData = context["sessions"] as? Data,
-           let sessions = try? decoder.decode([SessionRecord].self, from: sessData) {
-            DispatchQueue.main.async {
-                self.lastReceivedSessions = sessions
-            }
-        }
-
-        if let alertData = context["alerts"] as? Data,
-           let alerts = try? decoder.decode([AlertRecord].self, from: alertData) {
-            DispatchQueue.main.async {
-                self.lastReceivedAlerts = alerts
-            }
-        }
+        // Decode on background thread, batch-update all published properties in a single main-thread dispatch
+        let dash = (context["dashboard"] as? Data).flatMap { try? decoder.decode(DashboardSummary.self, from: $0) }
+        let providers = (context["providers"] as? Data).flatMap { try? decoder.decode([ProviderUsage].self, from: $0) }
+        let sessions = (context["sessions"] as? Data).flatMap { try? decoder.decode([SessionRecord].self, from: $0) }
+        let alerts = (context["alerts"] as? Data).flatMap { try? decoder.decode([AlertRecord].self, from: $0) }
 
         DispatchQueue.main.async {
+            if let dash { self.lastReceivedDashboard = dash }
+            if let providers { self.lastReceivedProviders = providers }
+            if let sessions { self.lastReceivedSessions = sessions }
+            if let alerts { self.lastReceivedAlerts = alerts }
             self.lastSyncDate = Date()
             self.persistData()
         }
