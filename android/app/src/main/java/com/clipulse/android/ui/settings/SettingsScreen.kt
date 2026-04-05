@@ -88,8 +88,8 @@ fun SettingsScreen(
                     EditableSettingRow("Usage Spike (tokens)", settings.usageSpikeThreshold) {
                         viewModel.updateSetting("usage_spike_threshold", it)
                     }
-                    EditableSettingRow("Project Budget ($)", settings.projectBudgetThresholdUsd.toInt()) {
-                        viewModel.updateSetting("project_budget_threshold_usd", it.toDouble() / 100.0 * 100.0)
+                    EditableDecimalRow("Project Budget ($)", settings.projectBudgetThresholdUsd) {
+                        viewModel.updateSetting("project_budget_threshold_usd", it)
                     }
                     EditableSettingRow("Long Session (min)", settings.sessionTooLongThresholdMinutes) {
                         viewModel.updateSetting("session_too_long_threshold_minutes", it)
@@ -163,6 +163,36 @@ fun SettingsScreen(
                     }
                 },
             )
+        }
+    }
+}
+
+@Composable
+private fun EditableDecimalRow(label: String, currentValue: Double, onUpdate: (Double) -> Unit) {
+    var editing by remember { mutableStateOf(false) }
+    var textValue by remember(currentValue) { mutableStateOf(String.format("%.2f", currentValue)) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        if (editing) {
+            OutlinedTextField(
+                value = textValue,
+                onValueChange = { textValue = it.filter { c -> c.isDigit() || c == '.' } },
+                modifier = Modifier.width(100.dp),
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyMedium,
+            )
+            IconButton(onClick = {
+                editing = false
+                textValue.toDoubleOrNull()?.let { onUpdate(it) }
+            }) { Icon(Icons.Filled.Check, contentDescription = "Save") }
+        } else {
+            TextButton(onClick = { editing = true }) {
+                Text(String.format("%.2f", currentValue))
+            }
         }
     }
 }

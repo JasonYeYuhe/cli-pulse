@@ -110,8 +110,8 @@ public enum AlertGenerator {
             ])
         }
 
-        // Cost spike: today's total > 2x yesterday
-        if let yesterday = yesterdayCost, yesterday > 0 {
+        // Cost spike: today's total > 2x yesterday (min $1 to avoid trivial alerts)
+        if let yesterday = yesterdayCost, yesterday >= 1.0 {
             let todayCost = providers.reduce(0.0) { $0 + Double($1.today_usage) * 0.001 } // rough estimate
             if todayCost > yesterday * 2 {
                 let spikeKey = "costspike:\(sharedISO8601Formatter.string(from: Date()).prefix(10))"

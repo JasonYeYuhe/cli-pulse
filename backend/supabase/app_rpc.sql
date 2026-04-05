@@ -255,12 +255,10 @@ begin
   loop
     v_suppression_key := 'budget:' || v_user_id || ':' || v_project.project || ':' || v_week_label;
 
-    -- Skip if already alerted this week (suppression)
+    -- Skip if already alerted this week (strict existence — no cooldown for budget alerts)
     if not exists (
       select 1 from public.alerts
-      where user_id = v_user_id
-        and suppression_key = v_suppression_key
-        and created_at > now() - (v_cooldown || ' minutes')::interval
+      where user_id = v_user_id and suppression_key = v_suppression_key
     ) then
       insert into public.alerts (id, user_id, type, severity, title, message,
         related_project_name, related_provider, suppression_key, grouping_key)
@@ -295,7 +293,8 @@ begin
       and last_active_at >= current_date - interval '1 day'
       and last_active_at < current_date;
 
-    if v_yesterday_cost > 0 and v_today_cost > v_yesterday_cost * 2 then
+    -- Require minimum $1 yesterday to avoid trivial false positives
+    if v_yesterday_cost >= 1.0 and v_today_cost > v_yesterday_cost * 2 then
       if not exists (
         select 1 from public.alerts
         where user_id = v_user_id and suppression_key = v_spike_key
@@ -332,6 +331,8 @@ declare
   v_tier text;
 begin
   if v_user_id is null then raise exception 'Not authenticated'; end if;
+
+  if trim(p_name) = '' then raise exception 'Team name cannot be empty'; end if;
 
   -- Require Pro or Team subscription
   select coalesce(
@@ -480,6 +481,13 @@ begin
   -- Cannot remove the owner
   if exists (select 1 from public.teams where id = p_team_id and owner_id = p_user_id) then
     raise exception 'Cannot remove the team owner';
+  end if;
+
+  -- Admins can only remove members, not other admins (owner can remove anyone)
+  if v_caller_role = 'admin' then
+    if exists (select 1 from public.team_members where team_id = p_team_id and user_id = p_user_id and role = 'admin') then
+      raise exception 'Only the owner can remove admins';
+    end if;
   end if;
 
   delete from public.team_members where team_id = p_team_id and user_id = p_user_id;

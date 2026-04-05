@@ -56,9 +56,16 @@ struct TeamView: View {
 
             if let detail = selectedTeam {
                 Divider()
+                let currentUserId = appState.api.userId ?? ""
+                let callerIsOwner = detail.team.owner_id == currentUserId
+                let callerIsAdmin = detail.members.first(where: { $0.user_id == currentUserId })?.role == "admin"
+                let canManage = callerIsOwner || callerIsAdmin
+
                 TeamDetailView(
                     detail: detail,
                     usage: teamUsage,
+                    canManage: canManage,
+                    isOwner: callerIsOwner,
                     onInvite: { showInviteSheet = true },
                     onRemove: { userId in
                         Task { await removeMember(teamId: detail.team.id, userId: userId) }
@@ -185,6 +192,8 @@ private struct TeamRow: View {
 private struct TeamDetailView: View {
     let detail: TeamDetailDTO
     let usage: TeamUsageSummaryDTO?
+    let canManage: Bool
+    let isOwner: Bool
     let onInvite: () -> Void
     let onRemove: (String) -> Void
     let onRoleChange: (String, String) -> Void
@@ -194,8 +203,10 @@ private struct TeamDetailView: View {
             HStack {
                 Text(detail.team.name).font(.headline)
                 Spacer()
-                Button("Invite", action: onInvite)
-                    .font(.caption)
+                if canManage {
+                    Button("Invite", action: onInvite)
+                        .font(.caption)
+                }
             }
 
             if let usage {
@@ -216,11 +227,13 @@ private struct TeamDetailView: View {
                         Text(member.role.capitalized).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    if member.role != "owner" {
+                    if member.role != "owner" && canManage {
                         Menu {
-                            Button("Make Admin") { onRoleChange(member.user_id, "admin") }
-                            Button("Make Member") { onRoleChange(member.user_id, "member") }
-                            Divider()
+                            if isOwner {
+                                Button("Make Admin") { onRoleChange(member.user_id, "admin") }
+                                Button("Make Member") { onRoleChange(member.user_id, "member") }
+                                Divider()
+                            }
                             Button("Remove", role: .destructive) { onRemove(member.user_id) }
                         } label: {
                             Image(systemName: "ellipsis.circle")

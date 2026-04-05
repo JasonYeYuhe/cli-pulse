@@ -472,10 +472,27 @@ class SupabaseClient(
         }
     }
 
-    // ── Public RPC (for Team management etc.) ─────────────
+    // ── Teams ─────────────────────────────────────────────
 
     suspend fun rpcPublic(function: String, params: JSONObject = JSONObject()): JSONObject =
         withContext(Dispatchers.IO) { rpc(function, params) }
+
+    data class TeamInfo(val id: String, val name: String, val role: String)
+
+    suspend fun fetchTeamsForUser(userId: String): List<TeamInfo> = withContext(Dispatchers.IO) {
+        val arr = restGetArray(
+            "/rest/v1/team_members?user_id=eq.${enc(userId)}&select=role,teams(id,name)"
+        )
+        (0 until arr.length()).mapNotNull { i ->
+            val row = arr.getJSONObject(i)
+            val team = row.optJSONObject("teams") ?: return@mapNotNull null
+            TeamInfo(
+                id = team.optString("id"),
+                name = team.optString("name"),
+                role = row.optString("role", "member"),
+            )
+        }
+    }
 
     // ── Account Deletion ─────────────────────────────────
 

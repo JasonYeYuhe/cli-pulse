@@ -3,18 +3,17 @@ package com.clipulse.android.ui.team
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.clipulse.android.data.remote.SupabaseClient
+import com.clipulse.android.data.remote.TokenStore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
+import java.net.URLEncoder
 import javax.inject.Inject
-
-data class TeamInfo(
-    val id: String,
-    val name: String,
-    val role: String,
-)
 
 data class TeamMember(
     val userId: String,
@@ -24,8 +23,8 @@ data class TeamMember(
 )
 
 data class TeamUiState(
-    val teams: List<TeamInfo> = emptyList(),
-    val selectedTeam: TeamInfo? = null,
+    val teams: List<SupabaseClient.TeamInfo> = emptyList(),
+    val selectedTeam: SupabaseClient.TeamInfo? = null,
     val members: List<TeamMember> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -34,6 +33,7 @@ data class TeamUiState(
 @HiltViewModel
 class TeamViewModel @Inject constructor(
     private val supabase: SupabaseClient,
+    private val tokenStore: TokenStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TeamUiState())
@@ -45,9 +45,9 @@ class TeamViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
-                val json = supabase.rpcPublic("team_details_for_user")
-                // For now, use a simplified approach via REST
-                _state.value = _state.value.copy(isLoading = false)
+                val userId = tokenStore.userId ?: return@launch
+                val teams = supabase.fetchTeamsForUser(userId)
+                _state.value = _state.value.copy(isLoading = false, teams = teams)
             } catch (e: Exception) {
                 _state.value = _state.value.copy(isLoading = false, error = e.message)
             }
