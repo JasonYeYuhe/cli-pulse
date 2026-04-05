@@ -768,6 +768,51 @@ public actor APIClient {
         return result.alerts_created ?? 0
     }
 
+    // MARK: - Teams
+
+    public func createTeam(name: String) async throws -> TeamDTO {
+        struct Params: Encodable { let p_name: String }
+        struct Result: Decodable { let team_id: String; let name: String }
+        let result: Result = try await rpc("create_team", params: Params(p_name: name))
+        return TeamDTO(id: result.team_id, name: result.name, owner_id: userId ?? "", created_at: sharedISO8601Formatter.string(from: Date()), member_count: 1, role: "owner")
+    }
+
+    public func teamDetails(teamId: String) async throws -> TeamDetailDTO {
+        struct Params: Encodable { let p_team_id: String }
+        return try await rpc("team_details", params: Params(p_team_id: teamId))
+    }
+
+    public func myTeams() async throws -> [TeamDTO] {
+        guard let uid = userId, Self.isValidUUID(uid) else { throw APIError.invalidResponse }
+        let safeUid = Self.sanitizeParam(uid)
+        return try await restGet("/rest/v1/team_members?user_id=eq.\(safeUid)&select=team_id,role,joined_at,teams(id,name,owner_id,created_at)")
+    }
+
+    public func inviteMember(teamId: String, email: String) async throws {
+        struct Params: Encodable { let p_team_id: String; let p_email: String; let p_role: String }
+        let _: [String: String] = try await rpc("invite_member", params: Params(p_team_id: teamId, p_email: email, p_role: "member"))
+    }
+
+    public func acceptInvite(inviteId: String) async throws {
+        struct Params: Encodable { let p_invite_id: String }
+        let _: [String: String] = try await rpc("accept_invite", params: Params(p_invite_id: inviteId))
+    }
+
+    public func removeMember(teamId: String, userId: String) async throws {
+        struct Params: Encodable { let p_team_id: String; let p_user_id: String }
+        let _: [String: String] = try await rpc("remove_member", params: Params(p_team_id: teamId, p_user_id: userId))
+    }
+
+    public func updateMemberRole(teamId: String, userId: String, role: String) async throws {
+        struct Params: Encodable { let p_team_id: String; let p_user_id: String; let p_role: String }
+        let _: [String: String] = try await rpc("update_member_role", params: Params(p_team_id: teamId, p_user_id: userId, p_role: role))
+    }
+
+    public func teamUsageSummary(teamId: String) async throws -> TeamUsageSummaryDTO {
+        struct Params: Encodable { let p_team_id: String }
+        return try await rpc("team_usage_summary", params: Params(p_team_id: teamId))
+    }
+
     // MARK: - OAuth (Google / GitHub via Supabase)
 
     /// Build the Supabase OAuth authorization URL for a given provider with PKCE.

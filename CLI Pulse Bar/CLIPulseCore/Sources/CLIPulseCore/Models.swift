@@ -635,3 +635,45 @@ public struct SettingsSnapshot: Codable, Sendable {
         self.data_retention_days = data_retention_days
     }
 }
+
+// MARK: - Teams
+
+public struct TeamDTO: Codable, Identifiable, Sendable {
+    public let id: String
+    public let name: String
+    public let owner_id: String
+    public let created_at: String
+    public let member_count: Int?
+    public let role: String?  // caller's role in this team
+}
+
+public struct TeamMemberDTO: Codable, Identifiable, Sendable {
+    public var id: String { user_id }
+    public let user_id: String
+    public let name: String
+    public let email: String
+    public let role: String  // "owner", "admin", "member"
+    public let joined_at: String
+}
+
+public struct TeamInviteDTO: Codable, Identifiable, Sendable {
+    public let id: String
+    public let email: String
+    public let role: String
+    public let created_at: String
+    public let expires_at: String
+}
+
+public struct TeamDetailDTO: Codable, Sendable {
+    public let team: TeamDTO
+    public let members: [TeamMemberDTO]
+    public let invites: [TeamInviteDTO]
+}
+
+public struct TeamUsageSummaryDTO: Codable, Sendable {
+    public let team_id: String
+    public let total_usage: Int
+    public let total_cost: Double
+    public let member_count: Int
+    public let provider_breakdown: [ProviderBreakdown]?
+}

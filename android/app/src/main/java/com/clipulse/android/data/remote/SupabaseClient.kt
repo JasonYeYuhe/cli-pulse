@@ -472,6 +472,11 @@ class SupabaseClient(
         }
     }
 
+    // ── Public RPC (for Team management etc.) ─────────────
+
+    suspend fun rpcPublic(function: String, params: JSONObject = JSONObject()): JSONObject =
+        withContext(Dispatchers.IO) { rpc(function, params) }
+
     // ── Account Deletion ─────────────────────────────────
 
     suspend fun deleteAccount() = withContext(Dispatchers.IO) {

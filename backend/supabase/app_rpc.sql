@@ -318,3 +318,233 @@ begin
   return jsonb_build_object('alerts_created', v_alert_count);
 end;
 $$ language plpgsql security definer;
+
+-- ============================================================
+-- Team Management RPCs
+-- ============================================================
+
+-- create_team: create a new team with the caller as owner
+create or replace function public.create_team(p_name text)
+returns jsonb as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_team_id uuid;
+  v_tier text;
+begin
+  if v_user_id is null then raise exception 'Not authenticated'; end if;
+
+  -- Require Pro or Team subscription
+  select coalesce(
+    (select s.tier from public.subscriptions s
+     where s.user_id = v_user_id and s.status = 'active' and s.tier != 'free'),
+    (select p.tier from public.profiles p where p.id = v_user_id),
+    'free'
+  ) into v_tier;
+  if v_tier = 'free' then raise exception 'Team features require Pro or Team subscription'; end if;
+
+  insert into public.teams (name, owner_id) values (left(p_name, 100), v_user_id)
+  returning id into v_team_id;
+
+  insert into public.team_members (team_id, user_id, role) values (v_team_id, v_user_id, 'owner');
+
+  return jsonb_build_object('team_id', v_team_id, 'name', p_name);
+end;
+$$ language plpgsql security definer;
+
+-- team_details: return team info + members + invites
+create or replace function public.team_details(p_team_id uuid)
+returns jsonb as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_team jsonb;
+  v_members jsonb;
+  v_invites jsonb;
+begin
+  if v_user_id is null then raise exception 'Not authenticated'; end if;
+
+  -- Verify caller is a member
+  if not exists (select 1 from public.team_members where team_id = p_team_id and user_id = v_user_id) then
+    raise exception 'Not a member of this team';
+  end if;
+
+  select jsonb_build_object('id', t.id, 'name', t.name, 'owner_id', t.owner_id, 'created_at', t.created_at)
+  into v_team from public.teams t where t.id = p_team_id;
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'user_id', tm.user_id, 'name', p.name, 'email', p.email,
+    'role', tm.role, 'joined_at', tm.joined_at
+  )), '[]'::jsonb)
+  into v_members
+  from public.team_members tm
+  join public.profiles p on p.id = tm.user_id
+  where tm.team_id = p_team_id;
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', ti.id, 'email', ti.email, 'role', ti.role,
+    'created_at', ti.created_at, 'expires_at', ti.expires_at
+  )), '[]'::jsonb)
+  into v_invites
+  from public.team_invites ti
+  where ti.team_id = p_team_id and ti.expires_at > now();
+
+  return jsonb_build_object('team', v_team, 'members', v_members, 'invites', v_invites);
+end;
+$$ language plpgsql security definer;
+
+-- invite_member: send an invite to a team
+create or replace function public.invite_member(p_team_id uuid, p_email text, p_role text default 'member')
+returns jsonb as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_invite_id uuid;
+  v_member_count integer;
+begin
+  if v_user_id is null then raise exception 'Not authenticated'; end if;
+
+  -- Verify caller is owner or admin
+  if not exists (
+    select 1 from public.team_members
+    where team_id = p_team_id and user_id = v_user_id and role in ('owner', 'admin')
+  ) then raise exception 'Only owners and admins can invite members'; end if;
+
+  -- Enforce role constraint: can only invite as 'member'
+  if p_role not in ('member') then raise exception 'Can only invite as member role'; end if;
+
+  -- Check for existing invite
+  if exists (
+    select 1 from public.team_invites
+    where team_id = p_team_id and email = p_email and expires_at > now()
+  ) then raise exception 'Invite already pending for this email'; end if;
+
+  insert into public.team_invites (team_id, email, role)
+  values (p_team_id, left(p_email, 255), p_role)
+  returning id into v_invite_id;
+
+  return jsonb_build_object('invite_id', v_invite_id, 'email', p_email);
+end;
+$$ language plpgsql security definer;
+
+-- accept_invite: join a team via invite
+create or replace function public.accept_invite(p_invite_id uuid)
+returns jsonb as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_user_email text;
+  v_invite record;
+begin
+  if v_user_id is null then raise exception 'Not authenticated'; end if;
+
+  select email into v_user_email from public.profiles where id = v_user_id;
+
+  select * into v_invite from public.team_invites
+  where id = p_invite_id and expires_at > now();
+
+  if v_invite is null then raise exception 'Invite not found or expired'; end if;
+
+  -- Verify email matches
+  if v_user_email != v_invite.email then
+    raise exception 'This invite was sent to a different email address';
+  end if;
+
+  -- Already a member?
+  if exists (select 1 from public.team_members where team_id = v_invite.team_id and user_id = v_user_id) then
+    delete from public.team_invites where id = p_invite_id;
+    raise exception 'Already a member of this team';
+  end if;
+
+  insert into public.team_members (team_id, user_id, role)
+  values (v_invite.team_id, v_user_id, v_invite.role);
+
+  delete from public.team_invites where id = p_invite_id;
+
+  return jsonb_build_object('team_id', v_invite.team_id, 'role', v_invite.role);
+end;
+$$ language plpgsql security definer;
+
+-- remove_member: remove a member from a team
+create or replace function public.remove_member(p_team_id uuid, p_user_id uuid)
+returns jsonb as $$
+declare
+  v_caller_id uuid := auth.uid();
+  v_caller_role text;
+begin
+  if v_caller_id is null then raise exception 'Not authenticated'; end if;
+
+  select role into v_caller_role from public.team_members
+  where team_id = p_team_id and user_id = v_caller_id;
+
+  if v_caller_role is null or v_caller_role not in ('owner', 'admin') then
+    raise exception 'Only owners and admins can remove members';
+  end if;
+
+  -- Cannot remove the owner
+  if exists (select 1 from public.teams where id = p_team_id and owner_id = p_user_id) then
+    raise exception 'Cannot remove the team owner';
+  end if;
+
+  delete from public.team_members where team_id = p_team_id and user_id = p_user_id;
+
+  return jsonb_build_object('removed', p_user_id);
+end;
+$$ language plpgsql security definer;
+
+-- update_member_role: change a member's role (owner only)
+create or replace function public.update_member_role(p_team_id uuid, p_user_id uuid, p_role text)
+returns jsonb as $$
+declare
+  v_caller_id uuid := auth.uid();
+begin
+  if v_caller_id is null then raise exception 'Not authenticated'; end if;
+
+  -- Only team owner can change roles
+  if not exists (select 1 from public.teams where id = p_team_id and owner_id = v_caller_id) then
+    raise exception 'Only the team owner can change roles';
+  end if;
+
+  if p_role not in ('admin', 'member') then raise exception 'Invalid role'; end if;
+
+  update public.team_members set role = p_role
+  where team_id = p_team_id and user_id = p_user_id and user_id != v_caller_id;
+
+  return jsonb_build_object('user_id', p_user_id, 'role', p_role);
+end;
+$$ language plpgsql security definer;
+
+-- team_usage_summary: aggregated usage for a team
+create or replace function public.team_usage_summary(p_team_id uuid)
+returns jsonb as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_week_start date := current_date - interval '7 days';
+begin
+  if v_user_id is null then raise exception 'Not authenticated'; end if;
+
+  if not exists (select 1 from public.team_members where team_id = p_team_id and user_id = v_user_id) then
+    raise exception 'Not a member of this team';
+  end if;
+
+  return (
+    select jsonb_build_object(
+      'team_id', p_team_id,
+      'member_count', (select count(*) from public.team_members where team_id = p_team_id),
+      'total_usage', coalesce(sum(s.total_usage), 0),
+      'total_cost', coalesce(sum(s.estimated_cost), 0),
+      'provider_breakdown', coalesce((
+        select jsonb_agg(jsonb_build_object(
+          'provider', sub.provider, 'usage', sub.usage, 'cost', sub.cost
+        ))
+        from (
+          select s2.provider, sum(s2.total_usage) as usage, sum(s2.estimated_cost) as cost
+          from public.sessions s2
+          where s2.user_id in (select tm.user_id from public.team_members tm where tm.team_id = p_team_id)
+            and s2.last_active_at >= v_week_start
+          group by s2.provider order by sum(s2.total_usage) desc
+        ) sub
+      ), '[]'::jsonb)
+    )
+    from public.sessions s
+    where s.user_id in (select tm.user_id from public.team_members tm where tm.team_id = p_team_id)
+      and s.last_active_at >= v_week_start
+  );
+end;
+$$ language plpgsql security definer;
