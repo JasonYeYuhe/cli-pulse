@@ -14,29 +14,37 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun TeamScreen(
     viewModel: TeamViewModel = hiltViewModel(),
+    onBack: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
     var newTeamName by remember { mutableStateOf("") }
 
+    Scaffold(
+        topBar = {
+            @OptIn(ExperimentalMaterial3Api::class)
+            TopAppBar(
+                title = { Text("Teams") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showCreateDialog = true }) {
+                        Icon(Icons.Filled.Add, contentDescription = "Create Team")
+                    }
+                },
+            )
+        },
+    ) { padding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(padding)
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text("Teams", style = MaterialTheme.typography.headlineMedium)
-            IconButton(onClick = { showCreateDialog = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "Create Team")
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
         if (state.isLoading) {
             CircularProgressIndicator(modifier = Modifier.padding(16.dp))
         }
@@ -69,6 +77,7 @@ fun TeamScreen(
             Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
     }
+    } // end Scaffold
 
     if (showCreateDialog) {
         AlertDialog(

@@ -115,7 +115,7 @@ fun AppNavigation() {
                 DevicesScreen()
             }
             composable("teams") {
-                TeamScreen()
+                TeamScreen(onBack = { navController.popBackStack() })
             }
         }
     }

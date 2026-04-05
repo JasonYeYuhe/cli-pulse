@@ -66,6 +66,23 @@ struct iOSOverviewTab: View {
                     }
                     .disabled(state.isLoading)
                 }
+                ToolbarItem(placement: .secondaryAction) {
+                    Menu {
+                        if let url = ExportService.exportCostReportCSV(
+                            dashboard: state.dashboard, providers: state.providers, sessions: state.sessions
+                        ) {
+                            ShareLink(item: url) { Label("Export Cost Report", systemImage: "doc.text") }
+                        }
+                        if let url = ExportService.exportSessionsCSV(sessions: state.sessions) {
+                            ShareLink(item: url) { Label("Export Sessions", systemImage: "list.bullet") }
+                        }
+                        if let url = ExportService.exportProviderSummaryCSV(providers: state.providers) {
+                            ShareLink(item: url) { Label("Export Providers", systemImage: "chart.bar") }
+                        }
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                }
             }
             .refreshable {
                 await state.refreshAll()

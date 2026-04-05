@@ -224,6 +224,12 @@ struct iOSSettingsTab: View {
                         .disabled(state.isLoading)
                     }
 
+                    // Teams
+                    Section("Teams") {
+                        TeamView()
+                            .environmentObject(state)
+                    }
+
                     // About
                     Section(L10n.settings.about) {
                         HStack {
