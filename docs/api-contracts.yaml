@@ -1,0 +1,479 @@
+openapi: 3.1.0
+info:
+  title: CLI Pulse API
+  version: 1.4.0
+  description: |
+    Shared API contract for CLI Pulse across iOS (Swift/Codable), Android (Kotlin/JSONObject),
+    and Python (dict) clients. All endpoints are Supabase RPCs or REST queries behind
+    the Supabase PostgREST layer.
+
+servers:
+  - url: https://gkjwsxotmwrgqsvfijzs.supabase.co
+    description: Production (Supabase Tokyo)
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Supabase access token (JWT)
+
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: apikey
+      description: Supabase anon key
+
+  schemas:
+    # ── Core Data Models ──
+
+    DashboardSummary:
+      type: object
+      required: [total_usage_today, total_estimated_cost_today, active_sessions, online_devices, unresolved_alerts]
+      properties:
+        total_usage_today: { type: integer, description: "Total tokens used today across all providers" }
+        total_estimated_cost_today: { type: number, format: double }
+        cost_status: { type: string, enum: [Exact, Estimated, Unavailable] }
+        total_requests_today: { type: integer }
+        active_sessions: { type: integer }
+        online_devices: { type: integer }
+        unresolved_alerts: { type: integer }
+        provider_breakdown:
+          type: array
+          items: { $ref: '#/components/schemas/ProviderBreakdown' }
+        top_projects:
+          type: array
+          items: { $ref: '#/components/schemas/TopProject' }
+        trend:
+          type: array
+          items: { $ref: '#/components/schemas/UsagePoint' }
+        recent_activity:
+          type: array
+          items: { $ref: '#/components/schemas/ActivityItem' }
+        risk_signals:
+          type: array
+          items: { type: string }
+        alert_summary: { $ref: '#/components/schemas/AlertSummaryDTO' }
+
+    ProviderUsage:
+      type: object
+      required: [provider, today_usage, week_usage, estimated_cost_today, estimated_cost_week, status_text]
+      properties:
+        provider: { type: string, description: "Provider name (e.g. Claude, Codex, Gemini)" }
+        today_usage: { type: integer }
+        week_usage: { type: integer }
+        estimated_cost_today: { type: number, format: double }
+        estimated_cost_week: { type: number, format: double }
+        cost_status_today: { type: string, enum: [Exact, Estimated, Unavailable] }
+        cost_status_week: { type: string, enum: [Exact, Estimated, Unavailable] }
+        quota: { type: integer, nullable: true }
+        remaining: { type: integer, nullable: true }
+        plan_type: { type: string, nullable: true }
+        reset_time: { type: string, format: date-time, nullable: true }
+        tiers:
+          type: array
+          items: { $ref: '#/components/schemas/TierDTO' }
+        status_text: { type: string }
+        trend:
+          type: array
+          items: { $ref: '#/components/schemas/UsagePoint' }
+        recent_sessions: { type: array, items: { type: string } }
+        recent_errors: { type: array, items: { type: string } }
+        metadata: { $ref: '#/components/schemas/ProviderMetadata' }
+
+    TierDTO:
+      type: object
+      required: [name, quota, remaining]
+      properties:
+        name: { type: string, description: "Tier display name (e.g. 5h Window, Weekly, Credits)" }
+        quota: { type: integer }
+        remaining: { type: integer }
+        reset_time: { type: string, format: date-time, nullable: true }
+
+    SessionRecord:
+      type: object
+      required: [id, name, provider, status, total_usage]
+      properties:
+        id: { type: string, maxLength: 128 }
+        name: { type: string }
+        provider: { type: string }
+        project: { type: string, nullable: true }
+        device_name: { type: string, nullable: true }
+        started_at: { type: string, format: date-time }
+        last_active_at: { type: string, format: date-time }
+        status: { type: string, enum: [Running, Idle, Failed, Syncing] }
+        total_usage: { type: integer }
+        estimated_cost: { type: number, format: double }
+        cost_status: { type: string, enum: [Exact, Estimated, Unavailable] }
+        requests: { type: integer }
+        error_count: { type: integer }
+        collection_confidence: { type: string, enum: [high, medium, low] }
+
+    DeviceRecord:
+      type: object
+      required: [id, name, type, system, status]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        type: { type: string }
+        system: { type: string }
+        status: { type: string, enum: [Online, Degraded, Offline] }
+        last_sync_at: { type: string, format: date-time, nullable: true }
+        helper_version: { type: string, nullable: true }
+        current_session_count: { type: integer }
+        cpu_usage: { type: number, nullable: true }
+        memory_usage: { type: number, nullable: true }
+
+    AlertRecord:
+      type: object
+      required: [id, type, severity, title, message, created_at, is_read, is_resolved]
+      properties:
+        id: { type: string, maxLength: 128 }
+        type: { type: string, description: "Alert type (Quota Low, Usage Spike, etc.)" }
+        severity: { type: string, enum: [Critical, Warning, Info] }
+        title: { type: string }
+        message: { type: string }
+        created_at: { type: string, format: date-time }
+        is_read: { type: boolean }
+        is_resolved: { type: boolean }
+        acknowledged_at: { type: string, format: date-time, nullable: true }
+        snoozed_until: { type: string, format: date-time, nullable: true }
+        related_project_id: { type: string, nullable: true }
+        related_project_name: { type: string, nullable: true }
+        related_session_id: { type: string, nullable: true }
+        related_session_name: { type: string, nullable: true }
+        related_provider: { type: string, nullable: true }
+        related_device_name: { type: string, nullable: true }
+        source_kind: { type: string, nullable: true }
+        source_id: { type: string, nullable: true }
+        grouping_key: { type: string, nullable: true }
+        suppression_key: { type: string, nullable: true }
+
+    UserSettings:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        notifications_enabled: { type: boolean, default: true }
+        push_policy: { type: string, default: "Warnings + Critical" }
+        digest_notifications_enabled: { type: boolean, default: true }
+        digest_interval_minutes: { type: integer, default: 15 }
+        usage_spike_threshold: { type: integer, default: 500 }
+        project_budget_threshold_usd: { type: number, default: 0.25 }
+        session_too_long_threshold_minutes: { type: integer, default: 180 }
+        offline_grace_period_minutes: { type: integer, default: 5 }
+        repeated_failure_threshold: { type: integer, default: 3 }
+        alert_cooldown_minutes: { type: integer, default: 30 }
+        data_retention_days: { type: integer, default: 7 }
+        webhook_url: { type: string, nullable: true }
+        webhook_enabled: { type: boolean, default: false }
+
+    # ── Supporting Types ──
+
+    ProviderBreakdown:
+      type: object
+      properties:
+        provider: { type: string }
+        usage: { type: integer }
+        estimated_cost: { type: number, format: double }
+        cost_status: { type: string }
+        remaining: { type: integer, nullable: true }
+
+    TopProject:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        usage: { type: integer }
+        estimated_cost: { type: number, format: double }
+        cost_status: { type: string }
+
+    UsagePoint:
+      type: object
+      properties:
+        timestamp: { type: string, format: date-time }
+        value: { type: integer }
+
+    ActivityItem:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        subtitle: { type: string }
+        timestamp: { type: string, format: date-time }
+
+    AlertSummaryDTO:
+      type: object
+      properties:
+        critical: { type: integer, default: 0 }
+        warning: { type: integer, default: 0 }
+        info: { type: integer, default: 0 }
+
+    ProviderMetadata:
+      type: object
+      properties:
+        display_name: { type: string }
+        category: { type: string, enum: [cloud, local, aggregator, ide] }
+        supports_exact_cost: { type: boolean }
+        supports_quota: { type: boolean }
+
+    # ── Helper Sync Payloads ──
+
+    HelperSyncRequest:
+      type: object
+      required: [p_device_id, p_helper_secret, p_sessions, p_alerts, p_provider_remaining, p_provider_tiers]
+      properties:
+        p_device_id: { type: string, format: uuid }
+        p_helper_secret: { type: string }
+        p_sessions:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+              provider: { type: string }
+              project: { type: string }
+              status: { type: string }
+              total_usage: { type: integer }
+              exact_cost: { type: number, nullable: true }
+              requests: { type: integer }
+              error_count: { type: integer }
+              collection_confidence: { type: string }
+              started_at: { type: string, format: date-time }
+              last_active_at: { type: string, format: date-time }
+        p_alerts:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              type: { type: string }
+              severity: { type: string }
+              title: { type: string }
+              message: { type: string }
+              created_at: { type: string, format: date-time }
+              related_provider: { type: string, nullable: true }
+              related_device_name: { type: string, nullable: true }
+              source_kind: { type: string }
+              source_id: { type: string }
+              grouping_key: { type: string }
+              suppression_key: { type: string, nullable: true }
+        p_provider_remaining:
+          type: object
+          additionalProperties: { type: integer }
+          description: "Map of provider_name -> remaining token count"
+        p_provider_tiers:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              remaining: { type: integer }
+              quota: { type: integer }
+              plan_type: { type: string }
+              reset_time: { type: string }
+
+    HelperHeartbeatRequest:
+      type: object
+      required: [p_device_id, p_helper_secret]
+      properties:
+        p_device_id: { type: string, format: uuid }
+        p_helper_secret: { type: string }
+        p_cpu_usage: { type: number, nullable: true }
+        p_memory_usage: { type: number, nullable: true }
+        p_active_session_count: { type: integer }
+
+    # ── Team Types ──
+
+    TeamInfo:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        role: { type: string, enum: [owner, admin, member, viewer] }
+        member_count: { type: integer }
+
+paths:
+  /rest/v1/rpc/dashboard_summary:
+    post:
+      summary: Get dashboard summary
+      operationId: dashboardSummary
+      responses:
+        '200':
+          description: Dashboard metrics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DashboardSummary' }
+
+  /rest/v1/rpc/provider_summary:
+    post:
+      summary: Get provider usage summaries
+      operationId: providerSummary
+      responses:
+        '200':
+          description: Array of provider usage data
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProviderUsage' }
+
+  /rest/v1/rpc/get_user_tier:
+    post:
+      summary: Get user subscription tier
+      operationId: getUserTier
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tier: { type: string, enum: [free, pro, team] }
+
+  /rest/v1/rpc/helper_sync:
+    post:
+      summary: Sync helper data (sessions, alerts, quotas)
+      operationId: helperSync
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HelperSyncRequest' }
+      responses:
+        '200':
+          description: Sync acknowledged
+
+  /rest/v1/rpc/helper_heartbeat:
+    post:
+      summary: Send helper heartbeat
+      operationId: helperHeartbeat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HelperHeartbeatRequest' }
+      responses:
+        '200':
+          description: Heartbeat acknowledged
+
+  /rest/v1/rpc/create_team:
+    post:
+      summary: Create a new team
+      operationId: createTeam
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                p_name: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeamInfo' }
+
+  /rest/v1/rpc/invite_member:
+    post:
+      summary: Invite a member to a team
+      operationId: inviteMember
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                p_team_id: { type: string, format: uuid }
+                p_email: { type: string, format: email }
+                p_role: { type: string, enum: [admin, member, viewer] }
+      responses:
+        '200':
+          description: Invite sent
+
+  /rest/v1/rpc/team_usage_summary:
+    post:
+      summary: Get usage summary for a team
+      operationId: teamUsageSummary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                p_team_id: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Team usage data
+
+  /rest/v1/rpc/evaluate_budget_alerts:
+    post:
+      summary: Evaluate budget alert thresholds
+      operationId: evaluateBudgetAlerts
+      responses:
+        '200':
+          description: Budget evaluation result
+
+  /functions/v1/validate-receipt:
+    post:
+      summary: Validate subscription receipt (Apple/Google)
+      operationId: validateReceipt
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    platform: { type: string, const: "apple" }
+                    transactionJWS: { type: string }
+                    productId: { type: string }
+                - type: object
+                  properties:
+                    platform: { type: string, const: "google" }
+                    purchaseToken: { type: string }
+                    productId: { type: string }
+                    packageName: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verified: { type: boolean }
+                  tier: { type: string }
+
+  /functions/v1/send-webhook:
+    post:
+      summary: Send alert notification to user webhook
+      operationId: sendWebhook
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, alert]
+              properties:
+                user_id: { type: string, format: uuid }
+                alert:
+                  type: object
+                  properties:
+                    type: { type: string }
+                    severity: { type: string }
+                    title: { type: string }
+                    message: { type: string }
+                    related_provider: { type: string, nullable: true }
+                    grouping_key: { type: string, nullable: true }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent: { type: boolean }
+                  skipped: { type: boolean }
+                  reason: { type: string }

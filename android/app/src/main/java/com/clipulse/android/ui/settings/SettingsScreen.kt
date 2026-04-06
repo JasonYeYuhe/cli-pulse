@@ -109,19 +109,80 @@ fun SettingsScreen(
             }
         }
 
+        // Integrations (Webhook)
+        Spacer(Modifier.height(16.dp))
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Integrations", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text("Webhook Notifications", modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = state.webhookEnabled,
+                        onCheckedChange = { viewModel.updateSetting("webhook_enabled", it) },
+                    )
+                }
+
+                if (state.webhookEnabled) {
+                    Spacer(Modifier.height(8.dp))
+                    var webhookText by remember(state.webhookUrl) { mutableStateOf(state.webhookUrl ?: "") }
+                    OutlinedTextField(
+                        value = webhookText,
+                        onValueChange = { webhookText = it },
+                        label = { Text("Webhook URL (Discord / Slack)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { viewModel.updateSetting("webhook_url", webhookText) },
+                            enabled = webhookText.isNotBlank(),
+                        ) { Text("Save URL") }
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.updateSetting("webhook_url", webhookText)
+                                viewModel.testWebhook()
+                            },
+                            enabled = webhookText.isNotBlank(),
+                        ) { Text("Test") }
+                    }
+                }
+            }
+        }
+
         Spacer(Modifier.height(24.dp))
 
-        // Sign out
-        OutlinedButton(
-            onClick = {
-                viewModel.signOut()
-                onSignOut()
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Sign Out")
+        // Demo mode exit or Sign out
+        if (state.isDemoMode) {
+            OutlinedButton(
+                onClick = {
+                    viewModel.exitDemoMode()
+                    onSignOut()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.tertiary),
+            ) {
+                Icon(Icons.Filled.ExitToApp, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Exit Demo Mode")
+            }
+        } else {
+            OutlinedButton(
+                onClick = {
+                    viewModel.signOut()
+                    onSignOut()
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Sign Out")
+            }
         }
 
         Spacer(Modifier.height(12.dp))

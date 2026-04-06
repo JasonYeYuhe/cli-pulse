@@ -39,7 +39,11 @@ class TokenStore(
         get() = prefs.getString(KEY_DEVICE_ID, null)
         set(value) = prefs.edit().putString(KEY_DEVICE_ID, value).apply()
 
-    val isLoggedIn: Boolean get() = !accessToken.isNullOrBlank()
+    var isDemoMode: Boolean
+        get() = prefs.getBoolean(KEY_DEMO_MODE, false)
+        set(value) = prefs.edit().putBoolean(KEY_DEMO_MODE, value).apply()
+
+    val isLoggedIn: Boolean get() = isDemoMode || !accessToken.isNullOrBlank()
 
     /** Atomically update auth tokens + userId in a single write transaction. */
     fun updateAuthState(access: String?, refresh: String?, user: String?) {
@@ -73,5 +77,6 @@ class TokenStore(
         private const val KEY_USER_NAME = "user_name"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_DEVICE_ID = "device_id"
+        private const val KEY_DEMO_MODE = "demo_mode"
     }
 }

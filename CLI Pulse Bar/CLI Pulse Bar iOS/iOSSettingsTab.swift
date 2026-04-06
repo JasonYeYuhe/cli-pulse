@@ -209,6 +209,37 @@ struct iOSSettingsTab: View {
                         Toggle(L10n.settings.checkProviderStatus, isOn: $state.checkProviderStatus)
                     }
 
+                    // Integrations (Webhook)
+                    Section("Integrations") {
+                        Toggle("Webhook Notifications", isOn: Binding(
+                            get: { state.webhookEnabled },
+                            set: { state.webhookEnabled = $0; state.pushSettingsToServer() }
+                        ))
+
+                        if state.webhookEnabled {
+                            TextField("Webhook URL (Discord / Slack)", text: Binding(
+                                get: { state.webhookURL },
+                                set: { state.webhookURL = $0 }
+                            ))
+                            .textContentType(.URL)
+                            .keyboardType(.URL)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                            .onSubmit { state.pushSettingsToServer() }
+
+                            Button {
+                                state.pushSettingsToServer()
+                                Task { await state.testWebhook() }
+                            } label: {
+                                HStack {
+                                    Image(systemName: "paperplane")
+                                    Text("Test Webhook")
+                                }
+                            }
+                            .disabled(state.webhookURL.isEmpty)
+                        }
+                    }
+
                     // Advanced
                     Section(L10n.settings.advanced) {
                         Toggle(L10n.settings.hidePersonalInfo, isOn: $state.hidePersonalInfo)

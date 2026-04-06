@@ -706,6 +706,8 @@ public actor APIClient {
         public var session_too_long_threshold_minutes: Int?
         public var offline_grace_period_minutes: Int?
         public var data_retention_days: Int?
+        public var webhook_url: String?
+        public var webhook_enabled: Bool?
 
         public init(
             notifications_enabled: Bool? = nil,
@@ -714,7 +716,9 @@ public actor APIClient {
             project_budget_threshold_usd: Double? = nil,
             session_too_long_threshold_minutes: Int? = nil,
             offline_grace_period_minutes: Int? = nil,
-            data_retention_days: Int? = nil
+            data_retention_days: Int? = nil,
+            webhook_url: String? = nil,
+            webhook_enabled: Bool? = nil
         ) {
             self.notifications_enabled = notifications_enabled
             self.push_policy = push_policy
@@ -723,6 +727,35 @@ public actor APIClient {
             self.session_too_long_threshold_minutes = session_too_long_threshold_minutes
             self.offline_grace_period_minutes = offline_grace_period_minutes
             self.data_retention_days = data_retention_days
+            self.webhook_url = webhook_url
+            self.webhook_enabled = webhook_enabled
+        }
+    }
+
+    // MARK: - Webhook
+
+    /// Invoke the send-webhook Edge Function for a given alert.
+    public func sendWebhook(alert: AlertRecord) async throws {
+        guard let uid = userId else { return }
+        guard let url = URL(string: "\(supabaseURL)/functions/v1/send-webhook") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        applyHeaders(&request)
+        let body: [String: Any] = [
+            "user_id": uid,
+            "alert": [
+                "type": alert.type,
+                "severity": alert.severity,
+                "title": alert.title,
+                "message": alert.message,
+                "related_provider": alert.related_provider ?? "",
+                "grouping_key": alert.grouping_key ?? "",
+            ]
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (_, response) = try await dataWithRetry(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw APIError.invalidResponse
         }
     }
 

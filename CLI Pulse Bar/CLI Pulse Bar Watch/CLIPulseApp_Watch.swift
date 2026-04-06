@@ -3,7 +3,7 @@ import CLIPulseCore
 
 @main
 struct CLIPulseWatchApp: App {
-    @StateObject private var appState = AppState()
+    @StateObject private var appState = WatchAppState()
     @StateObject private var sessionManager = WatchSessionManager.shared
 
     var body: some Scene {
@@ -13,6 +13,7 @@ struct CLIPulseWatchApp: App {
                 .environmentObject(sessionManager)
                 .onAppear {
                     sessionManager.activate()
+                    appState.applyFallbackData(from: sessionManager)
                 }
         }
     }

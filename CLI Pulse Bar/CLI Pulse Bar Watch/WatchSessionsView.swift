@@ -2,7 +2,7 @@ import SwiftUI
 import CLIPulseCore
 
 struct WatchSessionsView: View {
-    @EnvironmentObject var state: AppState
+    @EnvironmentObject var state: WatchAppState
 
     private var runningSessions: [SessionRecord] {
         state.sessions.filter { $0.status.caseInsensitiveCompare("running") == .orderedSame }

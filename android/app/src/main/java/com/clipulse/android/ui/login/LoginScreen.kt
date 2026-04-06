@@ -187,6 +187,12 @@ fun LoginScreen(
                 TextButton(onClick = { showPasswordLogin = true }) {
                     Text("Sign in with password")
                 }
+                Spacer(Modifier.height(24.dp))
+                TextButton(onClick = {
+                    viewModel.enterDemoMode()
+                }) {
+                    Text("Try Demo", color = MaterialTheme.colorScheme.tertiary)
+                }
             }
         }
     }

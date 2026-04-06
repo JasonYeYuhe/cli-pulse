@@ -11,5 +11,10 @@ struct CLIPulseWidgetBundle: WidgetBundle {
             UsageLockScreenWidget()
         }
         #endif
+        #if os(watchOS)
+        if #available(watchOSApplicationExtension 10.0, *) {
+            WatchComplicationWidget()
+        }
+        #endif
     }
 }

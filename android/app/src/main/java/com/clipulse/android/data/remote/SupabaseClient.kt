@@ -311,6 +311,8 @@ class SupabaseClient(
             repeatedFailureThreshold = s.optInt("repeated_failure_threshold", 3),
             alertCooldownMinutes = s.optInt("alert_cooldown_minutes", 30),
             dataRetentionDays = s.optInt("data_retention_days", 7),
+            webhookUrl = s.optString("webhook_url").takeIf { it.isNotBlank() },
+            webhookEnabled = s.optBoolean("webhook_enabled", false),
         )
     }
 
@@ -319,7 +321,21 @@ class SupabaseClient(
         restPatch("/rest/v1/user_settings?user_id=eq.$userId", patch)
     }
 
-    // ── Server Tier ──────────────────────────────────────
+    suspend fun testWebhook(): Unit = withContext(Dispatchers.IO) {
+        val userId = tokenStore.userId ?: return@withContext
+        val body = JSONObject().apply {
+            put("user_id", userId)
+            put("alert", JSONObject().apply {
+                put("type", "Test")
+                put("severity", "Info")
+                put("title", "CLI Pulse webhook test")
+                put("message", "If you see this, your webhook integration is working correctly.")
+            })
+        }
+        post("$supabaseUrl/functions/v1/send-webhook", body)
+    }
+
+    // ─�� Server Tier ──────────────────────────────────────
 
     suspend fun serverTier(): String = withContext(Dispatchers.IO) {
         try {

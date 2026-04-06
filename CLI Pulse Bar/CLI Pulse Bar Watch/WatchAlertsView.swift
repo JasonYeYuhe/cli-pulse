@@ -5,7 +5,7 @@ import WatchKit
 #endif
 
 struct WatchAlertsView: View {
-    @EnvironmentObject var state: AppState
+    @EnvironmentObject var state: WatchAppState
 
     private var openAlerts: [AlertRecord] {
         state.alerts.filter { !$0.is_resolved }
@@ -154,7 +154,7 @@ struct WatchAlertRow: View {
 
 struct WatchAlertDetailView: View {
     let alert: AlertRecord
-    @EnvironmentObject var state: AppState
+    @EnvironmentObject var state: WatchAppState
 
     private var severityColor: Color {
         PulseTheme.severityColor(alert.severity)

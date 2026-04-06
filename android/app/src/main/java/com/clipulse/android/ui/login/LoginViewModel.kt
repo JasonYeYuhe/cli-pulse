@@ -80,7 +80,16 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    fun enterDemoMode() {
+        tokenStore.isDemoMode = true
+        _state.value = _state.value.copy(isLoggedIn = true)
+    }
+
     fun tryRestoreSession() {
+        if (tokenStore.isDemoMode) {
+            _state.value = _state.value.copy(isLoggedIn = true)
+            return
+        }
         if (!tokenStore.isLoggedIn) return
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)

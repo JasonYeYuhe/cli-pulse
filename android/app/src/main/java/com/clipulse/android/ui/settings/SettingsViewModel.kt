@@ -20,6 +20,9 @@ data class SettingsUiState(
     val isLoading: Boolean = true,
     val deleteError: String? = null,
     val deleteSuccess: Boolean = false,
+    val webhookEnabled: Boolean = false,
+    val webhookUrl: String? = null,
+    val isDemoMode: Boolean = false,
 )
 
 @HiltViewModel
@@ -31,8 +34,9 @@ class SettingsViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(
         SettingsUiState(
-            userName = tokenStore.userName,
-            userEmail = tokenStore.userEmail,
+            userName = if (tokenStore.isDemoMode) "Demo User" else tokenStore.userName,
+            userEmail = if (tokenStore.isDemoMode) "demo@clipulse.app" else tokenStore.userEmail,
+            isDemoMode = tokenStore.isDemoMode,
         )
     )
     val state: StateFlow<SettingsUiState> = _state
@@ -50,6 +54,8 @@ class SettingsViewModel @Inject constructor(
                     tier = tier,
                     settings = settings,
                     isLoading = false,
+                    webhookEnabled = settings?.webhookEnabled ?: false,
+                    webhookUrl = settings?.webhookUrl,
                 )
             } catch (_: Exception) {
                 _state.value = _state.value.copy(isLoading = false)
@@ -66,6 +72,21 @@ class SettingsViewModel @Inject constructor(
                 loadSettings()
             } catch (_: Exception) {
                 // Silently fail — setting will revert on next load
+            }
+        }
+    }
+
+    fun exitDemoMode() {
+        tokenStore.isDemoMode = false
+        tokenStore.clear()
+    }
+
+    fun testWebhook() {
+        viewModelScope.launch {
+            try {
+                supabase.testWebhook()
+            } catch (_: Exception) {
+                // Best-effort test
             }
         }
     }

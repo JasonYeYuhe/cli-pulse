@@ -1,5 +1,14 @@
 import Foundation
 
+// MARK: - Auth Notification Names
+
+public extension Notification.Name {
+    /// Posted when the user successfully authenticates. UserInfo contains access_token, refresh_token, email, name.
+    static let cliPulseDidAuthenticate = Notification.Name("cliPulseDidAuthenticate")
+    /// Posted when the user signs out.
+    static let cliPulseDidSignOut = Notification.Name("cliPulseDidSignOut")
+}
+
 internal struct AuthSessionState {
     let userName: String
     let userEmail: String
@@ -266,6 +275,8 @@ extension AppState {
         // Clear local state immediately — don't block on network
         isDemoMode = false
         applySignedOutState()
+        // Notify iOS companion to forward logout to watch
+        NotificationCenter.default.post(name: .cliPulseDidSignOut, object: nil)
     }
 
     public func deleteAccount() async {
@@ -329,6 +340,30 @@ extension AppState {
         userEmail = authState.userEmail
         isPaired = authState.isPaired
         isAuthenticated = true
+
+        // Notify iOS companion to forward auth to watch
+        NotificationCenter.default.post(
+            name: .cliPulseDidAuthenticate,
+            object: nil,
+            userInfo: [
+                "access_token": storedToken,
+                "refresh_token": storedRefreshToken,
+                "email": authState.userEmail,
+                "name": authState.userName,
+            ]
+        )
+    }
+
+    /// Apply auth credentials received from the paired iPhone via WCSession.
+    /// Used on watchOS for passwordless login.
+    public func applyWatchAuth(token: String, refreshToken: String?, email: String, name: String) {
+        Self.persistAuthTokens(access: token, refresh: refreshToken)
+        userName = name
+        userEmail = email
+        isAuthenticated = true
+        isPaired = true
+        startRefreshLoop()
+        Task { await refreshAll() }
     }
 
     func applySignedOutState() {

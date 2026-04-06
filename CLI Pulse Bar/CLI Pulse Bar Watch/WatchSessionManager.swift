@@ -14,6 +14,12 @@ final class WatchSessionManager: NSObject, ObservableObject {
     @Published var isPhoneReachable = false
     @Published var lastSyncDate: Date?
 
+    // Auth tokens received from iPhone
+    @Published var pendingAuthToken: String?
+    @Published var pendingRefreshToken: String?
+    @Published var pendingAuthEmail: String?
+    @Published var pendingAuthName: String?
+
     private let dashboardKey = "cli_pulse_watch_dashboard"
     private let providersKey = "cli_pulse_watch_providers"
     private let sessionsKey = "cli_pulse_watch_sessions"
@@ -145,4 +151,54 @@ extension WatchSessionManager: WCSessionDelegate {
     ) {
         processContext(applicationContext)
     }
+
+    /// Receive queued user info from iPhone (auth tokens or logout signal).
+    func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        if userInfo["cli_pulse_logout"] as? Bool == true {
+            DispatchQueue.main.async {
+                self.pendingAuthToken = nil
+                self.pendingRefreshToken = nil
+                self.pendingAuthEmail = nil
+                self.pendingAuthName = nil
+                // Clear stored tokens
+                UserDefaults.standard.removeObject(forKey: "cli_pulse_watch_auth_token")
+                UserDefaults.standard.removeObject(forKey: "cli_pulse_watch_refresh_token")
+                NotificationCenter.default.post(name: .watchDidReceiveLogout, object: nil)
+            }
+            return
+        }
+
+        if userInfo["cli_pulse_auth"] as? Bool == true {
+            let token = userInfo["access_token"] as? String
+            let refresh = userInfo["refresh_token"] as? String
+            let email = userInfo["email"] as? String
+            let name = userInfo["name"] as? String
+
+            guard let token, !token.isEmpty else { return }
+
+            // Persist for independent token lifecycle
+            UserDefaults.standard.set(token, forKey: "cli_pulse_watch_auth_token")
+            if let refresh { UserDefaults.standard.set(refresh, forKey: "cli_pulse_watch_refresh_token") }
+
+            DispatchQueue.main.async {
+                self.pendingAuthToken = token
+                self.pendingRefreshToken = refresh
+                self.pendingAuthEmail = email
+                self.pendingAuthName = name
+                NotificationCenter.default.post(name: .watchDidReceiveAuth, object: nil, userInfo: [
+                    "access_token": token,
+                    "refresh_token": refresh ?? "",
+                    "email": email ?? "",
+                    "name": name ?? "",
+                ])
+            }
+        }
+    }
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let watchDidReceiveAuth = Notification.Name("watchDidReceiveAuth")
+    static let watchDidReceiveLogout = Notification.Name("watchDidReceiveLogout")
 }

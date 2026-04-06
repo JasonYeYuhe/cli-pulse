@@ -12,4 +12,6 @@ data class SettingsSnapshot(
     val repeatedFailureThreshold: Int = 3,
     val alertCooldownMinutes: Int = 30,
     val dataRetentionDays: Int = 7,
+    val webhookUrl: String? = null,
+    val webhookEnabled: Boolean = false,
 )

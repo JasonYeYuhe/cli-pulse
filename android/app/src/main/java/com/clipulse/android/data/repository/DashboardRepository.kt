@@ -1,8 +1,10 @@
 package com.clipulse.android.data.repository
 
+import com.clipulse.android.data.DemoDataProvider
 import com.clipulse.android.data.local.*
 import com.clipulse.android.data.model.*
 import com.clipulse.android.data.remote.SupabaseClient
+import com.clipulse.android.data.remote.TokenStore
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +15,9 @@ import org.json.JSONObject
 class DashboardRepository(
     private val supabase: SupabaseClient,
     private val cache: CacheDao,
+    private val tokenStore: TokenStore? = null,
 ) {
+    val isDemoMode: Boolean get() = tokenStore?.isDemoMode == true
     private val _dashboard = MutableStateFlow<DashboardSummary?>(null)
     val dashboard: StateFlow<DashboardSummary?> = _dashboard
 
@@ -47,7 +51,30 @@ class DashboardRepository(
         if (cachedDevices.isNotEmpty()) _devices.value = cachedDevices
     }
 
+    /** Load demo data into StateFlows when in demo mode. */
+    fun loadDemoData() {
+        _dashboard.value = DemoDataProvider.dashboard()
+        _providers.value = DemoDataProvider.providers()
+        _sessions.value = DemoDataProvider.sessions()
+        _devices.value = DemoDataProvider.devices()
+        _alerts.value = DemoDataProvider.alerts()
+    }
+
+    /** Clear demo mode and all demo data. */
+    fun exitDemoMode() {
+        tokenStore?.isDemoMode = false
+        _dashboard.value = null
+        _providers.value = emptyList()
+        _sessions.value = emptyList()
+        _devices.value = emptyList()
+        _alerts.value = emptyList()
+    }
+
     suspend fun refreshAll() = coroutineScope {
+        if (isDemoMode) {
+            loadDemoData()
+            return@coroutineScope
+        }
         // Run all fetches in parallel (like iOS async let pattern)
         launch { refreshDashboard() }
         launch { refreshProviders() }

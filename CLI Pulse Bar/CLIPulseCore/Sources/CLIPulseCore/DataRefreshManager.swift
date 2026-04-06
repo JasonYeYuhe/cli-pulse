@@ -678,6 +678,44 @@ extension AppState {
 
         let request = UNNotificationRequest(identifier: alert.id, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
+
+        // Trigger webhook if enabled
+        if webhookEnabled, !webhookURL.isEmpty {
+            Task {
+                try? await api.sendWebhook(alert: alert)
+            }
+        }
+    }
+
+    /// Push webhook settings to the server.
+    public func pushSettingsToServer() {
+        Task {
+            do {
+                try await api.updateSettings(APIClient.SettingsPatch(
+                    webhook_url: webhookURL.isEmpty ? nil : webhookURL,
+                    webhook_enabled: webhookEnabled
+                ))
+            } catch {
+                lastError = "Failed to save webhook settings: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// Send a test webhook to verify the user's URL works.
+    public func testWebhook() async {
+        do {
+            let testAlert = AlertRecord(
+                id: "test-\(UUID().uuidString.prefix(8))",
+                type: "Test", severity: "Info",
+                title: "CLI Pulse webhook test",
+                message: "If you see this, your webhook integration is working correctly.",
+                created_at: sharedISO8601Formatter.string(from: Date()),
+                is_read: false, is_resolved: false
+            )
+            try await api.sendWebhook(alert: testAlert)
+        } catch {
+            lastError = "Webhook test failed: \(error.localizedDescription)"
+        }
     }
 
     func applyRefreshPayload(_ payload: DataRefreshManager.RefreshPayload) {

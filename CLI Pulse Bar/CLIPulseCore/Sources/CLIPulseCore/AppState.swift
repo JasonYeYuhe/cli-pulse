@@ -47,6 +47,10 @@ public final class AppState: ObservableObject {
     @Published public var pairingError: String?
     @AppStorage("cli_pulse_demo_mode") public var isDemoMode = false
 
+    // MARK: - Webhook Integration
+    @AppStorage("cli_pulse_webhook_enabled") public var webhookEnabled = false
+    @AppStorage("cli_pulse_webhook_url") public var webhookURL = ""
+
     // MARK: - Settings - General
     nonisolated static let tokenKeychainKey = "cli_pulse_token"
 

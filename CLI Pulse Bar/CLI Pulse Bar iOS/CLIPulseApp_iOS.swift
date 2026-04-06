@@ -4,15 +4,14 @@ import CLIPulseCore
 @main
 struct CLIPulseApp: App {
     @StateObject private var appState = AppState()
+    private let phoneSession = PhoneSessionManager.shared
 
     var body: some Scene {
         WindowGroup {
             iOSMainView()
                 .environmentObject(appState)
                 .onAppear {
-                    #if targetEnvironment(macCatalyst)
-                    // Not using Catalyst, but future-proof
-                    #endif
+                    phoneSession.activate()
                 }
         }
         .commands {

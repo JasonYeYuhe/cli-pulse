@@ -4,6 +4,18 @@ import CLIPulseCore
 struct MenuBarView: View {
     @EnvironmentObject var state: AppState
 
+    /// Adaptive max height: 80% of the screen where the status item lives, capped at 720pt.
+    /// Falls back to 600 if screen info is unavailable.
+    private static var maxMenuBarHeight: CGFloat {
+        // Prefer the screen hosting the status item; fall back to main screen
+        let screenHeight = NSApp.windows
+            .first(where: { $0.className.contains("StatusBarWindow") || $0.className.contains("NSStatusBar") })?
+            .screen?.visibleFrame.height
+            ?? NSScreen.main?.visibleFrame.height
+            ?? 800
+        return min(screenHeight * 0.8, 720)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if !state.isAuthenticated {
@@ -14,16 +26,24 @@ struct MenuBarView: View {
                 notConnectedView
             }
         }
-        .frame(width: 380, height: 520)
+        .frame(width: 380)
+        .frame(minHeight: 200, maxHeight: Self.maxMenuBarHeight)
     }
 
     // MARK: - Not Connected
 
+    @AppStorage("cli_pulse_onboarding_completed") private var onboardingCompleted = false
+
     private var notConnectedView: some View {
         VStack(spacing: 0) {
-            tabBar
-            SettingsTab()
-                .environmentObject(state)
+            if !state.isAuthenticated && !onboardingCompleted {
+                OnboardingWizardView()
+                    .environmentObject(state)
+            } else {
+                tabBar
+                SettingsTab()
+                    .environmentObject(state)
+            }
         }
     }
 

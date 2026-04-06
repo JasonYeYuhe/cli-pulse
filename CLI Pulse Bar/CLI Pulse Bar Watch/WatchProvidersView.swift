@@ -2,7 +2,7 @@ import SwiftUI
 import CLIPulseCore
 
 struct WatchProvidersView: View {
-    @EnvironmentObject var state: AppState
+    @EnvironmentObject var state: WatchAppState
 
     private var visibleProviders: [ProviderUsage] {
         state.providers.filter { state.enabledProviderNames.contains($0.provider) }

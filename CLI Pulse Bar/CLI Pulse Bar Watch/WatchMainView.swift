@@ -2,7 +2,7 @@ import SwiftUI
 import CLIPulseCore
 
 struct WatchMainView: View {
-    @EnvironmentObject var state: AppState
+    @EnvironmentObject var state: WatchAppState
 
     var body: some View {
         if !state.isAuthenticated {

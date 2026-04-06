@@ -23,6 +23,10 @@ class CollectorManager(
         ProviderKind.Kimi to KimiCollector(),
         ProviderKind.Claude to ClaudeCollector(),
         ProviderKind.Gemini to GeminiCollector(),
+        ProviderKind.Codex to CodexCollector(),
+        ProviderKind.Cursor to CursorCollector(),
+        ProviderKind.Ollama to OllamaCollector(),
+        ProviderKind.Augment to AugmentCollector(),
     )
 
     fun availableCollectors(): List<ProviderKind> =
