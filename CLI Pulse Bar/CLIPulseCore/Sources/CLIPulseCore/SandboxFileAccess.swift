@@ -18,7 +18,9 @@ public enum SandboxFileAccess {
             }
         } else {
             return DispatchQueue.main.sync {
-                BookmarkManager.shared.resolveBookmark(for: dir)
+                MainActor.assumeIsolated {
+                    BookmarkManager.shared.resolveBookmark(for: dir)
+                }
             }
         }
     }
