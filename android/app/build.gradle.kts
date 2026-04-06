@@ -18,6 +18,15 @@ android {
     namespace = "com.clipulse.android"
     compileSdk = 35
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("cli-pulse-upload.jks")
+            storePassword = localProps.getProperty("STORE_PASSWORD", System.getenv("STORE_PASSWORD") ?: "")
+            keyAlias = localProps.getProperty("KEY_ALIAS", "cli-pulse-upload")
+            keyPassword = localProps.getProperty("KEY_PASSWORD", System.getenv("KEY_PASSWORD") ?: "")
+        }
+    }
+
     defaultConfig {
         applicationId = "com.clipulse.android"
         minSdk = 26
@@ -36,6 +45,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
