@@ -710,7 +710,11 @@ extension AppState {
                 title: "CLI Pulse webhook test",
                 message: "If you see this, your webhook integration is working correctly.",
                 created_at: sharedISO8601Formatter.string(from: Date()),
-                is_read: false, is_resolved: false
+                is_read: false, is_resolved: false,
+                acknowledged_at: nil, snoozed_until: nil,
+                related_project_id: nil, related_project_name: nil,
+                related_session_id: nil, related_session_name: nil,
+                related_provider: nil, related_device_name: nil
             )
             try await api.sendWebhook(alert: testAlert)
         } catch {

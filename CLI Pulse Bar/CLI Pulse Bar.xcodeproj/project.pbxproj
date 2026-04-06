@@ -36,6 +36,12 @@
 		A30007 /* WatchAlertsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30007 /* WatchAlertsView.swift */; };
 		A30008 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B30008 /* Assets.xcassets */; };
 		A30009 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30011 /* WatchSessionManager.swift */; };
+		A30024 /* TeamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30024 /* TeamView.swift */; };
+		A30025 /* TeamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30024 /* TeamView.swift */; };
+		A30023 /* WatchComplicationWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30023 /* WatchComplicationWidget.swift */; };
+		A30022 /* OnboardingWizardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30022 /* OnboardingWizardView.swift */; };
+		A30021 /* PhoneSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30021 /* PhoneSessionManager.swift */; };
+		A30020 /* WatchAppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30020 /* WatchAppState.swift */; };
 		A40001 /* CLIPulseWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40001 /* CLIPulseWidgets.swift */; };
 		A40002 /* WidgetDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40002 /* WidgetDataProvider.swift */; };
 		A40003 /* UsageOverviewWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40003 /* UsageOverviewWidget.swift */; };
@@ -149,6 +155,11 @@
 		B30009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B30010 /* CLI_Pulse_Watch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CLI_Pulse_Watch.entitlements; sourceTree = "<group>"; };
 		B30011 /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
+		B30024 /* TeamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamView.swift; sourceTree = "<group>"; };
+		B30023 /* WatchComplicationWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchComplicationWidget.swift; sourceTree = "<group>"; };
+		B30022 /* OnboardingWizardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWizardView.swift; sourceTree = "<group>"; };
+		B30021 /* PhoneSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneSessionManager.swift; sourceTree = "<group>"; };
+		B30020 /* WatchAppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAppState.swift; sourceTree = "<group>"; };
 		B40001 /* CLIPulseWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIPulseWidgets.swift; sourceTree = "<group>"; };
 		B40002 /* WidgetDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataProvider.swift; sourceTree = "<group>"; };
 		B40003 /* UsageOverviewWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageOverviewWidget.swift; sourceTree = "<group>"; };
@@ -244,6 +255,8 @@
 			children = (
 				B10001 /* CLIPulseBarApp.swift */,
 				B10006 /* MenuBarView.swift */,
+				B30024 /* TeamView.swift */,
+				B30022 /* OnboardingWizardView.swift */,
 				B10007 /* OverviewTab.swift */,
 				B10008 /* ProvidersTab.swift */,
 				B10009 /* SessionsTab.swift */,
@@ -280,6 +293,7 @@
 				B20006 /* iOSSessionsTab.swift */,
 				B20007 /* iOSAlertsTab.swift */,
 				B20008 /* iOSSettingsTab.swift */,
+				B30021 /* PhoneSessionManager.swift */,
 				B20009 /* Assets.xcassets */,
 				B20010 /* Info.plist */,
 				B20011 /* CLI_Pulse_iOS.entitlements */,
@@ -298,6 +312,7 @@
 				B30006 /* WatchSessionsView.swift */,
 				B30007 /* WatchAlertsView.swift */,
 				B30011 /* WatchSessionManager.swift */,
+				B30020 /* WatchAppState.swift */,
 				B30008 /* Assets.xcassets */,
 				B30009 /* Info.plist */,
 				B30010 /* CLI_Pulse_Watch.entitlements */,
@@ -313,6 +328,7 @@
 				B40003 /* UsageOverviewWidget.swift */,
 				B40004 /* ProviderUsageWidget.swift */,
 				B40005 /* LockScreenWidget.swift */,
+				B30023 /* WatchComplicationWidget.swift */,
 				B40006 /* WidgetTheme.swift */,
 				B40007 /* Assets.xcassets */,
 				B40008 /* Info.plist */,
@@ -520,6 +536,8 @@
 			files = (
 				A10001 /* CLIPulseBarApp.swift in Sources */,
 				A10006 /* MenuBarView.swift in Sources */,
+				A30024 /* TeamView.swift in Sources */,
+				A30022 /* OnboardingWizardView.swift in Sources */,
 				A10007 /* OverviewTab.swift in Sources */,
 				A10008 /* ProvidersTab.swift in Sources */,
 				A10009 /* SessionsTab.swift in Sources */,
@@ -541,6 +559,8 @@
 				A20010 /* iOSSessionsTab.swift in Sources */,
 				A20011 /* iOSAlertsTab.swift in Sources */,
 				A20012 /* iOSSettingsTab.swift in Sources */,
+				A30021 /* PhoneSessionManager.swift in Sources */,
+				A30025 /* TeamView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -556,6 +576,7 @@
 				A30006 /* WatchSessionsView.swift in Sources */,
 				A30007 /* WatchAlertsView.swift in Sources */,
 				A30009 /* WatchSessionManager.swift in Sources */,
+				A30020 /* WatchAppState.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -568,6 +589,7 @@
 				A40003 /* UsageOverviewWidget.swift in Sources */,
 				A40004 /* ProviderUsageWidget.swift in Sources */,
 				A40005 /* LockScreenWidget.swift in Sources */,
+				A30023 /* WatchComplicationWidget.swift in Sources */,
 				A40006 /* WidgetTheme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -161,7 +161,6 @@ struct OnboardingWizardView: View {
             } else {
                 TextField("Email", text: $email)
                     .textFieldStyle(.roundedBorder)
-                    .textContentType(.emailAddress)
                     .frame(width: 260)
 
                 Button {

@@ -9,19 +9,19 @@ public extension Notification.Name {
     static let cliPulseDidSignOut = Notification.Name("cliPulseDidSignOut")
 }
 
-internal struct AuthSessionState {
-    let userName: String
-    let userEmail: String
-    let isPaired: Bool
+public struct AuthSessionState {
+    public let userName: String
+    public let userEmail: String
+    public let isPaired: Bool
 }
 
-internal struct OTPFlowState {
-    let otpSent: Bool
-    let otpEmail: String
-    let lastError: String?
+public struct OTPFlowState {
+    public let otpSent: Bool
+    public let otpEmail: String
+    public let lastError: String?
 }
 
-internal enum RestoreSessionResult {
+public enum RestoreSessionResult {
     case demoMode
     case restored(AuthSessionState)
     case unavailable
@@ -29,23 +29,23 @@ internal enum RestoreSessionResult {
 }
 
 @MainActor
-internal final class AuthManager {
+public final class AuthManager {
     nonisolated static let refreshTokenKeychainKey = "cli_pulse_refresh_token"
 
     private let api: APIClient
     private let persistTokens: (String, String?) -> Void
 
-    init(api: APIClient, persistTokens: @escaping (String, String?) -> Void) {
+    public init(api: APIClient, persistTokens: @escaping (String, String?) -> Void) {
         self.api = api
         self.persistTokens = persistTokens
     }
 
-    func sendOTP(email: String) async throws -> String {
+    public func sendOTP(email: String) async throws -> String {
         try await api.sendOTP(email: email)
         return email
     }
 
-    func verifyOTP(email: String, code: String) async throws -> AuthSessionState {
+    public func verifyOTP(email: String, code: String) async throws -> AuthSessionState {
         let response = try await api.verifyOTP(email: email, code: code)
         storeAuthTokens(access: response.access_token, refresh: response.refresh_token)
         return authSessionState(from: response)
@@ -63,11 +63,11 @@ internal final class AuthManager {
         return authSessionState(from: response)
     }
 
-    func resetOTP() -> OTPFlowState {
+    public func resetOTP() -> OTPFlowState {
         OTPFlowState(otpSent: false, otpEmail: "", lastError: nil)
     }
 
-    func restoreSession(isDemoMode: Bool, accessToken: String, refreshToken: String?) async -> RestoreSessionResult {
+    public func restoreSession(isDemoMode: Bool, accessToken: String, refreshToken: String?) async -> RestoreSessionResult {
         if isDemoMode {
             return .demoMode
         }
@@ -91,7 +91,7 @@ internal final class AuthManager {
         }
     }
 
-    func signOut(currentAccessToken: String) async {
+    public func signOut(currentAccessToken: String) async {
         // Attempt server-side token revocation
         await api.signOutServer()
         // Only clear tokens if they haven't been replaced by a new sign-in

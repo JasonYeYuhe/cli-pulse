@@ -22,6 +22,7 @@ public final class WatchAppState: ObservableObject {
     @Published var isLoading = false
     @Published var lastError: String?
     @Published var lastRefresh: Date?
+    @Published var serverOnline = false
 
     // MARK: - Auth Flow
     @Published var otpSent = false
@@ -39,7 +40,7 @@ public final class WatchAppState: ObservableObject {
     init() {
         self.api = APIClient()
         self.authManager = AuthManager(api: api, persistTokens: { access, refresh in
-            if let access, !access.isEmpty {
+            if !access.isEmpty {
                 KeychainHelper.save(key: "cli_pulse_token", value: access)
             } else {
                 KeychainHelper.delete(key: "cli_pulse_token")
@@ -115,9 +116,7 @@ public final class WatchAppState: ObservableObject {
     }
 
     func applyWatchAuth(token: String, refreshToken: String?, email: String, name: String) {
-        if let token = token as String? {
-            KeychainHelper.save(key: "cli_pulse_token", value: token)
-        }
+        KeychainHelper.save(key: "cli_pulse_token", value: token)
         if let rt = refreshToken {
             KeychainHelper.save(key: "cli_pulse_refresh_token", value: rt)
         }
@@ -143,6 +142,41 @@ public final class WatchAppState: ObservableObject {
         alerts = []
     }
 
+    // MARK: - Provider Helpers
+
+    var enabledProviderNames: [String] {
+        providers.map { $0.provider }
+    }
+
+    // MARK: - Alert Actions
+
+    func acknowledgeAlert(_ alert: AlertRecord) async {
+        do {
+            _ = try await api.acknowledgeAlert(id: alert.id)
+            await refreshAll()
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    func resolveAlert(_ alert: AlertRecord) async {
+        do {
+            _ = try await api.resolveAlert(id: alert.id)
+            await refreshAll()
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    func snoozeAlert(_ alert: AlertRecord, minutes: Int) async {
+        do {
+            _ = try await api.snoozeAlert(id: alert.id, minutes: minutes)
+            await refreshAll()
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
     // MARK: - Refresh
 
     func refreshAll() async {
@@ -159,8 +193,10 @@ public final class WatchAppState: ObservableObject {
             providers = try await provTask
             sessions = try await sessTask
             alerts = try await alertTask
+            serverOnline = true
             lastRefresh = Date()
         } catch {
+            serverOnline = false
             lastError = error.localizedDescription
         }
         isLoading = false

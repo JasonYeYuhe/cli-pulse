@@ -23,7 +23,7 @@ public enum ExportService {
     public static func exportProviderSummaryCSV(providers: [ProviderUsage]) -> URL? {
         var csv = "Provider,Today Usage,Week Usage,Est. Cost (Week),Remaining,Quota,Plan Type,Reset Time\n"
         for p in providers {
-            csv += "\(esc(p.provider)),\(p.today_usage),\(p.total_usage),"
+            csv += "\(esc(p.provider)),\(p.today_usage),\(p.week_usage),"
             csv += "\(p.estimated_cost_week),"
             csv += "\(p.remaining.map(String.init) ?? "N/A"),"
             csv += "\(p.quota.map(String.init) ?? "N/A"),"
@@ -69,7 +69,7 @@ public enum ExportService {
         csv += "Provider Breakdown\n"
         csv += "Provider,Week Usage,Est. Cost,Remaining,Quota\n"
         for p in providers {
-            csv += "\(esc(p.provider)),\(p.total_usage),\(p.estimated_cost_week),"
+            csv += "\(esc(p.provider)),\(p.week_usage),\(p.estimated_cost_week),"
             csv += "\(p.remaining.map(String.init) ?? "N/A"),\(p.quota.map(String.init) ?? "N/A")\n"
         }
 

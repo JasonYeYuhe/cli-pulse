@@ -7,7 +7,7 @@ public actor APIClient {
 
     private var accessToken: String?
     private var refreshToken: String?
-    private var userId: String?
+    public private(set) var userId: String?
 
     private let session: URLSession
     private let decoder = JSONDecoder()

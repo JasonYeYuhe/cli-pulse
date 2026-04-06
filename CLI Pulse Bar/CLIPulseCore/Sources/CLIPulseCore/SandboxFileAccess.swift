@@ -11,6 +11,18 @@ public enum SandboxFileAccess {
 
     private static let logger = Logger(subsystem: "yyh.CLI-Pulse", category: "SandboxFileAccess")
 
+    private static func resolveBookmark(for dir: String) -> URL? {
+        if Thread.isMainThread {
+            return MainActor.assumeIsolated {
+                BookmarkManager.shared.resolveBookmark(for: dir)
+            }
+        } else {
+            return DispatchQueue.main.sync {
+                BookmarkManager.shared.resolveBookmark(for: dir)
+            }
+        }
+    }
+
     /// Read a file, resolving the parent directory's bookmark if needed.
     /// Returns nil if no bookmark access is available.
     public static func read(path: String) -> Data? {
@@ -21,7 +33,7 @@ public enum SandboxFileAccess {
 
         // Try resolving a bookmark for the parent directory
         let parentDir = (path as NSString).deletingLastPathComponent
-        if let _ = BookmarkManager.shared.resolveBookmark(for: parentDir) {
+        if let _ = resolveBookmark(for: parentDir) {
             // Bookmark resolved, try reading again
             let data = FileManager.default.contents(atPath: path)
             if data == nil {
@@ -33,7 +45,7 @@ public enum SandboxFileAccess {
         // Try walking up to find a matching bookmark
         var dir = parentDir
         while dir.count > 1 {
-            if let _ = BookmarkManager.shared.resolveBookmark(for: dir) {
+            if let _ = resolveBookmark(for: dir) {
                 return FileManager.default.contents(atPath: path)
             }
             dir = (dir as NSString).deletingLastPathComponent
@@ -48,7 +60,7 @@ public enum SandboxFileAccess {
         let parentDir = (path as NSString).deletingLastPathComponent
 
         // Ensure parent directory bookmark is resolved
-        let _ = BookmarkManager.shared.resolveBookmark(for: parentDir)
+        let _ = resolveBookmark(for: parentDir)
 
         // Try writing
         do {
@@ -72,7 +84,7 @@ public enum SandboxFileAccess {
         }
         // Try with bookmark
         let parentDir = (path as NSString).deletingLastPathComponent
-        if let _ = BookmarkManager.shared.resolveBookmark(for: parentDir) {
+        if let _ = resolveBookmark(for: parentDir) {
             return FileManager.default.fileExists(atPath: path)
         }
         return false
