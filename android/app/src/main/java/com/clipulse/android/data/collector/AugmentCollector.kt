@@ -75,7 +75,7 @@ class AugmentCollector : ProviderCollector {
             tiers.add(CollectorTier("Credits", total, remaining, sub?.second))
         }
 
-        CollectorResult(
+        return CollectorResult(
             provider = kind,
             remaining = remaining,
             quota = if (total > 0) total else null,

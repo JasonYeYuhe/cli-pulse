@@ -62,7 +62,7 @@ class OllamaCollector : ProviderCollector {
             "${running.size} running, ${models.size} installed"
         }
 
-        CollectorResult(
+        return CollectorResult(
             provider = kind,
             remaining = null,
             quota = null,

@@ -58,13 +58,12 @@ class BillingManager(
             }
 
             override fun onBillingServiceDisconnected() {
-                // Retry with exponential backoff, guarded against overlapping attempts
                 if (isReconnecting.compareAndSet(false, true)) {
                     scope.launch {
                         val attempt = reconnectAttempts.getAndIncrement()
                         val delay = minOf(attempt * 2000L, 30_000L)
                         kotlinx.coroutines.delay(delay)
-                        billingClient.startConnection(this@object)
+                        connect() // Reconnect using the same method
                         isReconnecting.set(false)
                     }
                 }

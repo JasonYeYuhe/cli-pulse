@@ -77,12 +77,12 @@ object DemoDataProvider {
         DeviceRecord(
             id = "d1", name = "MacBook Pro", type = "laptop", system = "macOS 15.4",
             status = "Online", lastSyncAt = ts(), helperVersion = "0.2.0",
-            currentSessionCount = 2, cpuUsage = 42.0, memoryUsage = 68.0,
+            currentSessionCount = 2, cpuUsage = 42, memoryUsage = 68,
         ),
         DeviceRecord(
             id = "d2", name = "lab-server-01", type = "server", system = "Ubuntu 24.04",
             status = "Online", lastSyncAt = ts(), helperVersion = "0.2.0",
-            currentSessionCount = 1, cpuUsage = 23.0, memoryUsage = 45.0,
+            currentSessionCount = 1, cpuUsage = 23, memoryUsage = 45,
         ),
         DeviceRecord(
             id = "d3", name = "build-box", type = "server", system = "macOS 14.7",
