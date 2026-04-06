@@ -4,8 +4,8 @@ import CLIPulseCore
 struct MenuBarView: View {
     @EnvironmentObject var state: AppState
 
-    /// Adaptive max height: 80% of the screen where the status item lives, capped at 720pt.
-    /// Falls back to 600 if screen info is unavailable.
+    /// Adaptive max height: 85% of the screen where the status item lives, capped at 900pt.
+    /// Falls back to 700 if screen info is unavailable.
     private static var maxMenuBarHeight: CGFloat {
         // Prefer the screen hosting the status item; fall back to main screen
         let screenHeight = NSApp.windows
@@ -13,7 +13,7 @@ struct MenuBarView: View {
             .screen?.visibleFrame.height
             ?? NSScreen.main?.visibleFrame.height
             ?? 800
-        return min(screenHeight * 0.8, 720)
+        return min(screenHeight * 0.85, 900)
     }
 
     var body: some View {
@@ -27,7 +27,8 @@ struct MenuBarView: View {
             }
         }
         .frame(width: 380)
-        .frame(minHeight: 200, maxHeight: Self.maxMenuBarHeight)
+        .frame(minHeight: 520, maxHeight: Self.maxMenuBarHeight)
+        .background(WindowResizableHelper())
     }
 
     // MARK: - Not Connected
@@ -227,6 +228,34 @@ struct MenuBarView: View {
                 Text("+\(enabled.count - 5)")
                     .font(.system(size: 7))
                     .foregroundStyle(.tertiary)
+            }
+        }
+    }
+}
+
+// MARK: - Window Resizable Helper
+
+/// NSViewRepresentable that finds the hosting MenuBarExtra window and enables resizing.
+private struct WindowResizableHelper: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            guard let window = view.window else { return }
+            window.styleMask.insert(.resizable)
+            window.minSize = NSSize(width: 380, height: 400)
+            window.maxSize = NSSize(width: 520, height: 900)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        // Re-apply on each update in case the window was recreated
+        DispatchQueue.main.async {
+            guard let window = nsView.window else { return }
+            if !window.styleMask.contains(.resizable) {
+                window.styleMask.insert(.resizable)
+                window.minSize = NSSize(width: 380, height: 400)
+                window.maxSize = NSSize(width: 520, height: 900)
             }
         }
     }

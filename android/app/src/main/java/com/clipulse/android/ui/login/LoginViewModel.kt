@@ -80,6 +80,23 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    /** Build a Supabase OAuth URL for GitHub (or other providers). */
+    fun oauthAuthorizeUrl(provider: String): Pair<String, String> =
+        supabase.oauthAuthorizeUrl(provider)
+
+    /** Exchange an OAuth authorization code obtained via deep link. */
+    fun exchangeOAuthCode(code: String, codeVerifier: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            try {
+                supabase.exchangeOAuthCode(code, codeVerifier)
+                _state.value = _state.value.copy(isLoading = false, isLoggedIn = true)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(isLoading = false, error = e.message)
+            }
+        }
+    }
+
     fun enterDemoMode() {
         tokenStore.isDemoMode = true
         _state.value = _state.value.copy(isLoggedIn = true)

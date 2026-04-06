@@ -472,6 +472,64 @@ class SupabaseClient(
         val tiersJson: String = "[]",
     )
 
+    // ── OAuth PKCE (GitHub / Google via Supabase) ─────────
+
+    /** Build a Supabase OAuth authorize URL with PKCE challenge. Returns (url, codeVerifier). */
+    fun oauthAuthorizeUrl(provider: String): Pair<String, String> {
+        val verifier = generateCodeVerifier()
+        val challenge = sha256Base64Url(verifier)
+        val redirectTo = URLEncoder.encode("clipulse://auth/callback", "UTF-8")
+        val url = "$supabaseUrl/auth/v1/authorize" +
+            "?provider=$provider" +
+            "&redirect_to=$redirectTo" +
+            "&code_challenge=$challenge" +
+            "&code_challenge_method=S256"
+        return url to verifier
+    }
+
+    /** Exchange an OAuth authorization code for a Supabase session (PKCE). */
+    suspend fun exchangeOAuthCode(code: String, codeVerifier: String): Unit = withContext(Dispatchers.IO) {
+        val body = JSONObject().apply {
+            put("auth_code", code)
+            put("code_verifier", codeVerifier)
+        }
+        val req = Request.Builder()
+            .url("$supabaseUrl/auth/v1/token?grant_type=pkce")
+            .post(body.toString().toRequestBody(jsonMedia))
+            .addHeader("Content-Type", "application/json")
+            .addHeader("apikey", supabaseAnonKey)
+            .build()
+        val resp: okhttp3.Response = client.newCall(req).execute()
+        resp.use { r: okhttp3.Response ->
+            val responseBody = r.body?.string() ?: ""
+            if (!r.isSuccessful) throw ApiError.Http(r.code, responseBody)
+            val json = JSONObject(responseBody)
+            val at = json.getString("access_token")
+            val rt = json.getString("refresh_token")
+            val user = json.optJSONObject("user")
+            val uid = user?.optString("id") ?: ""
+            val meta = user?.optJSONObject("user_metadata")
+            val name = meta?.optString("name") ?: meta?.optString("full_name") ?: ""
+            val email = user?.optString("email") ?: ""
+            tokenStore.updateAuthState(at, rt, uid)
+            tokenStore.userName = name
+            tokenStore.userEmail = email
+        }
+    }
+
+    private fun generateCodeVerifier(): String {
+        val bytes = ByteArray(32)
+        java.security.SecureRandom().nextBytes(bytes)
+        return android.util.Base64.encodeToString(bytes,
+            android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
+    }
+
+    private fun sha256Base64Url(input: String): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
+        return android.util.Base64.encodeToString(digest,
+            android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
+    }
+
     // ── Health ────────────────────────────────────────────
 
     suspend fun health(): Boolean = withContext(Dispatchers.IO) {

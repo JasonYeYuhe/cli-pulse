@@ -10,7 +10,10 @@ struct iOSLoginView: View {
     @State private var password = ""
     @State private var otpCode = ""
     @State private var currentNonce: String?
+    @State private var webAuthSession: ASWebAuthenticationSession?
     @FocusState private var codeFieldFocused: Bool
+
+    private static let webAuthContextProvider = WebAuthContextProvider()
 
     private func randomNonceString(length: Int = 32) -> String {
         precondition(length > 0)
@@ -180,29 +183,34 @@ struct iOSLoginView: View {
                 state.lastError = "Failed to build \(provider) authorization URL"
                 return
             }
-            let webSession = ASWebAuthenticationSession(
+            let session = ASWebAuthenticationSession(
                 url: authURL,
                 callbackURLScheme: "clipulse"
-            ) { callbackURL, error in
+            ) { [weak state] callbackURL, error in
+                Task { @MainActor in
+                    self.webAuthSession = nil
+                }
                 if let error {
                     if (error as NSError).code == ASWebAuthenticationSessionError.canceledLogin.rawValue {
                         return
                     }
-                    Task { @MainActor in self.state.lastError = error.localizedDescription }
+                    Task { @MainActor in state?.lastError = error.localizedDescription }
                     return
                 }
                 guard let callbackURL,
                       let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false),
                       let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
-                    Task { @MainActor in self.state.lastError = "OAuth sign-in failed: no authorization code" }
+                    Task { @MainActor in state?.lastError = "OAuth sign-in failed: no authorization code" }
                     return
                 }
                 Task {
-                    await self.state.exchangeOAuthCode(code: code, codeVerifier: codeVerifier)
+                    await state?.exchangeOAuthCode(code: code, codeVerifier: codeVerifier)
                 }
             }
-            webSession.prefersEphemeralWebBrowserSession = false
-            webSession.start()
+            session.presentationContextProvider = Self.webAuthContextProvider
+            session.prefersEphemeralWebBrowserSession = false
+            self.webAuthSession = session
+            session.start()
         }
     }
 
@@ -326,5 +334,17 @@ struct iOSLoginView: View {
             }
             .foregroundStyle(PulseTheme.accent)
         }
+    }
+}
+
+// MARK: - ASWebAuthenticationSession Presentation Context
+
+private class WebAuthContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first else {
+            return ASPresentationAnchor()
+        }
+        return window
     }
 }

@@ -1037,6 +1037,64 @@ public actor APIClient {
         }
     }
 
+    // MARK: - Provider Quota Sync
+
+    #if os(macOS)
+    /// Push locally collected provider quotas to Supabase (upsert into provider_quotas table).
+    /// Non-throwing — sync failures are logged but not propagated.
+    public func syncProviderQuotas(_ results: [CollectorResult]) async {
+        guard let userId else { return }
+        let quotaResults = results.filter { $0.dataKind == .quota || $0.dataKind == .credits }
+        guard !quotaResults.isEmpty else { return }
+
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/provider_quotas") else { return }
+
+        var rows: [[String: Any]] = []
+        for r in quotaResults {
+            let u = r.usage
+            var row: [String: Any] = [
+                "user_id": userId,
+                "provider": u.provider,
+                "remaining": u.remaining ?? 0,
+                "updated_at": sharedISO8601Formatter.string(from: Date()),
+            ]
+            if let q = u.quota { row["quota"] = q }
+            if let pt = u.plan_type { row["plan_type"] = pt }
+            if let rt = u.reset_time { row["reset_time"] = rt }
+
+            let tiersArr: [[String: Any]] = u.tiers.map { t in
+                var d: [String: Any] = ["name": t.name, "quota": t.quota, "remaining": t.remaining]
+                if let rt = t.reset_time { d["reset_time"] = rt }
+                return d
+            }
+            row["tiers"] = tiersArr
+            rows.append(row)
+        }
+
+        guard let body = try? JSONSerialization.data(withJSONObject: rows) else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("resolution=merge-duplicates", forHTTPHeaderField: "Prefer")
+        if let token = accessToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = body
+
+        do {
+            let (_, response) = try await session.data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if !(200...299).contains(status) {
+                print("[syncProviderQuotas] failed: HTTP \(status)")
+            }
+        } catch {
+            print("[syncProviderQuotas] error: \(error.localizedDescription)")
+        }
+    }
+    #endif
+
     // MARK: - Health
 
     public func health() async throws -> Bool {

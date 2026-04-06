@@ -111,6 +111,11 @@ internal final class DataRefreshManager {
                 local: localResults
             )
 
+            // Push locally-collected quotas to Supabase so other devices see fresh data
+            if !localResults.isEmpty {
+                Task { await api.syncProviderQuotas(localResults) }
+            }
+
             #if DEBUG
             Self.dumpMergeDiagnostic(cloud: providerData, local: localResults, merged: resolvedProviders)
             #endif
@@ -217,6 +222,11 @@ internal final class DataRefreshManager {
 
         let collectorResults = await runCollectors(providerConfigs: context.providerConfigs)
         let scanResult = await Task.detached { LocalScanner.shared.scan() }.value
+
+        // Push locally-collected quotas to Supabase (even in unpaired/local mode)
+        if !collectorResults.isEmpty {
+            Task { await api.syncProviderQuotas(collectorResults) }
+        }
 
         guard callbacks.isAuthenticated() else {
             callbacks.setLoading(false)

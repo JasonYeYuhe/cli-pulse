@@ -1,5 +1,7 @@
 package com.clipulse.android.ui.login
 
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -20,9 +22,13 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
 
+/** Stores the PKCE verifier while the browser handles GitHub OAuth. */
+private var pendingOAuthVerifier: String? = null
+
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel = hiltViewModel(),
+    oauthCode: String? = null,
     onLoggedIn: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
@@ -32,6 +38,14 @@ fun LoginScreen(
     LaunchedEffect(Unit) { viewModel.tryRestoreSession() }
     LaunchedEffect(state.isLoggedIn) {
         if (state.isLoggedIn) onLoggedIn()
+    }
+
+    // Handle deep-link OAuth callback
+    LaunchedEffect(oauthCode) {
+        val code = oauthCode ?: return@LaunchedEffect
+        val verifier = pendingOAuthVerifier ?: return@LaunchedEffect
+        pendingOAuthVerifier = null
+        viewModel.exchangeOAuthCode(code, verifier)
     }
 
     var email by remember { mutableStateOf("") }
@@ -182,6 +196,20 @@ fun LoginScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Sign in with Google")
+                }
+                Spacer(Modifier.height(12.dp))
+
+                // GitHub Sign-In via Supabase OAuth PKCE
+                OutlinedButton(
+                    onClick = {
+                        val (url, verifier) = viewModel.oauthAuthorizeUrl("github")
+                        // Store verifier so we can exchange the code when the deep link returns
+                        pendingOAuthVerifier = verifier
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Sign in with GitHub")
                 }
                 Spacer(Modifier.height(12.dp))
                 TextButton(onClick = { showPasswordLogin = true }) {

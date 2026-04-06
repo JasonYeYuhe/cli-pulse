@@ -36,12 +36,12 @@ enum class Screen(val route: String, val label: String, val icon: ImageVector) {
 }
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(oauthCode: String? = null) {
     val navController = rememberNavController()
     var isLoggedIn by remember { mutableStateOf(false) }
 
     if (!isLoggedIn) {
-        LoginScreen(onLoggedIn = { isLoggedIn = true })
+        LoginScreen(oauthCode = oauthCode, onLoggedIn = { isLoggedIn = true })
         return
     }
 

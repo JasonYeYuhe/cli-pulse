@@ -193,8 +193,19 @@ struct iOSEnhancedProviderCard: View {
                     quotaBadge
                 }
 
-                // Quota bar
-                if let quota = provider.quota, quota > 0 {
+                // Usage tiers (multiple bars when available)
+                if !detail.tiers.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(detail.tiers) { tier in
+                            UsageBar(
+                                label: tier.name,
+                                value: 1.0 - tier.usagePercent,
+                                color: tierColor(tier),
+                                detail: tierDetail(tier)
+                            )
+                        }
+                    }
+                } else if let quota = provider.quota, quota > 0 {
                     UsageBar(
                         label: L10n.providers.quota,
                         value: provider.usagePercent,
@@ -233,6 +244,23 @@ struct iOSEnhancedProviderCard: View {
     private var remainingText: String? {
         guard let remaining = provider.remaining else { return nil }
         return L10n.detail.remainingValue(CostFormatter.formatUsage(remaining))
+    }
+
+    private func tierColor(_ tier: UsageTier) -> Color {
+        if tier.usagePercent > 0.9 { return .red }
+        if tier.usagePercent > 0.7 { return .orange }
+        return providerColor
+    }
+
+    private func tierDetail(_ tier: UsageTier) -> String? {
+        guard let remaining = tier.remaining, let quota = tier.quota, quota > 0 else { return nil }
+        let pctLeft = Int(100.0 * Double(remaining) / Double(quota))
+        var result = "\(pctLeft)% left"
+        if let reset = tier.resetTime,
+           let resetText = RelativeTime.formatReset(reset) {
+            result += " · Resets \(resetText)"
+        }
+        return result
     }
 
     private var quotaBadge: some View {
