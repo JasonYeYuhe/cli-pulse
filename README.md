@@ -1,21 +1,29 @@
 # CLI Pulse
 
-CLI Pulse is a developer app for monitoring usage, quotas, resets, sessions,
-and alerts across supported AI coding providers.
+CLI Pulse is a cross-platform developer app for monitoring usage, quotas, costs,
+sessions, and alerts across 17+ AI coding providers — Claude, Codex, Gemini,
+Cursor, Copilot, Ollama, and more.
 
-This public repository is used for:
+Available on **macOS** (menu bar), **iOS**, **watchOS** (complication), and **Android**.
 
-- release downloads
-- product pages
-- legal pages
-- support and contact information
+## What's New in v1.4
 
-The product source code is maintained separately.
+- Webhook/Slack/Discord alert notifications
+- watchOS complication (quota gauge & alert count)
+- macOS onboarding wizard for new users
+- Watch passwordless login from iPhone
+- Android demo mode
+- 4 new Android collectors (Codex, Cursor, Ollama, Augment)
+- Adaptive menu bar height on macOS
+- OpenAPI 3.1 shared API contract
 
 ## Downloads
 
-- iOS: [App Store](https://apps.apple.com/app/cli-pulse/id6761163709)
-- macOS: [GitHub Releases](https://github.com/JasonYeYuhe/cli-pulse/releases/latest)
+| Platform | Link |
+|----------|------|
+| iOS / watchOS | [App Store](https://apps.apple.com/app/cli-pulse/id6761163709) |
+| macOS | [GitHub Releases](https://github.com/JasonYeYuhe/cli-pulse/releases/latest) |
+| Android | [GitHub Releases (APK)](https://github.com/JasonYeYuhe/cli-pulse/releases/latest) |
 
 ## Support
 
@@ -23,9 +31,3 @@ The product source code is maintained separately.
 - Privacy Policy: [docs/privacy.html](docs/privacy.html)
 - Terms of Use: [docs/terms.html](docs/terms.html)
 - Contact: `clipulse.support@gmail.com`
-
-## Notes
-
-- GitHub Pages content is published from the `docs/` directory in this
-  repository.
-- GitHub Releases are used to distribute notarized macOS builds.
