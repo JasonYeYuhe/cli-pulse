@@ -118,9 +118,15 @@ internal final class DataRefreshManager {
             }
 
             // Scan local JSONL logs for precise token counts and costs (non-blocking)
-            let scanResult = await Task.detached {
+            let costScanData = await Task.detached {
                 CostUsageScanner.scan()
             }.value
+            let scanResult: CostUsageScanResult? = costScanData.entries.isEmpty ? nil : costScanData
+
+            // Sync completed days to Supabase (non-blocking, best-effort)
+            if let scanResult {
+                Task { await self.api.syncDailyUsage(scanResult) }
+            }
 
             #if DEBUG
             Self.dumpMergeDiagnostic(cloud: providerData, local: localResults, merged: resolvedProviders)
@@ -232,9 +238,15 @@ internal final class DataRefreshManager {
         let scanResult = await Task.detached { LocalScanner.shared.scan() }.value
 
         // Scan local JSONL logs for precise token counts and costs
-        let costScanResult = await Task.detached {
+        let costScanData = await Task.detached {
             CostUsageScanner.scan()
         }.value
+        let costScanResult: CostUsageScanResult? = costScanData.entries.isEmpty ? nil : costScanData
+
+        // Sync completed days to Supabase (non-blocking, best-effort)
+        if let costScanResult {
+            Task { await self.api.syncDailyUsage(costScanResult) }
+        }
 
         // Push locally-collected quotas to Supabase (even in unpaired/local mode)
         if !collectorResults.isEmpty {

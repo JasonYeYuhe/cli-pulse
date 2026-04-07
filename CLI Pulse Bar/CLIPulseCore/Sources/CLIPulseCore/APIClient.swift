@@ -1093,6 +1093,97 @@ public actor APIClient {
             print("[syncProviderQuotas] error: \(error.localizedDescription)")
         }
     }
+
+    // MARK: - Daily Usage Sync
+
+    /// Push precise daily usage data from CostUsageScanner to Supabase.
+    /// Only syncs completed days (T-1 and earlier) to avoid incomplete data.
+    public func syncDailyUsage(_ scanResult: CostUsageScanResult) async {
+        guard let userId else { return }
+        guard !scanResult.entries.isEmpty else { return }
+
+        // Only sync completed days (exclude today)
+        let cal = Calendar.current
+        let todayComps = cal.dateComponents([.year, .month, .day], from: Date())
+        let todayKey = String(format: "%04d-%02d-%02d", todayComps.year ?? 1970, todayComps.month ?? 1, todayComps.day ?? 1)
+        let completedEntries = scanResult.entries.filter { $0.date < todayKey }
+        guard !completedEntries.isEmpty else { return }
+
+        let metrics: [[String: Any]] = completedEntries.map { entry in
+            [
+                "metric_date": entry.date,
+                "provider": entry.provider,
+                "model": entry.model,
+                "input_tokens": entry.inputTokens,
+                "cached_tokens": entry.cachedTokens,
+                "output_tokens": entry.outputTokens,
+                "cost": entry.costUSD ?? 0.0,
+            ]
+        }
+
+        guard let metricsJson = try? JSONSerialization.data(withJSONObject: metrics),
+              let url = URL(string: "\(supabaseURL)/rest/v1/rpc/upsert_daily_usage") else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        if let token = accessToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        let body: [String: Any] = ["metrics": (try? JSONSerialization.jsonObject(with: metricsJson)) ?? []]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        do {
+            let (_, response) = try await session.data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if !(200...299).contains(status) {
+                print("[syncDailyUsage] failed: HTTP \(status)")
+            }
+        } catch {
+            print("[syncDailyUsage] error: \(error.localizedDescription)")
+        }
+    }
+
+    /// Fetch daily usage data from Supabase (for iOS/Android display).
+    public func fetchDailyUsage(days: Int = 30) async -> [DailyUsage] {
+        guard userId != nil else { return [] }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/rpc/get_daily_usage") else { return [] }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        if let token = accessToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["days": days])
+
+        do {
+            let (data, response) = try await session.data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            guard (200...299).contains(status) else { return [] }
+
+            guard let items = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return [] }
+            return items.compactMap { item -> DailyUsage? in
+                guard let date = item["metric_date"] as? String,
+                      let provider = item["provider"] as? String,
+                      let model = item["model"] as? String else { return nil }
+                return DailyUsage(
+                    date: date,
+                    provider: provider,
+                    model: model,
+                    inputTokens: (item["input_tokens"] as? Int) ?? 0,
+                    cachedTokens: (item["cached_tokens"] as? Int) ?? 0,
+                    outputTokens: (item["output_tokens"] as? Int) ?? 0,
+                    cost: (item["cost"] as? Double) ?? 0
+                )
+            }
+        } catch {
+            return []
+        }
+    }
     #endif
 
     // MARK: - Health
