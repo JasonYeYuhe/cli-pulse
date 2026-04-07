@@ -3,16 +3,20 @@ import CLIPulseCore
 
 struct MenuBarView: View {
     @EnvironmentObject var state: AppState
+    @AppStorage("cli_pulse_menubar_height") private var storedHeight: Double = 580
 
     /// Adaptive max height: 85% of the screen where the status item lives, capped at 900pt.
-    fileprivate static var maxMenuBarHeight: CGFloat {
-        // Prefer the screen hosting the status item; fall back to main screen
+    private static var maxMenuBarHeight: CGFloat {
         let screenHeight = NSApp.windows
             .first(where: { $0.className.contains("StatusBarWindow") || $0.className.contains("NSStatusBar") })?
             .screen?.visibleFrame.height
             ?? NSScreen.main?.visibleFrame.height
             ?? 800
         return min(screenHeight * 0.85, 900)
+    }
+
+    private var effectiveHeight: CGFloat {
+        min(max(CGFloat(storedHeight), 400), Self.maxMenuBarHeight)
     }
 
     var body: some View {
@@ -25,9 +29,7 @@ struct MenuBarView: View {
                 notConnectedView
             }
         }
-        .frame(width: 380)
-        .frame(minHeight: 520, maxHeight: .infinity)
-        .background(WindowResizableHelper())
+        .frame(width: 380, height: effectiveHeight)
     }
 
     // MARK: - Not Connected
@@ -119,6 +121,9 @@ struct MenuBarView: View {
 
             // Footer
             footer
+
+            // Resize handle
+            resizeHandle
         }
     }
 
@@ -213,6 +218,36 @@ struct MenuBarView: View {
         .background(Color(nsColor: .separatorColor).opacity(0.1))
     }
 
+    // MARK: - Resize Handle
+
+    /// Draggable bar at the bottom edge; vertical drag changes the stored height.
+    private var resizeHandle: some View {
+        Rectangle()
+            .fill(Color.clear)
+            .frame(height: 6)
+            .overlay(
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(Color(nsColor: .separatorColor).opacity(0.35))
+                    .frame(width: 36, height: 3)
+            )
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        let newHeight = CGFloat(storedHeight) + value.translation.height
+                        let clamped = min(max(newHeight, 400), Self.maxMenuBarHeight)
+                        storedHeight = Double(clamped)
+                    }
+            )
+            .onHover { hovering in
+                if hovering {
+                    NSCursor.resizeUpDown.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
+    }
+
     private var providerSwitcher: some View {
         let enabled = Array(state.providerConfigs.filter(\.isEnabled))
         let visible = Array(enabled.prefix(5))
@@ -229,40 +264,5 @@ struct MenuBarView: View {
                     .foregroundStyle(.tertiary)
             }
         }
-    }
-}
-
-// MARK: - Window Resizable Helper
-
-/// NSViewRepresentable that finds the hosting MenuBarExtra window and enables resizing.
-/// The window's maxSize is the real constraint; SwiftUI content expands to fill whatever
-/// height the window has, so there's no blank gap when the user drags to resize.
-private struct WindowResizableHelper: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async {
-            guard let window = view.window else { return }
-            Self.applyWindowConstraints(window)
-        }
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async {
-            guard let window = nsView.window else { return }
-            Self.applyWindowConstraints(window)
-        }
-    }
-
-    /// Configure the window for vertical-only resize. Called on every SwiftUI update
-    /// so the maxHeight stays fresh if the user moves to a different display.
-    private static func applyWindowConstraints(_ window: NSWindow) {
-        if !window.styleMask.contains(.resizable) {
-            window.styleMask.insert(.resizable)
-        }
-        let maxH = MenuBarView.maxMenuBarHeight
-        // Width locked to 380 (no horizontal resize); height 520..maxH
-        window.minSize = NSSize(width: 380, height: 520)
-        window.maxSize = NSSize(width: 380, height: maxH)
     }
 }
