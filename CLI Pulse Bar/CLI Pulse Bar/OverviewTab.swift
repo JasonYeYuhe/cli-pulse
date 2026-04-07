@@ -225,6 +225,48 @@ struct OverviewTab: View {
                     }
                 }
             }
+
+            // Subscriptions section
+            if !state.costSummary.subscriptionByProvider.isEmpty {
+                Divider().padding(.vertical, 2)
+
+                HStack {
+                    Image(systemName: "creditcard")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                    Text("Subscriptions")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(CostFormatter.format(state.costSummary.subscriptionTotal) + "/mo")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(.orange)
+                }
+
+                ForEach(state.costSummary.subscriptionByProvider, id: \.provider) { item in
+                    HStack {
+                        Text("\(item.provider) \(item.plan)")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.tertiary)
+                        Spacer()
+                        Text(CostFormatter.format(item.monthlyCost))
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundStyle(.orange)
+                    }
+                }
+
+                Divider().padding(.vertical, 2)
+
+                HStack {
+                    Text("Total Monthly")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("~" + CostFormatter.format(state.costSummary.grandTotal))
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                }
+            }
         }
         .padding(10)
         .background(PulseTheme.cardBackground.opacity(0.3))

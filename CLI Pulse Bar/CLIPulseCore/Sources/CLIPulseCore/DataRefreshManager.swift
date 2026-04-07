@@ -646,6 +646,10 @@ extension AppState {
     }
 
     func updateCostSummary() {
+        // Calculate subscription costs from enabled providers' plan_type
+        let subscriptions = calculateSubscriptions()
+        let subTotal = subscriptions.reduce(0) { $0 + $1.monthlyCost }
+
         if let scan = costUsageScanResult, !scan.entries.isEmpty {
             // Use precise data from local JSONL log scanning
             let cal = Calendar.current
@@ -657,14 +661,12 @@ extension AppState {
             for entry in todayEntries {
                 todayByProv[entry.provider, default: 0] += entry.costUSD ?? 0
             }
-            // Also include providers with API-only cost data not covered by scanner
             for provider in providers where todayByProv[provider.provider] == nil && provider.estimated_cost_today > 0 {
                 todayByProv[provider.provider] = provider.estimated_cost_today
             }
             let todayByProvider = todayByProv.map { ($0.key, $0.value) }
             let todayTotal = todayByProv.values.reduce(0, +)
 
-            // 30-day: sum all scan entries
             var thirtyDayByProv: [String: Double] = [:]
             for entry in scan.entries {
                 thirtyDayByProv[entry.provider, default: 0] += entry.costUSD ?? 0
@@ -680,7 +682,10 @@ extension AppState {
                 todayByProvider: todayByProvider,
                 thirtyDayTotal: thirtyDayTotal,
                 thirtyDayByProvider: thirtyDayByProvider,
-                isPrecise: true
+                isPrecise: true,
+                subscriptionTotal: subTotal,
+                subscriptionByProvider: subscriptions,
+                grandTotal: subTotal + thirtyDayTotal
             )
             return
         }
@@ -694,8 +699,24 @@ extension AppState {
             todayTotal: todayTotal,
             todayByProvider: todayByProvider,
             thirtyDayTotal: thirtyDayTotal,
-            thirtyDayByProvider: thirtyDayByProvider
+            thirtyDayByProvider: thirtyDayByProvider,
+            subscriptionTotal: subTotal,
+            subscriptionByProvider: subscriptions,
+            grandTotal: subTotal + thirtyDayTotal
         )
+    }
+
+    private func calculateSubscriptions() -> [(provider: String, plan: String, monthlyCost: Double)] {
+        let enabledNames = Set(providerConfigs.filter(\.isEnabled).map(\.kind.rawValue))
+        var result: [(provider: String, plan: String, monthlyCost: Double)] = []
+        for provider in providers where enabledNames.contains(provider.provider) {
+            if let plan = provider.plan_type,
+               let cost = SubscriptionPricing.monthlyCost(provider: provider.provider, plan: plan),
+               cost > 0 {
+                result.append((provider: provider.provider, plan: plan, monthlyCost: cost))
+            }
+        }
+        return result.sorted { $0.monthlyCost > $1.monthlyCost }
     }
 
     func publishWidgetData() {

@@ -436,18 +436,29 @@ public struct CostSummary: Sendable {
     public let thirtyDayByProvider: [(provider: String, cost: Double)]
     /// True when costs come from precise JSONL log scanning rather than API estimates
     public let isPrecise: Bool
+    /// Monthly subscription costs
+    public let subscriptionTotal: Double
+    public let subscriptionByProvider: [(provider: String, plan: String, monthlyCost: Double)]
+    /// Grand total = subscriptionTotal + thirtyDayTotal
+    public let grandTotal: Double
 
     public init(
         todayTotal: Double = 0,
         todayByProvider: [(provider: String, cost: Double)] = [],
         thirtyDayTotal: Double = 0,
         thirtyDayByProvider: [(provider: String, cost: Double)] = [],
-        isPrecise: Bool = false
+        isPrecise: Bool = false,
+        subscriptionTotal: Double = 0,
+        subscriptionByProvider: [(provider: String, plan: String, monthlyCost: Double)] = [],
+        grandTotal: Double = 0
     ) {
         self.todayTotal = todayTotal
         self.todayByProvider = todayByProvider
         self.thirtyDayTotal = thirtyDayTotal
         self.thirtyDayByProvider = thirtyDayByProvider
         self.isPrecise = isPrecise
+        self.subscriptionTotal = subscriptionTotal
+        self.subscriptionByProvider = subscriptionByProvider
+        self.grandTotal = grandTotal
     }
 }
