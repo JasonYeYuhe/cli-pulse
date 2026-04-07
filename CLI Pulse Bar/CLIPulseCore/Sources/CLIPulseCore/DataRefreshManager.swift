@@ -28,6 +28,7 @@ internal final class DataRefreshManager {
         let tierLimitWarning: String?
         let lastRefresh: Date
         let isLocalMode: Bool
+        let costUsageScanResult: CostUsageScanResult?
     }
 
     struct Callbacks {
@@ -116,12 +117,18 @@ internal final class DataRefreshManager {
                 Task { await api.syncProviderQuotas(localResults) }
             }
 
+            // Scan local JSONL logs for precise token counts and costs (non-blocking)
+            let scanResult = await Task.detached {
+                CostUsageScanner.scan()
+            }.value
+
             #if DEBUG
             Self.dumpMergeDiagnostic(cloud: providerData, local: localResults, merged: resolvedProviders)
             #endif
             #else
             let resolvedProviders = providerData
             let supplementedProviders: Set<String> = []
+            let scanResult: CostUsageScanResult? = nil
             #endif
 
             guard callbacks.isAuthenticated() else {
@@ -162,7 +169,8 @@ internal final class DataRefreshManager {
                     locallySupplementedProviders: supplementedProviders,
                     tierLimitWarning: warning,
                     lastRefresh: Date(),
-                    isLocalMode: false
+                    isLocalMode: false,
+                    costUsageScanResult: scanResult
                 )
             )
             callbacks.afterRefresh()
@@ -222,6 +230,11 @@ internal final class DataRefreshManager {
 
         let collectorResults = await runCollectors(providerConfigs: context.providerConfigs)
         let scanResult = await Task.detached { LocalScanner.shared.scan() }.value
+
+        // Scan local JSONL logs for precise token counts and costs
+        let costScanResult = await Task.detached {
+            CostUsageScanner.scan()
+        }.value
 
         // Push locally-collected quotas to Supabase (even in unpaired/local mode)
         if !collectorResults.isEmpty {
@@ -288,7 +301,8 @@ internal final class DataRefreshManager {
                 locallySupplementedProviders: [],
                 tierLimitWarning: nil,
                 lastRefresh: Date(),
-                isLocalMode: true
+                isLocalMode: true,
+                costUsageScanResult: costScanResult
             )
         )
         callbacks.afterRefresh()
@@ -620,6 +634,45 @@ extension AppState {
     }
 
     func updateCostSummary() {
+        if let scan = costUsageScanResult, !scan.entries.isEmpty {
+            // Use precise data from local JSONL log scanning
+            let cal = Calendar.current
+            let now = Date()
+            let todayComps = cal.dateComponents([.year, .month, .day], from: now)
+            let todayKey = String(format: "%04d-%02d-%02d", todayComps.year ?? 1970, todayComps.month ?? 1, todayComps.day ?? 1)
+            let todayEntries = scan.entries.filter { $0.date == todayKey }
+            var todayByProv: [String: Double] = [:]
+            for entry in todayEntries {
+                todayByProv[entry.provider, default: 0] += entry.costUSD ?? 0
+            }
+            // Also include providers with API-only cost data not covered by scanner
+            for provider in providers where todayByProv[provider.provider] == nil && provider.estimated_cost_today > 0 {
+                todayByProv[provider.provider] = provider.estimated_cost_today
+            }
+            let todayByProvider = todayByProv.map { ($0.key, $0.value) }
+            let todayTotal = todayByProv.values.reduce(0, +)
+
+            // 30-day: sum all scan entries
+            var thirtyDayByProv: [String: Double] = [:]
+            for entry in scan.entries {
+                thirtyDayByProv[entry.provider, default: 0] += entry.costUSD ?? 0
+            }
+            for provider in providers where thirtyDayByProv[provider.provider] == nil && provider.estimated_cost_week > 0 {
+                thirtyDayByProv[provider.provider] = provider.estimated_cost_week * 4.3
+            }
+            let thirtyDayByProvider = thirtyDayByProv.map { ($0.key, $0.value) }
+            let thirtyDayTotal = thirtyDayByProv.values.reduce(0, +)
+
+            costSummary = CostSummary(
+                todayTotal: todayTotal,
+                todayByProvider: todayByProvider,
+                thirtyDayTotal: thirtyDayTotal,
+                thirtyDayByProvider: thirtyDayByProvider
+            )
+            return
+        }
+
+        // Fallback: use API-provided estimates
         let todayByProvider = providers.map { ($0.provider, $0.estimated_cost_today) }
         let todayTotal = todayByProvider.reduce(0) { $0 + $1.1 }
         let thirtyDayByProvider = providers.map { ($0.provider, $0.estimated_cost_week * 4.3) }
@@ -742,6 +795,7 @@ extension AppState {
         tierLimitWarning = payload.tierLimitWarning
         lastRefresh = payload.lastRefresh
         isLocalMode = payload.isLocalMode
+        costUsageScanResult = payload.costUsageScanResult
     }
 
     func completeRefresh() {

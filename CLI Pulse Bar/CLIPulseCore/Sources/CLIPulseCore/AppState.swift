@@ -40,6 +40,9 @@ public final class AppState: ObservableObject {
     @Published public var costSummary: CostSummary = CostSummary()
     public var locallySupplementedProviders: Set<String> = []
 
+    // MARK: - Cost Usage Scan (precise token data from local JSONL logs, macOS only)
+    @Published public var costUsageScanResult: CostUsageScanResult?
+
     // MARK: - Auth Flow
     @Published public var otpSent = false
     @Published public var otpEmail = ""
