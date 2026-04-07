@@ -54,6 +54,28 @@ class TeamViewModel @Inject constructor(
         }
     }
 
+    fun selectTeam(team: SupabaseClient.TeamInfo) {
+        _state.value = _state.value.copy(selectedTeam = team)
+        loadMembers(team.id)
+    }
+
+    fun deselectTeam() {
+        _state.value = _state.value.copy(selectedTeam = null, members = emptyList())
+    }
+
+    fun loadMembers(teamId: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            try {
+                val raw = supabase.fetchTeamMembers(teamId)
+                val members = raw.map { TeamMember(it.userId, it.name, it.email, it.role) }
+                _state.value = _state.value.copy(isLoading = false, members = members)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(isLoading = false, error = e.message)
+            }
+        }
+    }
+
     fun createTeam(name: String) {
         viewModelScope.launch {
             try {
@@ -75,6 +97,7 @@ class TeamViewModel @Inject constructor(
                     put("p_role", "member")
                 }
                 supabase.rpcPublic("invite_member", params)
+                loadMembers(teamId)
             } catch (e: Exception) {
                 _state.value = _state.value.copy(error = e.message)
             }
@@ -89,7 +112,7 @@ class TeamViewModel @Inject constructor(
                     put("p_user_id", userId)
                 }
                 supabase.rpcPublic("remove_member", params)
-                loadTeams()
+                loadMembers(teamId)
             } catch (e: Exception) {
                 _state.value = _state.value.copy(error = e.message)
             }

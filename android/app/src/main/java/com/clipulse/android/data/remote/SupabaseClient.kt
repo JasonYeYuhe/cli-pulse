@@ -424,6 +424,29 @@ class SupabaseClient(
             }
         }
 
+    suspend fun updatePushToken(deviceId: String, token: String): Unit =
+        withContext(Dispatchers.IO) {
+            val body = JSONObject().apply {
+                put("push_token", token)
+                put("push_platform", "fcm")
+            }
+            val req = Request.Builder()
+                .url("$supabaseUrl/rest/v1/devices?id=eq.${enc(deviceId)}")
+                .patch(body.toString().toRequestBody(jsonMedia))
+                .addHeader("Content-Type", "application/json")
+                .addHeader("apikey", supabaseAnonKey)
+                .apply {
+                    tokenStore.accessToken?.let {
+                        addHeader("Authorization", "Bearer $it")
+                    }
+                }
+                .build()
+            val resp = client.newCall(req).execute()
+            resp.use { r ->
+                if (!r.isSuccessful) throw ApiError.Http(r.code, r.body?.string() ?: "")
+            }
+        }
+
     suspend fun syncProviderQuotas(results: List<ProviderQuotaPayload>): Unit =
         withContext(Dispatchers.IO) {
             val userId = tokenStore.userId ?: return@withContext
@@ -563,6 +586,24 @@ class SupabaseClient(
             TeamInfo(
                 id = team.optString("id"),
                 name = team.optString("name"),
+                role = row.optString("role", "member"),
+            )
+        }
+    }
+
+    data class TeamMemberInfo(val userId: String, val name: String, val email: String, val role: String)
+
+    suspend fun fetchTeamMembers(teamId: String): List<TeamMemberInfo> = withContext(Dispatchers.IO) {
+        val arr = restGetArray(
+            "/rest/v1/team_members?team_id=eq.${enc(teamId)}&select=role,user_id,profiles(name,email)"
+        )
+        (0 until arr.length()).mapNotNull { i ->
+            val row = arr.getJSONObject(i)
+            val profile = row.optJSONObject("profiles") ?: return@mapNotNull null
+            TeamMemberInfo(
+                userId = row.optString("user_id"),
+                name = profile.optString("name"),
+                email = profile.optString("email"),
                 role = row.optString("role", "member"),
             )
         }

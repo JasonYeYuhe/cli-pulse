@@ -16,11 +16,20 @@ class SubscriptionViewModel @Inject constructor(
 
     val state: StateFlow<SubscriptionState> = billingManager.state
 
+    init {
+        billingManager.connect()
+    }
+
     fun purchase(activity: Activity, productDetails: ProductDetails) {
         billingManager.purchase(activity, productDetails)
     }
 
     fun restore() {
         billingManager.restorePurchases()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        billingManager.disconnect()
     }
 }

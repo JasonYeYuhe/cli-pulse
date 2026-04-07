@@ -40,6 +40,7 @@ class BillingManager(
     private val scope = CoroutineScope(Dispatchers.IO)
     private val reconnectAttempts = AtomicInteger(0)
     private val isReconnecting = AtomicBoolean(false)
+    private val isConnected = AtomicBoolean(false)
 
     private var billingClient: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
@@ -47,9 +48,11 @@ class BillingManager(
         .build()
 
     fun connect() {
+        if (isConnected.get() && billingClient.isReady) return
         billingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                    isConnected.set(true)
                     reconnectAttempts.set(0)
                     isReconnecting.set(false)
                     queryProducts()
@@ -203,6 +206,7 @@ class BillingManager(
     }
 
     fun disconnect() {
+        isConnected.set(false)
         billingClient.endConnection()
     }
 }

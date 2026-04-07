@@ -59,6 +59,8 @@ create table public.user_settings (
   alert_cooldown_minutes integer not null default 30,
   data_retention_days integer not null default 7,
   login_method text not null default 'apple',
+  webhook_url text,
+  webhook_enabled boolean not null default false,
   updated_at timestamptz not null default now()
 );
 alter table public.user_settings enable row level security;
@@ -91,6 +93,8 @@ create table public.devices (
   cpu_usage integer not null default 0,
   memory_usage integer not null default 0,
   helper_secret text,
+  push_token text,
+  push_platform text,
   last_seen_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
@@ -111,11 +115,13 @@ revoke select (helper_secret) on public.devices from authenticated;
 
 create index idx_devices_user_id on public.devices(user_id);
 create index idx_devices_user_status on public.devices(user_id, status);
+create index idx_devices_push_token on public.devices(user_id) where push_token is not null;
 
 -- ── Pairing Codes ──
 create table public.pairing_codes (
   code text primary key,
   user_id uuid not null references public.profiles(id) on delete cascade,
+  failed_attempts integer not null default 0,
   created_at timestamptz not null default now(),
   expires_at timestamptz not null default (now() + interval '10 minutes')
 );
@@ -364,3 +370,97 @@ select
 from public.sessions s
 where s.started_at >= (date_trunc('week', current_date) at time zone 'UTC')
 group by s.user_id, s.provider;
+
+-- ── Webhook settings index ──
+create index idx_user_settings_webhook_enabled
+  on public.user_settings(user_id)
+  where webhook_enabled = true and webhook_url is not null;
+
+-- ── Daily Usage Metrics (per-day per-model token counts and costs) ──
+create table public.daily_usage_metrics (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  metric_date date not null,
+  provider text not null,
+  model text not null,
+  input_tokens bigint not null default 0,
+  cached_tokens bigint not null default 0,
+  output_tokens bigint not null default 0,
+  cost numeric(10,6) not null default 0,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, metric_date, provider, model)
+);
+alter table public.daily_usage_metrics enable row level security;
+
+create policy "Users own metrics"
+  on public.daily_usage_metrics for all using (auth.uid() = user_id);
+
+create index idx_daily_usage_metrics_user_date
+  on public.daily_usage_metrics(user_id, metric_date desc);
+
+-- RPC: upsert_daily_usage
+-- Batch upsert daily usage metrics from macOS scanner.
+create or replace function public.upsert_daily_usage(metrics jsonb)
+returns jsonb as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_count int := 0;
+  v_item jsonb;
+begin
+  if v_user_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  for v_item in select * from jsonb_array_elements(metrics)
+  loop
+    insert into public.daily_usage_metrics (
+      user_id, metric_date, provider, model,
+      input_tokens, cached_tokens, output_tokens, cost, updated_at
+    ) values (
+      v_user_id,
+      (v_item->>'metric_date')::date,
+      v_item->>'provider',
+      v_item->>'model',
+      coalesce((v_item->>'input_tokens')::bigint, 0),
+      coalesce((v_item->>'cached_tokens')::bigint, 0),
+      coalesce((v_item->>'output_tokens')::bigint, 0),
+      coalesce((v_item->>'cost')::numeric, 0),
+      now()
+    )
+    on conflict (user_id, metric_date, provider, model)
+    do update set
+      input_tokens = excluded.input_tokens,
+      cached_tokens = excluded.cached_tokens,
+      output_tokens = excluded.output_tokens,
+      cost = excluded.cost,
+      updated_at = now();
+    v_count := v_count + 1;
+  end loop;
+
+  return jsonb_build_object('upserted', v_count);
+end;
+$$ language plpgsql security definer;
+
+-- RPC: get_daily_usage
+-- Returns the most recent N days of usage data for the authenticated user.
+create or replace function public.get_daily_usage(days int default 30)
+returns jsonb as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_since date := current_date - days;
+begin
+  if v_user_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  return coalesce(
+    (select jsonb_agg(row_to_json(t)) from (
+      select metric_date, provider, model,
+             input_tokens, cached_tokens, output_tokens, cost
+      from public.daily_usage_metrics
+      where user_id = v_user_id and metric_date >= v_since
+      order by metric_date desc, provider, model
+    ) t),
+    '[]'::jsonb
+  );
+end;
+$$ language plpgsql security definer;

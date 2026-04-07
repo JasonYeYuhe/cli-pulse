@@ -333,6 +333,13 @@ public struct ProviderMetadata: Codable, Sendable {
     }
 }
 
+/// Usage data for a single provider, used by both cloud sync and local collectors.
+///
+/// **Semantic convention for `today_usage` / `week_usage`:**
+/// These fields store **percentages** (0–100) representing how much of the
+/// provider's quota window has been consumed. Collectors that produce
+/// absolute token/request counts should convert to percentages before
+/// constructing this struct. This ensures all providers are comparable in UI.
 public struct ProviderUsage: Codable, Identifiable, Sendable {
     public let provider: String
     public let today_usage: Int
@@ -395,17 +402,29 @@ public struct ProviderUsage: Codable, Identifiable, Sendable {
     }
 }
 
+public enum TierRole: String, Codable, Sendable {
+    case primary       // Main window (e.g. 5h)
+    case secondary     // Secondary window (e.g. Weekly)
+    case modelSpecific // Per-model window (e.g. Opus, Sonnet)
+    case credits       // Extra usage / credits
+}
+
 public struct TierDTO: Codable, Sendable {
     public let name: String
     public let quota: Int
     public let remaining: Int
     public let reset_time: String?
+    public let windowMinutes: Int?
+    public let role: TierRole?
 
-    public init(name: String, quota: Int, remaining: Int, reset_time: String? = nil) {
+    public init(name: String, quota: Int, remaining: Int, reset_time: String? = nil,
+                windowMinutes: Int? = nil, role: TierRole? = nil) {
         self.name = name
         self.quota = quota
         self.remaining = remaining
         self.reset_time = reset_time
+        self.windowMinutes = windowMinutes
+        self.role = role
     }
 }
 

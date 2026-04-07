@@ -108,7 +108,7 @@ fun LoginScreen(
                 Button(
                     onClick = { viewModel.verifyOTP(otpCode) },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = otpCode.length >= 6,
+                    enabled = otpCode.isNotBlank(),
                 ) {
                     Text("Verify")
                 }

@@ -6,9 +6,17 @@ import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.clipulse.android.R
+import com.clipulse.android.data.remote.SupabaseClient
+import com.clipulse.android.data.remote.TokenStore
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class PushService : FirebaseMessagingService() {
 
     companion object {
@@ -17,9 +25,24 @@ class PushService : FirebaseMessagingService() {
         private const val CHANNEL_NAME = "CLI Pulse Alerts"
     }
 
+    @Inject lateinit var supabase: SupabaseClient
+    @Inject lateinit var tokenStore: TokenStore
+
     override fun onNewToken(token: String) {
         Log.d(TAG, "FCM token refreshed")
-        // TODO: send token to Supabase backend for targeted push
+        val deviceId = tokenStore.deviceId
+        if (deviceId != null && tokenStore.accessToken != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    supabase.updatePushToken(deviceId, token)
+                    Log.d(TAG, "Push token registered for device $deviceId")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to register push token: ${e.message}")
+                }
+            }
+        } else {
+            Log.d(TAG, "Skipping push token upload: deviceId=$deviceId, authenticated=${tokenStore.accessToken != null}")
+        }
     }
 
     override fun onMessageReceived(message: RemoteMessage) {

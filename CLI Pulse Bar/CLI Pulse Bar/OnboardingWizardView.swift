@@ -139,7 +139,7 @@ struct OnboardingWizardView: View {
                     .font(.caption)
                     .foregroundStyle(.green)
 
-                TextField("6-digit code", text: $otpCode)
+                TextField(L10n.auth.codePlaceholder, text: $otpCode)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 200)
 

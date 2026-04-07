@@ -32,7 +32,7 @@ final class MergeTests: XCTestCase {
         let cloud = [makeCloudUsage(provider: "Claude", quota: 250000, remaining: 118000)]
         // Local has 1 tier (richer than cloud's 0 tiers)
         let local = [makeLocalResult(provider: "Claude", quota: 100, remaining: 70)]
-        let (merged, supplemented) = AppState.mergeCloudWithLocal(cloud: cloud, local: local)
+        let (merged, supplemented) = DataRefreshManager.mergeCloudWithLocal(cloud: cloud, local: local)
 
         XCTAssertEqual(merged.count, 1)
         let claude = merged.first!
@@ -42,8 +42,8 @@ final class MergeTests: XCTestCase {
         XCTAssertEqual(claude.tiers.count, 1)
         XCTAssertEqual(claude.tiers[0].name, "5h Window")
         XCTAssertTrue(supplemented.contains("Claude"), "Should be supplemented when local is richer")
-        // Cloud usage/cost values preserved
-        XCTAssertEqual(claude.today_usage, 100, "Cloud usage values should be preserved")
+        // Local usage preferred when > 0 (fresher data)
+        XCTAssertEqual(claude.today_usage, 50, "Local usage should override cloud when > 0")
     }
 
     /// When cloud and local have equal tier counts, local wins (fresher data).
@@ -51,7 +51,7 @@ final class MergeTests: XCTestCase {
         let tiers = [TierDTO(name: "Pro", quota: 200, remaining: 150, reset_time: nil)]
         let cloud = [makeCloudUsage(provider: "Gemini", quota: nil, remaining: nil, tiers: tiers)]
         let local = [makeLocalResult(provider: "Gemini", quota: 100, remaining: 50)]
-        let (merged, supplemented) = AppState.mergeCloudWithLocal(cloud: cloud, local: local)
+        let (merged, supplemented) = DataRefreshManager.mergeCloudWithLocal(cloud: cloud, local: local)
 
         XCTAssertEqual(merged.count, 1)
         let gemini = merged.first!
@@ -64,7 +64,7 @@ final class MergeTests: XCTestCase {
     func testCloudWithoutQuotaGetsMerged() {
         let cloud = [makeCloudUsage(provider: "Claude", quota: nil, remaining: nil)]
         let local = [makeLocalResult(provider: "Claude", quota: 100, remaining: 70)]
-        let (merged, supplemented) = AppState.mergeCloudWithLocal(cloud: cloud, local: local)
+        let (merged, supplemented) = DataRefreshManager.mergeCloudWithLocal(cloud: cloud, local: local)
 
         XCTAssertEqual(merged.count, 1)
         let claude = merged.first!
@@ -74,14 +74,14 @@ final class MergeTests: XCTestCase {
         XCTAssertEqual(claude.tiers[0].name, "5h Window")
         XCTAssertEqual(claude.plan_type, "Pro")
         XCTAssertEqual(claude.reset_time, "2026-04-02T22:00:00Z")
-        XCTAssertEqual(claude.today_usage, 100, "Cloud usage should be preserved")
+        XCTAssertEqual(claude.today_usage, 50, "Local usage should override cloud when > 0")
         XCTAssertTrue(supplemented.contains("Claude"), "Should be in supplemented set")
     }
 
     func testLocalOnlyProviderAdded() {
         let cloud = [makeCloudUsage(provider: "Codex", quota: 500, remaining: 200)]
         let local = [makeLocalResult(provider: "JetBrains AI", quota: 500, remaining: 350)]
-        let (merged, supplemented) = AppState.mergeCloudWithLocal(cloud: cloud, local: local)
+        let (merged, supplemented) = DataRefreshManager.mergeCloudWithLocal(cloud: cloud, local: local)
 
         XCTAssertEqual(merged.count, 2)
         XCTAssertNotNil(merged.first(where: { $0.provider == "JetBrains AI" }))
@@ -100,7 +100,7 @@ final class MergeTests: XCTestCase {
             status_text: "3 running", trend: [], recent_sessions: [], recent_errors: []
         )
         let local = [CollectorResult(usage: localUsage, dataKind: .statusOnly)]
-        let (merged, supplemented) = AppState.mergeCloudWithLocal(cloud: cloud, local: local)
+        let (merged, supplemented) = DataRefreshManager.mergeCloudWithLocal(cloud: cloud, local: local)
 
         XCTAssertEqual(merged.count, 1)
         let ollama = merged.first!
@@ -111,7 +111,7 @@ final class MergeTests: XCTestCase {
     func testCloudWithZeroQuotaGetsMerged() {
         let cloud = [makeCloudUsage(provider: "Claude", quota: 0, remaining: 0)]
         let local = [makeLocalResult(provider: "Claude", quota: 100, remaining: 70)]
-        let (merged, supplemented) = AppState.mergeCloudWithLocal(cloud: cloud, local: local)
+        let (merged, supplemented) = DataRefreshManager.mergeCloudWithLocal(cloud: cloud, local: local)
 
         let claude = merged.first!
         XCTAssertEqual(claude.quota, 100, "Local quota should fill in when cloud quota is 0")
@@ -123,7 +123,7 @@ final class MergeTests: XCTestCase {
         // This is tested indirectly through the supplemented return value
         let cloud = [makeCloudUsage(provider: "Claude", quota: nil, remaining: nil)]
         let local = [makeLocalResult(provider: "Claude", quota: 100, remaining: 70)]
-        let (_, supplemented) = AppState.mergeCloudWithLocal(cloud: cloud, local: local)
+        let (_, supplemented) = DataRefreshManager.mergeCloudWithLocal(cloud: cloud, local: local)
         XCTAssertTrue(supplemented.contains("Claude"))
     }
 
@@ -152,7 +152,7 @@ final class MergeTests: XCTestCase {
         )
         let local = [CollectorResult(usage: localUsage, dataKind: .quota)]
 
-        let (merged, supplemented) = AppState.mergeCloudWithLocal(cloud: cloud, local: local)
+        let (merged, supplemented) = DataRefreshManager.mergeCloudWithLocal(cloud: cloud, local: local)
 
         let claude = merged.first!
         XCTAssertEqual(claude.tiers.count, 3, "Local richer tiers should override cloud")
@@ -170,7 +170,7 @@ final class MergeTests: XCTestCase {
         ]
         let cloud = [makeCloudUsage(provider: "Claude", quota: 100, remaining: 90, tiers: cloudTiers)]
         let local = [makeLocalResult(provider: "Claude", quota: 100, remaining: 70)]
-        let (merged, supplemented) = AppState.mergeCloudWithLocal(cloud: cloud, local: local)
+        let (merged, supplemented) = DataRefreshManager.mergeCloudWithLocal(cloud: cloud, local: local)
 
         let claude = merged.first!
         XCTAssertEqual(claude.tiers.count, 1, "Fresh local tiers should override stale cloud tiers")
@@ -190,7 +190,7 @@ final class MergeTests: XCTestCase {
             status_text: "30% used", trend: [], recent_sessions: [], recent_errors: []
         )
         let local = [CollectorResult(usage: localUsage, dataKind: .quota)]
-        let (merged, supplemented) = AppState.mergeCloudWithLocal(cloud: cloud, local: local)
+        let (merged, supplemented) = DataRefreshManager.mergeCloudWithLocal(cloud: cloud, local: local)
 
         let codex = merged.first!
         XCTAssertEqual(codex.quota, 100, "Fresh local Codex quota must replace stale cloud quota")
@@ -199,7 +199,7 @@ final class MergeTests: XCTestCase {
         XCTAssertTrue(supplemented.contains("Codex"))
     }
 
-    func testCodexHelperShapeMatchesRealSessionAndWeeklyWindows() {
+    func testCodexHelperShapeMatchesRealSessionAndWeeklyWindows() throws {
         let cloud = [makeCloudUsage(provider: "Codex", quota: 100, remaining: 29, tiers: [
             TierDTO(name: "5h Window", quota: 100, remaining: 29, reset_time: "2026-04-02T22:00:00Z"),
             TierDTO(name: "Weekly", quota: 100, remaining: 29, reset_time: "2026-04-09T00:00:00Z"),
@@ -217,7 +217,7 @@ final class MergeTests: XCTestCase {
             status_text: "0% used", trend: [], recent_sessions: [], recent_errors: []
         )
 
-        let (merged, supplemented) = AppState.mergeCloudWithLocal(
+        let (merged, supplemented) = DataRefreshManager.mergeCloudWithLocal(
             cloud: cloud,
             local: [CollectorResult(usage: localUsage, dataKind: .quota)]
         )

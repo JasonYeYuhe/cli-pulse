@@ -94,7 +94,7 @@ final class ClaudeRuntimeVerificationTest: XCTestCase {
                 tiers: [], status_text: "Operational",
                 trend: [], recent_sessions: [], recent_errors: [])
 
-            let (merged, supplemented) = AppState.mergeCloudWithLocal(
+            let (merged, supplemented) = DataRefreshManager.mergeCloudWithLocal(
                 cloud: [staleCloudRow], local: [result])
 
             let mergedClaude = merged.first { $0.provider == "Claude" }
@@ -116,7 +116,7 @@ final class ClaudeRuntimeVerificationTest: XCTestCase {
                 status_text: "Operational",
                 trend: [], recent_sessions: [], recent_errors: [])
 
-            let (merged2, supplemented2) = AppState.mergeCloudWithLocal(
+            let (merged2, supplemented2) = DataRefreshManager.mergeCloudWithLocal(
                 cloud: [coarseCloudRow], local: [result])
             let mergedClaude2 = merged2.first { $0.provider == "Claude" }
 
@@ -160,7 +160,7 @@ final class ClaudeRuntimeVerificationTest: XCTestCase {
                 print("============================================")
             }
 
-            AppState.dumpMergeDiagnostic(cloud: [staleCloudRow], local: [result], merged: merged)
+            DataRefreshManager.dumpMergeDiagnostic(cloud: [staleCloudRow], local: [result], merged: merged)
         }
     }
 
@@ -232,7 +232,7 @@ final class ClaudeRuntimeVerificationTest: XCTestCase {
                 tiers: [], status_text: "Operational",
                 trend: [], recent_sessions: [], recent_errors: [])
 
-            let (merged, supplemented) = AppState.mergeCloudWithLocal(
+            let (merged, supplemented) = DataRefreshManager.mergeCloudWithLocal(
                 cloud: [staleCloud], local: [result])
 
             let m = merged.first { $0.provider == "Claude" }!

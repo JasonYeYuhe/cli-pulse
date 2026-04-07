@@ -140,9 +140,9 @@ MULTI-PLATFORM:
 - Home Screen & Lock Screen widgets
 
 PRIVACY-FIRST:
-- All data stays on your local network
-- No cloud sync or third-party analytics
-- Connects to your self-hosted CLI Pulse backend
+- Local helper collects usage data on your machine
+- Optional cloud sync via your CLI Pulse account for cross-device access
+- No third-party analytics or data selling
 
 Perfect for developers who use multiple AI coding tools and want to understand their usage patterns, control costs, and stay informed about their AI assistant activity.
 
