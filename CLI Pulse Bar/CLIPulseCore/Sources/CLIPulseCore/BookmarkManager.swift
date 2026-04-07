@@ -123,9 +123,9 @@ public final class BookmarkManager {
             var bookmarks = loadBookmarks()
             bookmarks[url.path] = bookmarkData
             saveBookmarks(bookmarks)
-            logger.info("Stored bookmark for: \(url.path)")
+            logger.info("Stored bookmark for: \(url.path, privacy: .public)")
         } catch {
-            logger.error("Failed to create bookmark for \(url.path): \(error.localizedDescription)")
+            logger.error("Failed to create bookmark for \(url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -152,7 +152,7 @@ public final class BookmarkManager {
             )
 
             if isStale {
-                logger.warning("Bookmark stale for: \(directoryPath), re-storing")
+                logger.warning("Bookmark stale for: \(directoryPath, privacy: .public), re-storing")
                 storeBookmark(for: url)
             }
 
@@ -160,11 +160,11 @@ public final class BookmarkManager {
                 activeResources[directoryPath] = url
                 return url
             } else {
-                logger.error("Failed to start accessing security-scoped resource: \(directoryPath)")
+                logger.error("Failed to start accessing security-scoped resource: \(directoryPath, privacy: .public)")
                 return nil
             }
         } catch {
-            logger.error("Failed to resolve bookmark for \(directoryPath): \(error.localizedDescription)")
+            logger.error("Failed to resolve bookmark for \(directoryPath, privacy: .public): \(error.localizedDescription, privacy: .public)")
             // Remove invalid bookmark
             var bookmarks = loadBookmarks()
             bookmarks.removeValue(forKey: directoryPath)
@@ -189,7 +189,7 @@ public final class BookmarkManager {
         var bookmarks = loadBookmarks()
         bookmarks.removeValue(forKey: directoryPath)
         saveBookmarks(bookmarks)
-        logger.info("Revoked bookmark for: \(directoryPath)")
+        logger.info("Revoked bookmark for: \(directoryPath, privacy: .public)")
     }
 
     /// Resolve all stored bookmarks (call on app launch)

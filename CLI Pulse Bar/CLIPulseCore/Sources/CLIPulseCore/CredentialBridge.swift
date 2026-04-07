@@ -72,7 +72,7 @@ public enum CredentialBridge {
                 "credentials": credentials,
             ]) {
                 saveToKeychain(data: jsonData)
-                logger.debug("Bridged \(credentials.count) credential sets to Keychain")
+                logger.debug("Bridged \(credentials.count, privacy: .public) credential sets to Keychain")
             }
         }
     }
@@ -129,10 +129,10 @@ public enum CredentialBridge {
             addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
             let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
             if addStatus != errSecSuccess {
-                logger.error("Keychain save failed: \(addStatus)")
+                logger.error("Keychain save failed: \(addStatus, privacy: .public)")
             }
         } else if status != errSecSuccess {
-            logger.error("Keychain update failed: \(status)")
+            logger.error("Keychain update failed: \(status, privacy: .public)")
         }
     }
 

@@ -39,7 +39,7 @@ public enum SandboxFileAccess {
             // Bookmark resolved, try reading again
             let data = FileManager.default.contents(atPath: path)
             if data == nil {
-                logger.debug("Bookmark resolved for \(parentDir) but file not found: \(path)")
+                logger.debug("Bookmark resolved for \(parentDir, privacy: .public) but file not found: \(path, privacy: .public)")
             }
             return data
         }
@@ -53,7 +53,7 @@ public enum SandboxFileAccess {
             dir = (dir as NSString).deletingLastPathComponent
         }
 
-        logger.debug("No bookmark available for: \(path)")
+        logger.debug("No bookmark available for: \(path, privacy: .public)")
         return nil
     }
 
@@ -74,7 +74,7 @@ public enum SandboxFileAccess {
             try data.write(to: URL(fileURLWithPath: path))
             return true
         } catch {
-            logger.error("Failed to write to \(path): \(error.localizedDescription)")
+            logger.error("Failed to write to \(path, privacy: .public): \(error.localizedDescription, privacy: .public)")
             return false
         }
     }
