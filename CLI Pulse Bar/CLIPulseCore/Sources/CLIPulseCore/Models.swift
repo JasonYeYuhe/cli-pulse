@@ -636,6 +636,29 @@ public struct SettingsSnapshot: Codable, Sendable {
     }
 }
 
+// MARK: - Daily Usage (from CostUsageScanner)
+
+public struct DailyUsage: Codable, Identifiable, Sendable {
+    public var id: String { "\(date)-\(provider)-\(model)" }
+    public let date: String           // "2026-04-07"
+    public let provider: String       // "Codex", "Claude"
+    public let model: String          // "gpt-5", "claude-sonnet-4-5"
+    public let inputTokens: Int
+    public let cachedTokens: Int
+    public let outputTokens: Int
+    public let cost: Double
+
+    public init(date: String, provider: String, model: String, inputTokens: Int, cachedTokens: Int, outputTokens: Int, cost: Double) {
+        self.date = date
+        self.provider = provider
+        self.model = model
+        self.inputTokens = inputTokens
+        self.cachedTokens = cachedTokens
+        self.outputTokens = outputTokens
+        self.cost = cost
+    }
+}
+
 // MARK: - Teams
 
 public struct TeamDTO: Codable, Identifiable, Sendable {

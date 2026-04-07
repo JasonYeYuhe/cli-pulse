@@ -667,7 +667,8 @@ extension AppState {
                 todayTotal: todayTotal,
                 todayByProvider: todayByProvider,
                 thirtyDayTotal: thirtyDayTotal,
-                thirtyDayByProvider: thirtyDayByProvider
+                thirtyDayByProvider: thirtyDayByProvider,
+                isPrecise: true
             )
             return
         }

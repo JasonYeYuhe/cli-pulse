@@ -173,7 +173,17 @@ struct OverviewTab: View {
 
     private var costSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeader(title: L10n.dashboard.costSummary, icon: "dollarsign.circle")
+            HStack {
+                SectionHeader(title: L10n.dashboard.costSummary, icon: "dollarsign.circle")
+                Spacer()
+                Text(state.costSummary.isPrecise ? "Exact" : "Estimated")
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundStyle(state.costSummary.isPrecise ? .green : .orange)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background((state.costSummary.isPrecise ? Color.green : Color.orange).opacity(0.15))
+                    .clipShape(Capsule())
+            }
 
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -185,7 +195,7 @@ struct OverviewTab: View {
                         .foregroundStyle(.green)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(L10n.dashboard.thirtyDayEst)
+                    Text(state.costSummary.isPrecise ? "30 Day" : L10n.dashboard.thirtyDayEst)
                         .font(.system(size: 9))
                         .foregroundStyle(.tertiary)
                     Text(CostFormatter.format(state.costSummary.thirtyDayTotal))
@@ -195,9 +205,12 @@ struct OverviewTab: View {
                 Spacer()
             }
 
-            // Per-provider breakdown
-            if !state.costSummary.todayByProvider.isEmpty {
-                ForEach(state.costSummary.todayByProvider.sorted(by: { $0.cost > $1.cost }).prefix(5), id: \.provider) { item in
+            // Per-provider breakdown (use 30-day data for richer view when precise)
+            let breakdownData = state.costSummary.isPrecise
+                ? state.costSummary.thirtyDayByProvider
+                : state.costSummary.todayByProvider
+            if !breakdownData.isEmpty {
+                ForEach(breakdownData.sorted(by: { $0.cost > $1.cost }).prefix(5), id: \.provider) { item in
                     HStack {
                         Circle()
                             .fill(PulseTheme.providerColor(item.provider))
