@@ -5,8 +5,7 @@ struct MenuBarView: View {
     @EnvironmentObject var state: AppState
 
     /// Adaptive max height: 85% of the screen where the status item lives, capped at 900pt.
-    /// Falls back to 700 if screen info is unavailable.
-    private static var maxMenuBarHeight: CGFloat {
+    fileprivate static var maxMenuBarHeight: CGFloat {
         // Prefer the screen hosting the status item; fall back to main screen
         let screenHeight = NSApp.windows
             .first(where: { $0.className.contains("StatusBarWindow") || $0.className.contains("NSStatusBar") })?
@@ -27,7 +26,7 @@ struct MenuBarView: View {
             }
         }
         .frame(width: 380)
-        .frame(minHeight: 520, maxHeight: Self.maxMenuBarHeight)
+        .frame(minHeight: 520, maxHeight: .infinity)
         .background(WindowResizableHelper())
     }
 
@@ -236,27 +235,34 @@ struct MenuBarView: View {
 // MARK: - Window Resizable Helper
 
 /// NSViewRepresentable that finds the hosting MenuBarExtra window and enables resizing.
+/// The window's maxSize is the real constraint; SwiftUI content expands to fill whatever
+/// height the window has, so there's no blank gap when the user drags to resize.
 private struct WindowResizableHelper: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
         DispatchQueue.main.async {
             guard let window = view.window else { return }
-            window.styleMask.insert(.resizable)
-            window.minSize = NSSize(width: 380, height: 400)
-            window.maxSize = NSSize(width: 520, height: 900)
+            Self.applyWindowConstraints(window)
         }
         return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        // Re-apply on each update in case the window was recreated
         DispatchQueue.main.async {
             guard let window = nsView.window else { return }
-            if !window.styleMask.contains(.resizable) {
-                window.styleMask.insert(.resizable)
-                window.minSize = NSSize(width: 380, height: 400)
-                window.maxSize = NSSize(width: 520, height: 900)
-            }
+            Self.applyWindowConstraints(window)
         }
+    }
+
+    /// Configure the window for vertical-only resize. Called on every SwiftUI update
+    /// so the maxHeight stays fresh if the user moves to a different display.
+    private static func applyWindowConstraints(_ window: NSWindow) {
+        if !window.styleMask.contains(.resizable) {
+            window.styleMask.insert(.resizable)
+        }
+        let maxH = MenuBarView.maxMenuBarHeight
+        // Width locked to 380 (no horizontal resize); height 520..maxH
+        window.minSize = NSSize(width: 380, height: 520)
+        window.maxSize = NSSize(width: 380, height: maxH)
     }
 }
