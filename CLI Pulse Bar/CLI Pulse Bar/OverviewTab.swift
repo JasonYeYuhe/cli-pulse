@@ -210,7 +210,7 @@ struct OverviewTab: View {
                 ? state.costSummary.thirtyDayByProvider
                 : state.costSummary.todayByProvider
             if !breakdownData.isEmpty {
-                ForEach(breakdownData.sorted(by: { $0.cost > $1.cost }).prefix(5), id: \.provider) { item in
+                ForEach(Array(breakdownData.sorted(by: { $0.cost > $1.cost }).prefix(5)), id: \.provider) { item in
                     HStack {
                         Circle()
                             .fill(PulseTheme.providerColor(item.provider))

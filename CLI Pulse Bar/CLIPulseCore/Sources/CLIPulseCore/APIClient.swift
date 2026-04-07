@@ -1121,8 +1121,7 @@ public actor APIClient {
             ]
         }
 
-        guard let metricsJson = try? JSONSerialization.data(withJSONObject: metrics),
-              let url = URL(string: "\(supabaseURL)/rest/v1/rpc/upsert_daily_usage") else { return }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/rpc/upsert_daily_usage") else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -1132,7 +1131,7 @@ public actor APIClient {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
-        let body: [String: Any] = ["metrics": (try? JSONSerialization.jsonObject(with: metricsJson)) ?? []]
+        let body: [String: Any] = ["metrics": metrics]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
         do {
@@ -1145,6 +1144,9 @@ public actor APIClient {
             print("[syncDailyUsage] error: \(error.localizedDescription)")
         }
     }
+    #endif
+
+    // MARK: - Daily Usage Fetch (cross-platform — iOS/Android pull history from Supabase)
 
     /// Fetch daily usage data from Supabase (for iOS/Android display).
     public func fetchDailyUsage(days: Int = 30) async -> [DailyUsage] {
@@ -1184,7 +1186,6 @@ public actor APIClient {
             return []
         }
     }
-    #endif
 
     // MARK: - Health
 
