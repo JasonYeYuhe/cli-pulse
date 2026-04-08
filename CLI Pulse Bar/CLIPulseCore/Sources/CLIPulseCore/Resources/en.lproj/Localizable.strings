@@ -165,8 +165,12 @@
 "subscription.popular" = "POPULAR";
 "subscription.not_available" = "Not Available";
 "subscription.restore" = "Restore Purchases";
+"subscription.free" = "Free";
 "subscription.pro" = "Pro";
 "subscription.team" = "Team";
+"subscription.free_description" = "Basic monitoring for personal use";
+"subscription.pro_description" = "Advanced monitoring with extended history";
+"subscription.team_description" = "Full-featured monitoring for teams";
 "subscription.everything_in_pro" = "Everything in Pro";
 "subscription.unlimited_devices" = "Unlimited devices";
 "subscription.data_retention_365" = "365-day data retention";

@@ -90,7 +90,9 @@ public final class GeminiOAuthManager: NSObject, @unchecked Sendable {
     // ── Singleton ────────────────────────────────────────────────────
     public static let shared = GeminiOAuthManager()
 
-    private var authSession: ASWebAuthenticationSession?
+    // authSession is only accessed on MainActor (UI-driven OAuth flow).
+    // @unchecked Sendable on class is safe because all mutable state is MainActor-isolated.
+    @MainActor private var authSession: ASWebAuthenticationSession?
     private override init() { super.init() }
 
     // MARK: - Public API
@@ -114,7 +116,9 @@ public final class GeminiOAuthManager: NSObject, @unchecked Sendable {
         let challenge = Self.generateCodeChallenge(from: verifier)
         let state     = UUID().uuidString
 
-        var comps = URLComponents(string: Self.authEndpoint)!
+        guard var comps = URLComponents(string: Self.authEndpoint) else {
+            throw GeminiOAuthError.sessionStartFailed
+        }
         comps.queryItems = [
             .init(name: "client_id",             value: Self.clientID),
             .init(name: "redirect_uri",          value: Self.redirectURI),
@@ -127,7 +131,9 @@ public final class GeminiOAuthManager: NSObject, @unchecked Sendable {
             .init(name: "prompt",                value: "consent"),
         ]
 
-        let authURL = comps.url!
+        guard let authURL = comps.url else {
+            throw GeminiOAuthError.sessionStartFailed
+        }
 
         defer { self.authSession = nil }
 

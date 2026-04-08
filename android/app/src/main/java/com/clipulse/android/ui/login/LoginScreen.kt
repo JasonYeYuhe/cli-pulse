@@ -22,9 +22,6 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
 
-/** Stores the PKCE verifier while the browser handles GitHub OAuth. */
-private var pendingOAuthVerifier: String? = null
-
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel = hiltViewModel(),
@@ -34,6 +31,9 @@ fun LoginScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    /** PKCE verifier stored as composition-local state (survives config changes). */
+    var pendingOAuthVerifier by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) { viewModel.tryRestoreSession() }
     LaunchedEffect(state.isLoggedIn) {

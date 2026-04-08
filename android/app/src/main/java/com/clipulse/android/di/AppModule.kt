@@ -39,6 +39,9 @@ object AppModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "cli_pulse_cache")
+            // Destructive migration is acceptable here: all tables are re-fetchable
+            // caches (CachedDashboard, CachedProvider, etc.) — no user-only data.
+            // When user-only local data is added, switch to addMigrations().
             .fallbackToDestructiveMigration(true)
             .build()
 

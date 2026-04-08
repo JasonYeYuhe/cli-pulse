@@ -32,7 +32,8 @@ struct CostUsageCodexTotals: Codable {
 
 enum CostUsageCacheIO {
     private static func defaultCacheRoot() -> URL {
-        let root = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        let root = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
         return root.appendingPathComponent("CLIPulse", isDirectory: true)
     }
 

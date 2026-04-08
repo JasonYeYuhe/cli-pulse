@@ -252,6 +252,8 @@ begin
       and s.project != ''
     group by s.project
     having coalesce(sum(s.estimated_cost), 0) > v_threshold
+    order by week_cost desc
+    limit 200
   loop
     v_suppression_key := 'budget:' || v_user_id || ':' || v_project.project || ':' || v_week_label;
 

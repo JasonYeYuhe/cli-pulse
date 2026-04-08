@@ -34,7 +34,10 @@ public struct CodexCollector: ProviderCollector, Sendable {
             // Non-fatal: proceed with existing token even if refresh fails
         }
 
-        let usageData = try await fetchUsage(accessToken: auth.accessToken!, accountId: auth.accountId)
+        guard let currentToken = auth.accessToken else {
+            throw CollectorError.missingCredentials("Codex access token became nil after refresh")
+        }
+        let usageData = try await fetchUsage(accessToken: currentToken, accountId: auth.accountId)
         return buildResult(usage: usageData)
     }
 

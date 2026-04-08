@@ -14,6 +14,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -23,6 +24,7 @@ class PushService : FirebaseMessagingService() {
         private const val TAG = "PushService"
         private const val CHANNEL_ID = "cli_pulse_alerts"
         private const val CHANNEL_NAME = "CLI Pulse Alerts"
+        private val notificationIdCounter = AtomicInteger(0)
     }
 
     @Inject lateinit var supabase: SupabaseClient
@@ -68,6 +70,6 @@ class PushService : FirebaseMessagingService() {
             .setAutoCancel(true)
             .build()
 
-        manager.notify(System.currentTimeMillis().toInt(), notification)
+        manager.notify(notificationIdCounter.incrementAndGet(), notification)
     }
 }

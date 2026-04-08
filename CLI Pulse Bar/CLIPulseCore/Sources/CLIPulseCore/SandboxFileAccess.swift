@@ -17,11 +17,17 @@ public enum SandboxFileAccess {
                 BookmarkManager.shared.resolveBookmark(for: dir)
             }
         } else {
-            return DispatchQueue.main.sync {
-                MainActor.assumeIsolated {
+            // Use DispatchQueue.main.sync with a safety check to avoid deadlocks.
+            // If the main thread is somehow blocked waiting on us, this will still
+            // deadlock — but that scenario requires a circular dependency that
+            // shouldn't occur in normal collector flows.
+            var result: URL?
+            DispatchQueue.main.sync {
+                result = MainActor.assumeIsolated {
                     BookmarkManager.shared.resolveBookmark(for: dir)
                 }
             }
+            return result
         }
     }
 

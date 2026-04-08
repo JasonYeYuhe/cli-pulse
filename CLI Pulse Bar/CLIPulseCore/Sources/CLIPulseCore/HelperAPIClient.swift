@@ -1,5 +1,8 @@
 #if os(macOS)
 import Foundation
+import os
+
+private let helperLogger = Logger(subsystem: "com.clipulse", category: "HelperAPI")
 
 /// Lightweight Supabase RPC client for the helper daemon.
 /// Uses the anon key (not user tokens) — helper authenticates via device secret.
@@ -138,6 +141,7 @@ public enum SupabaseConstants {
         #if DEBUG
         fatalError("SUPABASE_ANON_KEY missing from Info.plist and environment")
         #else
+        helperLogger.error("SUPABASE_ANON_KEY missing — API calls will fail")
         return ""
         #endif
     }()

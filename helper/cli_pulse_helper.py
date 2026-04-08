@@ -80,7 +80,7 @@ def supabase_rpc(function_name: str, params: dict[str, Any]) -> Any:
         "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
     }
     if not SUPABASE_ANON_KEY:
-        raise ConfigError("CLI_PULSE_SUPABASE_ANON_KEY environment variable is not set")
+        raise ConfigError("Supabase credentials not configured — check helper .env file")
     body = json.dumps(params).encode("utf-8")
     request = urllib.request.Request(url=url, data=body, headers=headers, method="POST")
     try:
@@ -197,10 +197,23 @@ def sync(_: argparse.Namespace) -> None:
 
 def daemon(args: argparse.Namespace) -> None:
     """Run continuously: heartbeat + sync every interval seconds."""
+    import signal
+
     interval = max(args.interval, 60)  # Match Swift helper minimum (60s)
+    stopping = False
+
+    def _handle_shutdown(signum, _frame):
+        nonlocal stopping
+        sig_name = signal.Signals(signum).name
+        print(f"\n[{sig_name}] Shutting down gracefully...")
+        stopping = True
+
+    signal.signal(signal.SIGTERM, _handle_shutdown)
+    signal.signal(signal.SIGHUP, _handle_shutdown)
+
     print(f"CLI Pulse helper daemon started (interval={interval}s). Press Ctrl+C to stop.")
     try:
-        while True:
+        while not stopping:
             try:
                 heartbeat(args)
                 sync(args)
@@ -209,9 +222,14 @@ def daemon(args: argparse.Namespace) -> None:
             except (Exception, SyncError) as exc:
                 # Transient network/API errors — log and retry next cycle
                 print(f"[error] {exc}")
-            time.sleep(interval)
+            # Sleep in small increments so SIGTERM is handled promptly
+            for _ in range(interval):
+                if stopping:
+                    break
+                time.sleep(1)
     except KeyboardInterrupt:
-        print("\nDaemon stopped.")
+        pass
+    print("Daemon stopped.")
 
 
 def run_demo(args: argparse.Namespace) -> None:

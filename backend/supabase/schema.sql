@@ -147,7 +147,8 @@ create table public.sessions (
   started_at timestamptz not null default now(),
   last_active_at timestamptz not null default now(),
   synced_at timestamptz not null default now(),
-  primary key (id, user_id)
+  primary key (id, user_id),
+  constraint chk_sessions_cost_bounds check (estimated_cost is null or (estimated_cost >= 0 and estimated_cost < 10000))
 );
 alter table public.sessions enable row level security;
 
@@ -159,6 +160,7 @@ create index idx_sessions_provider on public.sessions(provider);
 create index idx_sessions_started_at on public.sessions(started_at);
 create index idx_sessions_status on public.sessions(status);
 create index idx_sessions_user_last_active on public.sessions(user_id, last_active_at);
+create index idx_sessions_device_id on public.sessions(device_id);
 
 -- ── Alerts ──
 create table public.alerts (
@@ -193,6 +195,7 @@ create policy "Users can manage own alerts"
 create index idx_alerts_user_id on public.alerts(user_id);
 create index idx_alerts_created_at on public.alerts(created_at);
 create index idx_alerts_user_resolved on public.alerts(user_id, is_resolved);
+create index idx_alerts_user_suppression_resolved on public.alerts(user_id, suppression_key, is_resolved);
 
 -- ── Subscriptions ──
 create table public.subscriptions (
@@ -268,6 +271,7 @@ create table public.team_invites (
 );
 alter table public.team_invites enable row level security;
 create index idx_team_invites_team_id on public.team_invites(team_id);
+create index idx_team_invites_team_email on public.team_invites(team_id, email);
 
 -- Team RLS policies (after all team tables exist)
 create policy "Team members can view team"

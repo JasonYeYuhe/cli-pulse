@@ -1,5 +1,8 @@
 import Foundation
 import CryptoKit
+import os
+
+private let apiLogger = Logger(subsystem: "com.clipulse", category: "APIClient")
 
 public actor APIClient {
     private let supabaseURL: String
@@ -1087,10 +1090,10 @@ public actor APIClient {
             let (_, response) = try await session.data(for: request)
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             if !(200...299).contains(status) {
-                print("[syncProviderQuotas] failed: HTTP \(status)")
+                apiLogger.warning("[syncProviderQuotas] failed: HTTP \(status)")
             }
         } catch {
-            print("[syncProviderQuotas] error: \(error.localizedDescription)")
+            apiLogger.warning("[syncProviderQuotas] error: \(error.localizedDescription)")
         }
     }
 
@@ -1138,10 +1141,10 @@ public actor APIClient {
             let (_, response) = try await session.data(for: request)
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             if !(200...299).contains(status) {
-                print("[syncDailyUsage] failed: HTTP \(status)")
+                apiLogger.warning("[syncDailyUsage] failed: HTTP \(status)")
             }
         } catch {
-            print("[syncDailyUsage] error: \(error.localizedDescription)")
+            apiLogger.warning("[syncDailyUsage] error: \(error.localizedDescription)")
         }
     }
     #endif

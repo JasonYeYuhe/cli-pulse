@@ -36,9 +36,10 @@ class MainActivity : ComponentActivity() {
 
     private fun handleOAuthDeepLink(intent: Intent?) {
         val data = intent?.data ?: return
-        if (data.scheme == "clipulse" && data.host == "auth") {
+        if (data.scheme == "clipulse" && data.host == "auth" && data.path == "/callback") {
             val code = data.getQueryParameter("code")
-            if (code != null) {
+            // Validate code is a plausible OAuth authorization code (alphanumeric + common delimiters)
+            if (code != null && code.length in 10..512 && code.matches(Regex("^[A-Za-z0-9_\\-/.+=]+$"))) {
                 pendingOAuthCode = code
             }
         }

@@ -1,8 +1,11 @@
 import Foundation
 import UserNotifications
+import os
 #if canImport(WidgetKit)
 import WidgetKit
 #endif
+
+private let refreshLogger = Logger(subsystem: "com.clipulse", category: "DataRefresh")
 
 @MainActor
 internal final class DataRefreshManager {
@@ -334,7 +337,7 @@ internal final class DataRefreshManager {
                     } catch {
                         let message = "[Collector] \(config.kind.rawValue) failed: \(error.localizedDescription)"
                         if !Self.shouldSilenceCollectorError(kind: config.kind, error: error) {
-                            print(message)
+                            refreshLogger.warning("\(message)")
                         }
 
                         let logPath = NSTemporaryDirectory() + "clipulse_collector_errors.log"

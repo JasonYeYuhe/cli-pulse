@@ -215,17 +215,17 @@ public final class SubscriptionManager: ObservableObject {
 
     public func tierName(for tier: SubscriptionTier) -> String {
         switch tier {
-        case .free: return "Free"
-        case .pro: return "Pro"
-        case .team: return "Team"
+        case .free: return L10n.subscription.free
+        case .pro: return L10n.subscription.pro
+        case .team: return L10n.subscription.team
         }
     }
 
     public func tierDescription(for tier: SubscriptionTier) -> String {
         switch tier {
-        case .free: return "Basic monitoring for personal use"
-        case .pro: return "Advanced monitoring with extended history"
-        case .team: return "Full-featured monitoring for teams"
+        case .free: return L10n.subscription.freeDescription
+        case .pro: return L10n.subscription.proDescription
+        case .team: return L10n.subscription.teamDescription
         }
     }
 }

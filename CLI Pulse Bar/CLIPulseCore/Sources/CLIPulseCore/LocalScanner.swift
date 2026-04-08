@@ -178,6 +178,7 @@ public final class LocalScanner: @unchecked Sendable {
         let command: String
     }
 
+    /// Lists running processes via `ps`. Synchronous — completes in <1s.
     private func listProcesses() -> [ProcessRow] {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/bin/ps")

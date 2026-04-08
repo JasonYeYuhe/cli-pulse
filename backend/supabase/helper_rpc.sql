@@ -24,20 +24,25 @@ declare
   v_device_id uuid;
   v_expires_at timestamptz;
   v_helper_secret text;
+  v_failed_attempts integer;
 begin
-  -- No auth.uid() required: helper clients call with anon key.
-  -- Security relies on: pairing code expiry (10 min), code entropy (10 hex chars ~40 bits).
-  -- Brute-force protection should be handled at the API gateway / Supabase rate limiting level.
-
-  -- Validate pairing code
-  select user_id, expires_at into v_user_id, v_expires_at
+  -- Validate pairing code exists
+  select user_id, expires_at, failed_attempts
+  into v_user_id, v_expires_at, v_failed_attempts
   from public.pairing_codes where code = p_pairing_code;
 
   if v_user_id is null then
     raise exception 'Invalid pairing code';
   end if;
 
+  -- Rate limit: block after 5 failed attempts
+  if v_failed_attempts >= 5 then
+    raise exception 'Too many failed attempts — please generate a new pairing code';
+  end if;
+
   if v_expires_at < now() then
+    update public.pairing_codes set failed_attempts = failed_attempts + 1
+    where code = p_pairing_code;
     delete from public.pairing_codes where code = p_pairing_code;
     raise exception 'Pairing code has expired';
   end if;
@@ -134,12 +139,12 @@ begin
       coalesce(v_session->>'name', ''), v_session->>'provider',
       coalesce(v_session->>'project', ''), coalesce(v_session->>'status', 'Running'),
       coalesce((v_session->>'total_usage')::integer, 0),
-      (v_session->>'exact_cost')::numeric,
+      least(greatest(coalesce((v_session->>'exact_cost')::numeric, 0), 0), 9999),
       coalesce((v_session->>'requests')::integer, 0),
       coalesce((v_session->>'error_count')::integer, 0),
       coalesce(v_session->>'collection_confidence', 'medium'),
-      coalesce((v_session->>'started_at')::timestamptz, now()),
-      coalesce((v_session->>'last_active_at')::timestamptz, now()), now()
+      least(coalesce((v_session->>'started_at')::timestamptz, now()), now() + interval '10 minutes'),
+      least(coalesce((v_session->>'last_active_at')::timestamptz, now()), now() + interval '10 minutes'), now()
     )
     on conflict (id, user_id) do update set
       name = excluded.name, status = excluded.status,

@@ -165,8 +165,12 @@
 "subscription.popular" = "热门";
 "subscription.not_available" = "暂不可用";
 "subscription.restore" = "恢复购买";
+"subscription.free" = "免费";
 "subscription.pro" = "Pro";
 "subscription.team" = "团队";
+"subscription.free_description" = "个人基础监控";
+"subscription.pro_description" = "高级监控与扩展历史";
+"subscription.team_description" = "团队全功能监控";
 "subscription.everything_in_pro" = "包含 Pro 的所有功能";
 "subscription.unlimited_devices" = "无限设备";
 "subscription.data_retention_365" = "365天数据保留";

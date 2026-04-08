@@ -1,6 +1,9 @@
 #if os(macOS)
 import Darwin
 import Foundation
+import os
+
+private let logger = Logger(subsystem: "com.clipulse", category: "ClaudeCLIPTY")
 
 /// Fetches Claude usage by running `claude /usage` inside a PTY.
 ///
@@ -75,7 +78,7 @@ public struct ClaudeCLIPTYStrategy: ClaudeSourceStrategy, Sendable {
         for c in candidates {
             if FileManager.default.isExecutableFile(atPath: c) { return c }
         }
-        // Fallback: search PATH via which
+        // Fallback: search PATH via which (synchronous — completes in <1s)
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/which")
         task.arguments = ["claude"]
@@ -90,7 +93,9 @@ public struct ClaudeCLIPTYStrategy: ClaudeSourceStrategy, Sendable {
                 let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                 if !path.isEmpty { return path }
             }
-        } catch {}
+        } catch {
+            logger.debug("claude binary lookup failed: \(error.localizedDescription)")
+        }
         return nil
     }
 

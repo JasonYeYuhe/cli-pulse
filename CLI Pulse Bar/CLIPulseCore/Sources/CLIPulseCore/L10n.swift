@@ -208,8 +208,12 @@ public enum L10n {
         public static var popular: String { tr("subscription.popular") }
         public static var notAvailable: String { tr("subscription.not_available") }
         public static var restore: String { tr("subscription.restore") }
+        public static var free: String { tr("subscription.free") }
         public static var pro: String { tr("subscription.pro") }
         public static var team: String { tr("subscription.team") }
+        public static var freeDescription: String { tr("subscription.free_description") }
+        public static var proDescription: String { tr("subscription.pro_description") }
+        public static var teamDescription: String { tr("subscription.team_description") }
         public static var everythingInPro: String { tr("subscription.everything_in_pro") }
         public static var unlimitedDevices: String { tr("subscription.unlimited_devices") }
         public static var dataRetention365: String { tr("subscription.data_retention_365") }
