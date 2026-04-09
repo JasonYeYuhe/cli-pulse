@@ -719,9 +719,17 @@ def _decrypt_chromium_cookie(encrypted_value: bytes, password: str) -> str:
 
 def _infer_claude_plan(tier: str, sub_type: str) -> str:
     """Infer Claude plan display name from rate_limit_tier or subscriptionType."""
-    for label, keyword in [("Max", "max"), ("Pro", "pro"), ("Team", "team"),
+    combined = f"{tier} {sub_type}".lower()
+    # Match specific Max tiers first (20x before generic max)
+    if "max_20x" in combined or "max 20x" in combined:
+        return "Max 20x"
+    if "max_5x" in combined or "max 5x" in combined:
+        return "Max 5x"
+    if "max" in combined:
+        return "Max 5x"  # default Max → 5x
+    for label, keyword in [("Ultra", "ultra"), ("Pro", "pro"), ("Team", "team"),
                            ("Enterprise", "enterprise"), ("Free", "free")]:
-        if keyword in tier or keyword in sub_type:
+        if keyword in combined:
             return label
     return sub_type.capitalize() if sub_type else "Unknown"
 

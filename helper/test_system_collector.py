@@ -10,8 +10,26 @@ from system_collector import (
 
 
 class TestInferClaudePlan(unittest.TestCase):
-    def test_max_tier(self):
-        self.assertEqual(_infer_claude_plan("max_5x", ""), "Max")
+    def test_max_5x_tier(self):
+        self.assertEqual(_infer_claude_plan("max_5x", ""), "Max 5x")
+
+    def test_max_20x_tier(self):
+        self.assertEqual(_infer_claude_plan("max_20x", ""), "Max 20x")
+
+    def test_max_20x_space(self):
+        self.assertEqual(_infer_claude_plan("max 20x", ""), "Max 20x")
+
+    def test_max_generic(self):
+        self.assertEqual(_infer_claude_plan("max", ""), "Max 5x")
+
+    def test_max_case_insensitive(self):
+        self.assertEqual(_infer_claude_plan("MAX_20X", ""), "Max 20x")
+
+    def test_max_from_sub_type(self):
+        self.assertEqual(_infer_claude_plan("", "max_20x"), "Max 20x")
+
+    def test_ultra_tier(self):
+        self.assertEqual(_infer_claude_plan("ultra", ""), "Ultra")
 
     def test_pro_tier(self):
         self.assertEqual(_infer_claude_plan("pro", ""), "Pro")

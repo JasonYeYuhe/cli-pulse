@@ -25,3 +25,11 @@
 # Credentials (Google Sign-In)
 -keep class com.google.android.libraries.identity.** { *; }
 -keep class androidx.credentials.** { *; }
+
+# Collectors — API response models used via reflection/Moshi
+-keep class com.clipulse.android.data.collector.** { *; }
+-keepclassmembers class com.clipulse.android.data.collector.** { *; }
+
+# SupabaseClient — JSON parsing of API responses
+-keep class com.clipulse.android.data.remote.** { *; }
+-keepclassmembers class com.clipulse.android.data.remote.** { *; }

@@ -27,6 +27,7 @@ public enum SubscriptionPricing {
         "Claude": [
             "Max 5x": 100,
             "Max 20x": 200,
+            "Ultra": 100,
             "Pro": 20,
             "Team": 30,
             "Enterprise": 0,  // custom pricing

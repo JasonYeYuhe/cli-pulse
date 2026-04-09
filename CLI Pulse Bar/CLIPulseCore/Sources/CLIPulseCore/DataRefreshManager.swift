@@ -680,6 +680,36 @@ extension AppState {
             let thirtyDayByProvider = thirtyDayByProv.map { ($0.key, $0.value) }
             let thirtyDayTotal = thirtyDayByProv.values.reduce(0, +)
 
+            // Token totals
+            let todayTokens = scan.totalTokens(for: todayKey)
+            let thirtyDayTokens = scan.totalTokens
+
+            // Subscription utilization (API equiv cost vs subscription price)
+            let utilization: [SubscriptionUtilization] = subscriptions.compactMap { sub in
+                let apiCost = scan.totalCostForProvider(sub.provider)
+                guard sub.monthlyCost > 0 else { return nil }
+                return SubscriptionUtilization(
+                    provider: sub.provider, plan: sub.plan,
+                    apiEquivCost: apiCost, subscriptionCost: sub.monthlyCost)
+            }.sorted { $0.utilizationPercent > $1.utilizationPercent }
+
+            // Per-model cost breakdown
+            var modelAgg: [String: (cost: Double, input: Int, output: Int, cached: Int)] = [:]
+            for entry in scan.entries {
+                let key = entry.model.isEmpty ? entry.provider : entry.model
+                var agg = modelAgg[key, default: (0, 0, 0, 0)]
+                agg.cost += entry.costUSD ?? 0
+                agg.input += entry.inputTokens
+                agg.output += entry.outputTokens
+                agg.cached += entry.cachedTokens
+                modelAgg[key] = agg
+            }
+            let costByModel = modelAgg.map { ModelCostDetail(
+                model: $0.key, cost: $0.value.cost,
+                inputTokens: $0.value.input, outputTokens: $0.value.output,
+                cachedTokens: $0.value.cached
+            )}.sorted { $0.cost > $1.cost }
+
             costSummary = CostSummary(
                 todayTotal: todayTotal,
                 todayByProvider: todayByProvider,
@@ -688,7 +718,11 @@ extension AppState {
                 isPrecise: true,
                 subscriptionTotal: subTotal,
                 subscriptionByProvider: subscriptions,
-                grandTotal: subTotal + thirtyDayTotal
+                grandTotal: subTotal + thirtyDayTotal,
+                todayTokens: todayTokens,
+                thirtyDayTokens: thirtyDayTokens,
+                utilization: utilization,
+                costByModel: costByModel
             )
             return
         }

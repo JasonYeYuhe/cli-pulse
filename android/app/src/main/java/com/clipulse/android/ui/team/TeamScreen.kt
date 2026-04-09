@@ -95,7 +95,7 @@ fun TeamScreen(
                         }
                         if (state.selectedTeam?.role in listOf("owner", "admin") && member.role == "member") {
                             IconButton(onClick = {
-                                viewModel.removeMember(state.selectedTeam!!.id, member.userId)
+                                state.selectedTeam?.id?.let { teamId -> viewModel.removeMember(teamId, member.userId) }
                             }) {
                                 Icon(Icons.Filled.Close, contentDescription = "Remove")
                             }

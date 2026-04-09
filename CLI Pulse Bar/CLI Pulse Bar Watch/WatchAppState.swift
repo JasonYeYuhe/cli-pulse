@@ -18,6 +18,9 @@ public final class WatchAppState: ObservableObject {
     @Published var sessions: [SessionRecord] = []
     @Published var alerts: [AlertRecord] = []
 
+    // MARK: - Cost
+    @Published var costSummary = CostSummary()
+
     // MARK: - UI
     @Published var isLoading = false
     @Published var lastError: String?

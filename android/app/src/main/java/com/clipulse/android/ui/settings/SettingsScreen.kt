@@ -36,11 +36,11 @@ fun SettingsScreen(
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Account", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
-                if (state.userName != null) {
-                    Text(state.userName!!, style = MaterialTheme.typography.bodyMedium)
+                state.userName?.let { name ->
+                    Text(name, style = MaterialTheme.typography.bodyMedium)
                 }
-                if (state.userEmail != null) {
-                    Text(state.userEmail!!, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                state.userEmail?.let { email ->
+                    Text(email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.height(8.dp))
                 Text("Tier: ${state.tier}", style = MaterialTheme.typography.labelMedium)

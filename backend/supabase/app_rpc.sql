@@ -175,33 +175,39 @@ begin
     from public.user_settings us
     where us.data_retention_days > 0
   loop
-    -- Clean sessions
-    delete from public.sessions
-    where user_id = v_user.user_id
-      and status = 'Ended'
-      and last_active_at < now() - (v_user.data_retention_days || ' days')::interval;
-    get diagnostics v_deleted = row_count;
-    v_total_sessions := v_total_sessions + v_deleted;
+    -- Wrap per-user cleanup in a savepoint so one user's failure
+    -- does not abort cleanup for all remaining users.
+    begin
+      -- Clean sessions
+      delete from public.sessions
+      where user_id = v_user.user_id
+        and status = 'Ended'
+        and last_active_at < now() - (v_user.data_retention_days || ' days')::interval;
+      get diagnostics v_deleted = row_count;
+      v_total_sessions := v_total_sessions + v_deleted;
 
-    -- Clean resolved alerts
-    delete from public.alerts
-    where user_id = v_user.user_id
-      and is_resolved = true
-      and created_at < now() - (v_user.data_retention_days || ' days')::interval;
-    get diagnostics v_deleted = row_count;
-    v_total_alerts := v_total_alerts + v_deleted;
+      -- Clean resolved alerts
+      delete from public.alerts
+      where user_id = v_user.user_id
+        and is_resolved = true
+        and created_at < now() - (v_user.data_retention_days || ' days')::interval;
+      get diagnostics v_deleted = row_count;
+      v_total_alerts := v_total_alerts + v_deleted;
 
-    -- Clean usage snapshots
-    delete from public.usage_snapshots
-    where user_id = v_user.user_id
-      and recorded_at < now() - (v_user.data_retention_days || ' days')::interval;
-    get diagnostics v_deleted = row_count;
-    v_total_snapshots := v_total_snapshots + v_deleted;
+      -- Clean usage snapshots
+      delete from public.usage_snapshots
+      where user_id = v_user.user_id
+        and recorded_at < now() - (v_user.data_retention_days || ' days')::interval;
+      get diagnostics v_deleted = row_count;
+      v_total_snapshots := v_total_snapshots + v_deleted;
 
-    -- Clean stale provider quotas (not updated in retention period)
-    delete from public.provider_quotas
-    where user_id = v_user.user_id
-      and updated_at < now() - (v_user.data_retention_days || ' days')::interval;
+      -- Clean stale provider quotas (not updated in retention period)
+      delete from public.provider_quotas
+      where user_id = v_user.user_id
+        and updated_at < now() - (v_user.data_retention_days || ' days')::interval;
+    exception when others then
+      raise notice 'cleanup_expired_data: failed for user %, skipping: %', v_user.user_id, sqlerrm;
+    end;
   end loop;
 
   return jsonb_build_object(

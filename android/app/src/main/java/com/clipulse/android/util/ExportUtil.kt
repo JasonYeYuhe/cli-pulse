@@ -12,7 +12,8 @@ import java.io.FileWriter
 object ExportUtil {
 
     fun exportSessionsCSV(context: Context, sessions: List<SessionRecord>): File? {
-        val file = File(context.cacheDir, "cli-pulse-sessions.csv")
+        val exportDir = File(context.cacheDir, "cli_pulse_exports").also { it.mkdirs() }
+        val file = File(exportDir, "cli-pulse-sessions.csv")
         return try {
             BufferedWriter(FileWriter(file)).use { w ->
                 w.write("ID,Name,Provider,Project,Status,Usage,Cost,Requests,Errors,Started,Last Active\n")
@@ -27,7 +28,8 @@ object ExportUtil {
     }
 
     fun exportProviderSummaryCSV(context: Context, providers: List<ProviderUsage>): File? {
-        val file = File(context.cacheDir, "cli-pulse-providers.csv")
+        val exportDir = File(context.cacheDir, "cli_pulse_exports").also { it.mkdirs() }
+        val file = File(exportDir, "cli-pulse-providers.csv")
         return try {
             BufferedWriter(FileWriter(file)).use { w ->
                 w.write("Provider,Today Usage,Week Usage,Est. Cost,Remaining,Quota,Plan Type\n")

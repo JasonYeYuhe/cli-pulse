@@ -49,7 +49,7 @@ fun DevicesScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
-                            state.error!!,
+                            state.error ?: "Unknown error",
                             modifier = Modifier.padding(16.dp),
                             color = MaterialTheme.colorScheme.onErrorContainer,
                         )

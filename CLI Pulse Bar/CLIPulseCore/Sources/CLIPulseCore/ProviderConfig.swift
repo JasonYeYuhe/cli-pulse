@@ -429,6 +429,38 @@ public enum ProviderRegistry {
 
 // MARK: - Cost Summary
 
+/// Per-provider subscription utilization (API equivalent cost / subscription cost)
+public struct SubscriptionUtilization: Sendable {
+    public let provider: String
+    public let plan: String
+    public let apiEquivCost: Double      // 30-day API equivalent cost from token scanning
+    public let subscriptionCost: Double  // Monthly subscription price
+    public let utilizationPercent: Double // apiEquivCost / subscriptionCost * 100 (0 if sub cost is 0)
+    public let valueMultiplier: String   // e.g. "23x" if utilization > 100%
+
+    public init(provider: String, plan: String, apiEquivCost: Double, subscriptionCost: Double) {
+        self.provider = provider
+        self.plan = plan
+        self.apiEquivCost = apiEquivCost
+        self.subscriptionCost = subscriptionCost
+        self.utilizationPercent = subscriptionCost > 0 ? (apiEquivCost / subscriptionCost * 100) : 0
+        let multiplier = subscriptionCost > 0 ? apiEquivCost / subscriptionCost : 0
+        self.valueMultiplier = multiplier >= 1.0 ? String(format: "%.0fx", multiplier) : ""
+    }
+}
+
+/// Per-model cost detail for breakdown views
+public struct ModelCostDetail: Sendable, Identifiable {
+    public var id: String { model }
+    public let model: String
+    public let cost: Double
+    public let inputTokens: Int
+    public let outputTokens: Int
+    public let cachedTokens: Int
+
+    public var totalTokens: Int { inputTokens + outputTokens + cachedTokens }
+}
+
 public struct CostSummary: Sendable {
     public let todayTotal: Double
     public let todayByProvider: [(provider: String, cost: Double)]
@@ -441,6 +473,13 @@ public struct CostSummary: Sendable {
     public let subscriptionByProvider: [(provider: String, plan: String, monthlyCost: Double)]
     /// Grand total = subscriptionTotal + thirtyDayTotal
     public let grandTotal: Double
+    /// Token totals from CostUsageScanner
+    public let todayTokens: Int
+    public let thirtyDayTokens: Int
+    /// Subscription utilization (API equiv cost vs subscription cost)
+    public let utilization: [SubscriptionUtilization]
+    /// Per-model cost breakdown for 30-day period
+    public let costByModel: [ModelCostDetail]
 
     public init(
         todayTotal: Double = 0,
@@ -450,7 +489,11 @@ public struct CostSummary: Sendable {
         isPrecise: Bool = false,
         subscriptionTotal: Double = 0,
         subscriptionByProvider: [(provider: String, plan: String, monthlyCost: Double)] = [],
-        grandTotal: Double = 0
+        grandTotal: Double = 0,
+        todayTokens: Int = 0,
+        thirtyDayTokens: Int = 0,
+        utilization: [SubscriptionUtilization] = [],
+        costByModel: [ModelCostDetail] = []
     ) {
         self.todayTotal = todayTotal
         self.todayByProvider = todayByProvider
@@ -460,5 +503,28 @@ public struct CostSummary: Sendable {
         self.subscriptionTotal = subscriptionTotal
         self.subscriptionByProvider = subscriptionByProvider
         self.grandTotal = grandTotal
+        self.todayTokens = todayTokens
+        self.thirtyDayTokens = thirtyDayTokens
+        self.utilization = utilization
+        self.costByModel = costByModel
+    }
+}
+
+/// Formats token counts into compact human-readable strings: 81M, 8.6B, 12.3K
+public enum TokenFormatter {
+    public static func format(_ count: Int) -> String {
+        let d = Double(count)
+        switch d {
+        case 1_000_000_000...:
+            return String(format: "%.1fB", d / 1_000_000_000)
+        case 1_000_000...:
+            let m = d / 1_000_000
+            return m >= 10 ? String(format: "%.0fM", m) : String(format: "%.1fM", m)
+        case 1_000...:
+            let k = d / 1_000
+            return k >= 10 ? String(format: "%.0fK", k) : String(format: "%.1fK", k)
+        default:
+            return "\(count)"
+        }
     }
 }

@@ -50,8 +50,9 @@ const PRODUCT_TIER_MAP: Record<string, string> = {
   "com.clipulse.team.yearly": "team",
 };
 
+const CORS_ORIGIN = Deno.env.get("CORS_ORIGIN") ?? "https://clipulse.app";
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://clipulse.app",
+  "Access-Control-Allow-Origin": CORS_ORIGIN,
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
@@ -132,7 +133,8 @@ async function getGoogleAccessToken(
 
   if (!resp.ok) {
     const errText = await resp.text();
-    throw new Error(`Google OAuth failed: ${errText}`);
+    console.error(`[validate-receipt] Google OAuth error ${resp.status}: ${errText}`);
+    throw new Error("Google Play verification unavailable");
   }
 
   const tokenResp = await resp.json();
@@ -231,13 +233,23 @@ serve(async (req: Request) => {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
+    // ── Request size guard ──
+    const contentLength = req.headers.get("content-length");
+    if (contentLength && parseInt(contentLength) > 102400) {
+      return jsonResponse({ error: "Request too large" }, 413);
+    }
+
     // ── Parse request body ──
     const body = await req.json();
     const platform: string = body.platform ?? "apple";
     const productId: string = body.productId ?? "";
 
-    if (!productId) {
-      return jsonResponse({ error: "Missing productId" }, 400);
+    if (!["apple", "google"].includes(platform)) {
+      return jsonResponse({ error: "Invalid platform" }, 400);
+    }
+
+    if (!productId || productId.length > 255) {
+      return jsonResponse({ error: "Missing or invalid productId" }, 400);
     }
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);

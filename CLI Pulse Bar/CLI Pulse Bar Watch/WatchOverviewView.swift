@@ -58,9 +58,16 @@ struct WatchOverviewView: View {
                             Text(L10n.dashboard.costToday)
                                 .font(.caption)
                             Spacer()
-                            Text(CostFormatter.format(dash.total_estimated_cost_today))
-                                .font(.caption.weight(.bold).monospacedDigit())
-                                .foregroundStyle(.green)
+                            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                                Text(CostFormatter.format(dash.total_estimated_cost_today))
+                                    .font(.caption.weight(.bold).monospacedDigit())
+                                    .foregroundStyle(.green)
+                                if state.costSummary.todayTokens > 0 {
+                                    Text("· \(TokenFormatter.format(state.costSummary.todayTokens))")
+                                        .font(.system(size: 9))
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
                         }
                     }
 

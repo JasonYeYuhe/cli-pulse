@@ -93,7 +93,11 @@ public enum ClaudeResultBuilder {
 
         let planType: String
         let tierLower = (snapshot.rateLimitTier ?? "").lowercased()
-        if tierLower.contains("max") { planType = "Max" }
+        // Match specific Max tiers first (20x before generic max)
+        if tierLower.contains("max_20x") || tierLower.contains("max 20x") { planType = "Max 20x" }
+        else if tierLower.contains("max_5x") || tierLower.contains("max 5x") { planType = "Max 5x" }
+        else if tierLower.contains("max") { planType = "Max 5x" }  // default Max → 5x
+        else if tierLower.contains("ultra") { planType = "Ultra" }
         else if tierLower.contains("pro") { planType = "Pro" }
         else if tierLower.contains("team") { planType = "Team" }
         else if tierLower.contains("enterprise") { planType = "Enterprise" }

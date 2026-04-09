@@ -124,6 +124,14 @@ struct iOSOverviewTab: View {
                     .foregroundStyle(.green)
                 Text(L10n.dashboard.costSummary)
                     .font(.subheadline.weight(.semibold))
+                Spacer()
+                Text(state.costSummary.isPrecise ? "Exact" : "Estimated")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(state.costSummary.isPrecise ? .green : .orange)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background((state.costSummary.isPrecise ? Color.green : Color.orange).opacity(0.15))
+                    .clipShape(Capsule())
             }
 
             HStack(spacing: 24) {
@@ -131,22 +139,40 @@ struct iOSOverviewTab: View {
                     Text(L10n.dashboard.today)
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
-                    Text(CostFormatter.format(state.costSummary.todayTotal))
-                        .font(.title3.weight(.bold).monospacedDigit())
-                        .foregroundStyle(.green)
+                    HStack(alignment: .firstTextBaseline, spacing: 3) {
+                        Text(CostFormatter.format(state.costSummary.todayTotal))
+                            .font(.title3.weight(.bold).monospacedDigit())
+                            .foregroundStyle(.green)
+                        if state.costSummary.todayTokens > 0 {
+                            Text("· \(TokenFormatter.format(state.costSummary.todayTokens))")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(L10n.dashboard.thirtyDayEst)
+                    Text(state.costSummary.isPrecise ? "30 Day" : L10n.dashboard.thirtyDayEst)
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
-                    Text(CostFormatter.format(state.costSummary.thirtyDayTotal))
-                        .font(.title3.weight(.bold).monospacedDigit())
-                        .foregroundStyle(.green)
+                    HStack(alignment: .firstTextBaseline, spacing: 3) {
+                        Text(CostFormatter.format(state.costSummary.thirtyDayTotal))
+                            .font(.title3.weight(.bold).monospacedDigit())
+                            .foregroundStyle(.green)
+                        if state.costSummary.thirtyDayTokens > 0 {
+                            Text("· \(TokenFormatter.format(state.costSummary.thirtyDayTokens))")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
                 }
                 Spacer()
             }
 
-            ForEach(state.costSummary.todayByProvider.sorted(by: { $0.cost > $1.cost }).prefix(5), id: \.provider) { item in
+            // Per-provider breakdown
+            let breakdownData = state.costSummary.isPrecise
+                ? state.costSummary.thirtyDayByProvider
+                : state.costSummary.todayByProvider
+            ForEach(Array(breakdownData.sorted(by: { $0.cost > $1.cost }).prefix(5)), id: \.provider) { item in
                 HStack {
                     Circle()
                         .fill(PulseTheme.providerColor(item.provider))
@@ -154,10 +180,113 @@ struct iOSOverviewTab: View {
                     Text(item.provider)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    if let sub = state.costSummary.subscriptionByProvider.first(where: { $0.provider == item.provider }) {
+                        Text(sub.plan)
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(Color.orange.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
                     Spacer()
                     Text(CostFormatter.format(item.cost))
                         .font(.caption.weight(.medium).monospacedDigit())
                         .foregroundStyle(.green)
+                }
+            }
+
+            // Subscriptions
+            if !state.costSummary.subscriptionByProvider.isEmpty {
+                Divider()
+                HStack {
+                    Image(systemName: "creditcard")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text("Subscriptions")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(CostFormatter.format(state.costSummary.subscriptionTotal) + "/mo")
+                        .font(.subheadline.weight(.bold).monospacedDigit())
+                        .foregroundStyle(.orange)
+                }
+
+                ForEach(state.costSummary.subscriptionByProvider, id: \.provider) { item in
+                    HStack {
+                        Text("\(item.provider) \(item.plan)")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                        Spacer()
+                        Text(CostFormatter.format(item.monthlyCost))
+                            .font(.caption.weight(.medium).monospacedDigit())
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
+
+            // Subscription Utilization
+            if !state.costSummary.utilization.isEmpty {
+                Divider()
+                HStack {
+                    Image(systemName: "chart.bar")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text("Subscription Utilization")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+
+                ForEach(state.costSummary.utilization.prefix(2), id: \.provider) { item in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("\(item.provider) \(item.plan)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(CostFormatter.format(item.apiEquivCost) + " / " + CostFormatter.format(item.subscriptionCost))
+                                .font(.caption2.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                        GeometryReader { geo in
+                            let fraction = min(item.utilizationPercent / 100.0, 1.0)
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(Color.gray.opacity(0.2))
+                                    .frame(height: 6)
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(iOSUtilizationColor(item.utilizationPercent))
+                                    .frame(width: geo.size.width * CGFloat(fraction), height: 6)
+                            }
+                        }
+                        .frame(height: 6)
+                        HStack {
+                            Text(String(format: "%.0f%% utilized", item.utilizationPercent))
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                            if !item.valueMultiplier.isEmpty {
+                                Text("· \(item.valueMultiplier) value")
+                                    .font(.caption2.weight(.medium))
+                                    .foregroundStyle(iOSUtilizationColor(item.utilizationPercent))
+                            }
+                            Spacer()
+                        }
+                    }
+                }
+            }
+
+            // Grand total
+            if !state.costSummary.subscriptionByProvider.isEmpty {
+                Divider()
+                HStack {
+                    Text("Total Monthly")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("~" + CostFormatter.format(state.costSummary.grandTotal))
+                        .font(.subheadline.weight(.bold).monospacedDigit())
+                        .foregroundStyle(.primary)
                 }
             }
         }
@@ -165,6 +294,15 @@ struct iOSOverviewTab: View {
         .background(PulseTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .padding(.horizontal)
+    }
+
+    private func iOSUtilizationColor(_ percent: Double) -> Color {
+        switch percent {
+        case 200...: return .purple
+        case 100...: return .blue
+        case 50...: return .green
+        default: return .gray
+        }
     }
 
     // MARK: - Provider Breakdown

@@ -13,8 +13,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// In-memory dedup cache (Edge Functions are short-lived, so this is per-invocation)
-const recentKeys = new Map<string, number>();
 const DEDUP_WINDOW_MS = 60_000;
 
 function isPrivateIP(hostname: string): boolean {
@@ -68,24 +66,55 @@ serve(async (req: Request) => {
   }
 
   try {
+    // ── Authenticate caller via Supabase JWT ──
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing authorization header" }), { status: 401 });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    }
+
+    // ── Request size guard ──
+    const contentLength = req.headers.get("content-length");
+    if (contentLength && parseInt(contentLength) > 102400) {
+      return new Response(JSON.stringify({ error: "Request too large" }), { status: 413 });
+    }
+
     const { user_id, alert } = await req.json();
     if (!user_id || !alert) {
       return new Response(JSON.stringify({ error: "Missing user_id or alert" }), { status: 400 });
     }
 
-    // Deduplication
-    const dedupKey = `${user_id}:${alert.grouping_key || alert.type}`;
-    const now = Date.now();
-    const lastSent = recentKeys.get(dedupKey);
-    if (lastSent && now - lastSent < DEDUP_WINDOW_MS) {
-      return new Response(JSON.stringify({ skipped: true, reason: "dedup" }), { status: 200 });
+    // Verify user_id matches authenticated user
+    if (user_id !== user.id) {
+      return new Response(JSON.stringify({ error: "Forbidden: user_id mismatch" }), { status: 403 });
     }
 
-    // Fetch webhook config
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    // ── Database-backed deduplication ──
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const dedupKey = `webhook:${user_id}:${alert.grouping_key || alert.type}`;
+    const { data: recentAlert } = await supabase
+      .from("alerts")
+      .select("created_at")
+      .eq("user_id", user_id)
+      .eq("suppression_key", dedupKey)
+      .gte("created_at", new Date(Date.now() - DEDUP_WINDOW_MS).toISOString())
+      .limit(1)
+      .maybeSingle();
+
+    if (recentAlert) {
+      return new Response(JSON.stringify({ skipped: true, reason: "dedup" }), { status: 200 });
+    }
 
     const { data: settings, error: fetchError } = await supabase
       .from("user_settings")
@@ -136,8 +165,6 @@ serve(async (req: Request) => {
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(5000),
     });
-
-    recentKeys.set(dedupKey, now);
 
     if (!webhookResp.ok) {
       const body = await webhookResp.text().catch(() => "");

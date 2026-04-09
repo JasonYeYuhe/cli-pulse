@@ -31,6 +31,19 @@ public struct CostUsageScanResult: Sendable {
     public func todayCost(todayKey: String) -> Double {
         totalCost(for: todayKey)
     }
+
+    public func totalTokens(for date: String) -> Int {
+        entries.filter { $0.date == date }.reduce(0) { $0 + $1.inputTokens + $1.outputTokens + $1.cachedTokens }
+    }
+
+    public var totalTokens: Int {
+        entries.reduce(0) { $0 + $1.inputTokens + $1.outputTokens + $1.cachedTokens }
+    }
+
+    /// Total API equivalent cost for a specific provider across all scanned days
+    public func totalCostForProvider(_ provider: String) -> Double {
+        entries.filter { $0.provider == provider }.compactMap(\.costUSD).reduce(0, +)
+    }
 }
 
 #if os(macOS)

@@ -105,7 +105,14 @@ class SupabaseClient(
             val rt = tokenStore.refreshToken ?: throw ApiError.TokenExpired
             val body = JSONObject().apply { put("refresh_token", rt) }
             val json = post("$supabaseUrl/auth/v1/token?grant_type=refresh_token", body, auth = false)
+            if (json.has("error")) {
+                val errorMsg = json.optString("error_description", json.optString("error", "Token refresh failed"))
+                throw ApiError.Http(401, errorMsg)
+            }
             val newAccess = json.optString("access_token")
+            if (newAccess.isNullOrBlank()) {
+                throw ApiError.Http(401, "Empty access_token in refresh response")
+            }
             val newRefresh = json.optString("refresh_token", rt)
             tokenStore.accessToken = newAccess
             tokenStore.refreshToken = newRefresh
