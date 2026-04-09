@@ -202,9 +202,11 @@ fun LoginScreen(
                 // GitHub Sign-In via Supabase OAuth PKCE
                 OutlinedButton(
                     onClick = {
-                        val (url, verifier) = viewModel.oauthAuthorizeUrl("github")
+                        val (url, verifier, oauthState) = viewModel.oauthAuthorizeUrl("github")
                         // Store verifier so we can exchange the code when the deep link returns
                         pendingOAuthVerifier = verifier
+                        // Set expected state on Activity for CSRF verification
+                        (context as? com.clipulse.android.MainActivity)?.expectedOAuthState = oauthState
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                     },
                     modifier = Modifier.fillMaxWidth(),

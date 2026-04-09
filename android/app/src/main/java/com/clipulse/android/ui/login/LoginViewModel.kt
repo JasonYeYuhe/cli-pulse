@@ -80,8 +80,8 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    /** Build a Supabase OAuth URL for GitHub (or other providers). */
-    fun oauthAuthorizeUrl(provider: String): Pair<String, String> =
+    /** Build a Supabase OAuth URL for GitHub (or other providers). Returns (url, codeVerifier, state). */
+    fun oauthAuthorizeUrl(provider: String): Triple<String, String, String> =
         supabase.oauthAuthorizeUrl(provider)
 
     /** Exchange an OAuth authorization code obtained via deep link. */

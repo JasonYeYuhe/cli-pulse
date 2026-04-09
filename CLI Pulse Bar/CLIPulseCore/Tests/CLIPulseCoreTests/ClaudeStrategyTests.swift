@@ -44,7 +44,7 @@ final class ClaudeStrategyTests: XCTestCase {
     }
 
     func testResultBuilderPlanTypes() {
-        for (tier, expected) in [("max", "Max"), ("default_claude_max_20x", "Max"), ("pro", "Pro"), ("team", "Team"), ("enterprise", "Enterprise"), (nil, "Unknown")] {
+        for (tier, expected) in [("max", "Max 5x"), ("default_claude_max_20x", "Max 20x"), ("max_5x", "Max 5x"), ("pro", "Pro"), ("team", "Team"), ("enterprise", "Enterprise"), (nil, "Unknown")] {
             let snapshot = ClaudeSnapshot(sessionUsed: 0, rateLimitTier: tier, sourceLabel: "test")
             let result = ClaudeResultBuilder.build(from: snapshot)
             XCTAssertEqual(result.usage.plan_type, expected, "tier '\(tier ?? "nil")' should map to '\(expected)'")

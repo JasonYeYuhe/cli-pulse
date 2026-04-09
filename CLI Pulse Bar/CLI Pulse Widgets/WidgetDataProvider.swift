@@ -106,7 +106,7 @@ struct CLIPulseTimelineProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<CLIPulseEntry>) -> Void) {
         let data = WidgetStorage.load()
         let entry = CLIPulseEntry(date: Date(), data: data)
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 5, to: Date())!
+        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 5, to: Date()) ?? Date().addingTimeInterval(300)
         let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
         completion(timeline)
     }
@@ -122,25 +122,33 @@ struct CLIPulseEntry: TimelineEntry {
 struct SingleProviderTimelineProvider: TimelineProvider {
     typealias Entry = SingleProviderEntry
 
+    private static let fallbackProvider = WidgetProviderData(
+        name: "Claude", usage: 0, quota: 100, costToday: 0, iconName: "brain.head.profile"
+    )
+
+    private static var previewProvider: WidgetProviderData {
+        WidgetData.preview.providers.first ?? fallbackProvider
+    }
+
     func placeholder(in context: Context) -> SingleProviderEntry {
-        SingleProviderEntry(date: Date(), provider: WidgetData.preview.providers.first!)
+        SingleProviderEntry(date: Date(), provider: Self.previewProvider)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SingleProviderEntry) -> Void) {
         if context.isPreview {
-            completion(SingleProviderEntry(date: Date(), provider: WidgetData.preview.providers.first!))
+            completion(SingleProviderEntry(date: Date(), provider: Self.previewProvider))
         } else {
             let data = WidgetStorage.load()
-            let provider = data.providers.first ?? WidgetData.preview.providers.first!
+            let provider = data.providers.first ?? Self.previewProvider
             completion(SingleProviderEntry(date: Date(), provider: provider))
         }
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<SingleProviderEntry>) -> Void) {
         let data = WidgetStorage.load()
-        let provider = data.providers.first ?? WidgetData.preview.providers.first!
+        let provider = data.providers.first ?? Self.previewProvider
         let entry = SingleProviderEntry(date: Date(), provider: provider)
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 5, to: Date())!
+        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 5, to: Date()) ?? Date().addingTimeInterval(300)
         let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
         completion(timeline)
     }

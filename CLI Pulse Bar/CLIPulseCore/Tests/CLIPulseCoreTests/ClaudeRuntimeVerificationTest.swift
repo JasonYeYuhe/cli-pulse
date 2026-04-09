@@ -222,13 +222,13 @@ final class ClaudeRuntimeVerificationTest: XCTestCase {
             XCTAssertGreaterThanOrEqual(u.tiers.count, 2, "Cache must return at least 2 tiers")
             XCTAssertTrue(u.tiers.contains { $0.name.contains("5h") }, "Must have 5h Window tier")
             XCTAssertTrue(u.tiers.contains { $0.name == "Weekly" }, "Must have Weekly tier")
-            XCTAssertEqual(u.plan_type, "Max")
+            XCTAssertEqual(u.plan_type, "Max 20x")
 
             let staleCloud = ProviderUsage(
                 provider: "Claude", today_usage: 42, week_usage: 100,
                 estimated_cost_today: 0, estimated_cost_week: 0,
                 cost_status_today: "Unavailable", cost_status_week: "Unavailable",
-                quota: 0, remaining: 0, plan_type: "Max", reset_time: nil,
+                quota: 0, remaining: 0, plan_type: "Max 20x", reset_time: nil,
                 tiers: [], status_text: "Operational",
                 trend: [], recent_sessions: [], recent_errors: [])
 

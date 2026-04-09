@@ -55,7 +55,14 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- OAuth callback deep link (GitHub / Google via Supabase PKCE) -->
+            <!-- OAuth callback: App Links (verified HTTPS, prevents hijacking) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="clipulse.app" android:path="/auth/callback" />
+            </intent-filter>
+            <!-- Fallback custom scheme for older devices / offline -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

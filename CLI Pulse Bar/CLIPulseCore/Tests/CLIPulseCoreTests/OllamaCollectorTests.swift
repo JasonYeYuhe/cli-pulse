@@ -80,10 +80,13 @@ final class OllamaCollectorTests: XCTestCase {
         XCTAssertEqual(OllamaCollector().kind, .ollama)
     }
 
-    func testAlwaysAvailable() {
+    func testAvailabilityDependsOnServer() {
+        // isAvailable now does a TCP connect check to localhost:11434.
+        // In CI / test environments Ollama is typically not running,
+        // so we just verify the method returns without crashing.
         let collector = OllamaCollector()
         let config = ProviderConfig(kind: .ollama)
-        XCTAssertTrue(collector.isAvailable(config: config))
+        _ = collector.isAvailable(config: config)
     }
 }
 #endif

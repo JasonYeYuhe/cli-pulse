@@ -96,7 +96,7 @@ final class ProviderFixtureRegressionTests: XCTestCase {
         let result = ClaudeResultBuilder.build(from: snapshot)
 
         assertDataKind(result, .quota)
-        XCTAssertEqual(result.usage.plan_type, "Max")
+        XCTAssertEqual(result.usage.plan_type, "Max 20x")
         XCTAssertEqual(result.usage.remaining, 97)
         XCTAssertEqual(result.usage.reset_time, "2026-04-02T12:00:00Z")
         assertTierNames(result.usage, ["5h Window", "Weekly", "Sonnet only"])

@@ -1,7 +1,9 @@
 package com.clipulse.android.di
 
 import android.content.Context
+import android.util.Log
 import androidx.room.Room
+import com.clipulse.android.BuildConfig
 import com.clipulse.android.billing.BillingManager
 import com.clipulse.android.data.collector.CollectorManager
 import com.clipulse.android.data.local.AppDatabase
@@ -37,13 +39,25 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, "cli_pulse_cache")
-            // Destructive migration is acceptable here: all tables are re-fetchable
-            // caches (CachedDashboard, CachedProvider, etc.) — no user-only data.
-            // When user-only local data is added, switch to addMigrations().
-            .fallbackToDestructiveMigration(true)
-            .build()
+    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
+        val builder = Room.databaseBuilder(context, AppDatabase::class.java, "cli_pulse_cache")
+        if (BuildConfig.DEBUG) {
+            // Debug only: silently recreate DB on schema changes for convenience.
+            builder.fallbackToDestructiveMigration(true)
+        } else {
+            // Release: no destructive fallback — forces us to add explicit
+            // Migration objects before bumping AppDatabase.version.
+            // If we forget, Room will throw IllegalStateException on upgrade
+            // instead of silently wiping user caches.
+            // Add migrations here: builder.addMigrations(MIGRATION_1_2, ...)
+            builder.addCallback(object : androidx.room.RoomDatabase.Callback() {
+                    override fun onDestructiveMigration(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                        Log.w("AppDatabase", "Destructive migration triggered — cache cleared")
+                    }
+                })
+        }
+        return builder.build()
+    }
 
     @Provides
     @Singleton

@@ -504,17 +504,19 @@ class SupabaseClient(
 
     // ── OAuth PKCE (GitHub / Google via Supabase) ─────────
 
-    /** Build a Supabase OAuth authorize URL with PKCE challenge. Returns (url, codeVerifier). */
-    fun oauthAuthorizeUrl(provider: String): Pair<String, String> {
+    /** Build a Supabase OAuth authorize URL with PKCE challenge. Returns (url, codeVerifier, state). */
+    fun oauthAuthorizeUrl(provider: String): Triple<String, String, String> {
         val verifier = generateCodeVerifier()
         val challenge = sha256Base64Url(verifier)
-        val redirectTo = URLEncoder.encode("clipulse://auth/callback", "UTF-8")
+        val state = generateCodeVerifier().take(32) // random state for CSRF protection
+        val redirectTo = URLEncoder.encode("https://clipulse.app/auth/callback", "UTF-8")
         val url = "$supabaseUrl/auth/v1/authorize" +
             "?provider=$provider" +
             "&redirect_to=$redirectTo" +
             "&code_challenge=$challenge" +
-            "&code_challenge_method=S256"
-        return url to verifier
+            "&code_challenge_method=S256" +
+            "&state=$state"
+        return Triple(url, verifier, state)
     }
 
     /** Exchange an OAuth authorization code for a Supabase session (PKCE). */

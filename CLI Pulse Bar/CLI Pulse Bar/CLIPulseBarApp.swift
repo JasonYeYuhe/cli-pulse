@@ -1,6 +1,9 @@
 import SwiftUI
 import ServiceManagement
 import CLIPulseCore
+import os.log
+
+private let logger = Logger(subsystem: "com.clipulse.bar", category: "AppLifecycle")
 
 @main
 struct CLIPulseBarApp: App {
@@ -127,7 +130,7 @@ enum LaunchAtLogin {
                 try SMAppService.mainApp.register()
             }
         } catch {
-            print("LaunchAtLogin error: \(error)")
+            logger.error("LaunchAtLogin error: \(error.localizedDescription)")
         }
     }
 }
@@ -151,9 +154,9 @@ enum HelperLogin {
     static func register() {
         do {
             try service.register()
-            print("HelperLogin: registered")
+            logger.info("HelperLogin: registered")
         } catch {
-            print("HelperLogin register error: \(error)")
+            logger.error("HelperLogin register error: \(error.localizedDescription)")
         }
     }
 
@@ -161,9 +164,9 @@ enum HelperLogin {
     static func unregister() {
         do {
             try service.unregister()
-            print("HelperLogin: unregistered")
+            logger.info("HelperLogin: unregistered")
         } catch {
-            print("HelperLogin unregister error: \(error)")
+            logger.error("HelperLogin unregister error: \(error.localizedDescription)")
         }
     }
 

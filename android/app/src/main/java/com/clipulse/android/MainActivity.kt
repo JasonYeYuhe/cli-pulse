@@ -14,9 +14,12 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    /** OAuth code extracted from a clipulse://auth/callback deep link. */
+    /** OAuth code extracted from an auth callback deep link. */
     var pendingOAuthCode by mutableStateOf<String?>(null)
         private set
+
+    /** OAuth state parameter for CSRF verification. Set by LoginScreen before launching browser. */
+    var expectedOAuthState: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,12 +39,21 @@ class MainActivity : ComponentActivity() {
 
     private fun handleOAuthDeepLink(intent: Intent?) {
         val data = intent?.data ?: return
-        if (data.scheme == "clipulse" && data.host == "auth" && data.path == "/callback") {
-            val code = data.getQueryParameter("code")
-            // Validate code is a plausible OAuth authorization code (alphanumeric + common delimiters)
-            if (code != null && code.length in 10..512 && code.matches(Regex("^[A-Za-z0-9_\\-/.+=]+$"))) {
-                pendingOAuthCode = code
-            }
+        // Accept both App Links (https://clipulse.app/auth/callback) and fallback custom scheme
+        val isHttps = data.scheme == "https" && data.host == "clipulse.app" && data.path == "/auth/callback"
+        val isCustom = data.scheme == "clipulse" && data.host == "auth" && data.path == "/callback"
+        if (!isHttps && !isCustom) return
+
+        // Verify state parameter to prevent CSRF attacks
+        val state = data.getQueryParameter("state")
+        val expected = expectedOAuthState
+        if (expected != null && state != expected) return // state mismatch — reject
+
+        val code = data.getQueryParameter("code")
+        // Validate code is a plausible OAuth authorization code (alphanumeric + common delimiters)
+        if (code != null && code.length in 10..512 && code.matches(Regex("^[A-Za-z0-9_\\-/.+=]+$"))) {
+            pendingOAuthCode = code
+            expectedOAuthState = null // consumed
         }
     }
 }
