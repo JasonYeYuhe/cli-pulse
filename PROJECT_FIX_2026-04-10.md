@@ -106,4 +106,54 @@
 
 ---
 
-*审查: Claude Opus 4.6 (主导) + Codex GPT (交叉验证, 11 项逐条确认)*
+## v1.8 全平台发布记录
+
+> 发布时间: 2026-04-10 02:00–02:30 JST
+
+### 版本号变更
+
+| 组件 | 旧值 | 新值 |
+|------|------|------|
+| Xcode MARKETING_VERSION | 1.5 | 1.8 |
+| Xcode CURRENT_PROJECT_VERSION | 25 | 26 |
+| Android versionCode | 7 | 8 |
+| Android versionName | "1.5" | "1.8" |
+| docs/index.html 下载链接 | v1.4.1 | v1.8 |
+
+### 构建产物
+
+| 产物 | 大小 | 状态 |
+|------|------|------|
+| `CLI-Pulse-Bar-v1.8.dmg` | 3.4 MB | 签名 + Apple 公证通过 |
+| `app-release.apk` | 3.7 MB | 已签名 (upload key) |
+| `app-release.aab` | 6.9 MB | 已签名 (upload key) |
+
+### 发布渠道
+
+| 渠道 | 状态 | 详情 |
+|------|------|------|
+| **GitHub Release** | 已发布 | https://github.com/JasonYeYuhe/cli-pulse/releases/tag/v1.8 |
+| **GitHub Pages** | 已更新 | docs/index.html v1.8 + assetlinks.json |
+| **App Store Connect (macOS)** | build 26 已上传 | 等待处理后可提交审核 |
+| **App Store Connect (iOS)** | build 26 已上传 | 等待处理后可提交审核 |
+| **Google Play Closed Testing** | 8 (1.8) 提交审核 | "Start full rollout", quick checks 14min |
+| **Private repo (origin)** | 已推送 | 2 commits: fix + version bump |
+| **Public repo (public)** | 已同步 | docs + assetlinks.json |
+
+### Google Play 测试者状态
+
+- 当前 opt-in: **10 / 12** (差 2 人)
+- 14 天计时器: 从 2026-04-08 开始, 不因新版本重置
+- Warning: 缺少 debug symbols (不影响发布, 建议未来上传)
+
+### Codex 发布审查要点
+
+1. v1.5 → v1.8 版本跳跃: OK, Apple/Google 不在意间隔
+2. ASC 旧审核: build 26 上传后会自动替代旧 build 25
+3. App Links 过渡期: 保留了 custom scheme fallback, 不会影响现有用户
+4. versionCode 8: 满足 Play Console 要求 (严格大于 7)
+5. docs 中无 "1.5" 残留: 已验证
+
+---
+
+*审查: Claude Opus 4.6 (主导) + Codex GPT (交叉验证, 11 项逐条确认 + 发布计划审查)*
