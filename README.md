@@ -56,6 +56,14 @@ Run the shared package tests:
 swift test --package-path "CLI Pulse Bar/CLIPulseCore"
 ```
 
+### Android
+
+Run Android unit tests (requires Java runtime):
+
+```bash
+cd android && ./gradlew testDebugUnitTest
+```
+
 ## Legacy or Reference Areas
 
 - `archive/`

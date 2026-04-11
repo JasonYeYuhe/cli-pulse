@@ -97,7 +97,17 @@ public actor HelperAPIClient {
 
     // MARK: - Generic RPC
 
+    /// True when the client has a non-empty Supabase URL and anon key.
+    /// Callers can check this before attempting RPCs to surface a clear
+    /// "not configured" state rather than chasing mysterious HTTP failures.
+    public var isConfigured: Bool {
+        !supabaseURL.isEmpty && !anonKey.isEmpty
+    }
+
     private func rpc<T>(_ function: String, params: [String: Any]) async throws -> T {
+        guard isConfigured else {
+            throw HelperAPIError.notConfigured
+        }
         guard let url = URL(string: "\(supabaseURL)/rest/v1/rpc/\(function)") else {
             throw HelperAPIError.invalidURL(function)
         }
@@ -150,12 +160,14 @@ public enum SupabaseConstants {
 // MARK: - Errors
 
 public enum HelperAPIError: LocalizedError {
+    case notConfigured
     case invalidURL(String)
     case httpError(status: Int, function: String, body: String)
     case parseFailed(String)
 
     public var errorDescription: String? {
         switch self {
+        case .notConfigured: return "HelperAPIClient is not configured — SUPABASE_ANON_KEY is missing or empty"
         case .invalidURL(let fn): return "Invalid URL for \(fn)"
         case .httpError(let s, let fn, let body): return "HTTP \(s) from \(fn): \(body.prefix(200))"
         case .parseFailed(let msg): return "Parse failed: \(msg)"
