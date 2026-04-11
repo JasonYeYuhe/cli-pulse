@@ -137,6 +137,33 @@ python3 -m pytest -q helper/test_system_collector.py
 swift test --package-path "CLI Pulse Bar/CLIPulseCore"
 ```
 
+### Android validation (requires Java runtime)
+
+```bash
+cd android && ./gradlew testDebugUnitTest
+```
+
+If the machine lacks a Java runtime, state this explicitly rather than
+skipping Android validation silently.
+
+### Live integration tests
+
+The default `swift test` run is deterministic and offline. To also run
+the live Claude collector chain (requires real credentials on the machine):
+
+```bash
+RUN_LIVE_TESTS=1 swift test --package-path "CLI Pulse Bar/CLIPulseCore"
+```
+
+### Backend SQL validation
+
+There is no automated SQL test runner yet. When touching files in
+`backend/supabase/`, manually verify:
+
+- SQL syntax via `psql` or Supabase dashboard query editor
+- RPC contracts match app/helper call sites
+- Migration ordering is consistent with `schema.sql`
+
 ## If You Are a New AI Starting Work
 
 1. Read this file first.

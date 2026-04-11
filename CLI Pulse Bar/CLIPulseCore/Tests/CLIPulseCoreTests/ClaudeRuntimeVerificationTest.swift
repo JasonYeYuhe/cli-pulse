@@ -6,9 +6,13 @@ import XCTest
 /// in the real environment and dumps the exact fields needed to prove
 /// Claude data reaches the UI merge path.
 ///
-/// This test is environment-dependent: it requires either an OAuth token
-/// (env var, credentials file, or Keychain) or the `claude` CLI binary.
-/// It will SKIP (not fail) if no Claude source is available.
+/// `testFullClaudeCollectorChain` is environment-dependent: it requires
+/// either an OAuth token (env var, credentials file, or Keychain) or the
+/// `claude` CLI binary. It is gated behind `RUN_LIVE_TESTS=1` so that
+/// the default `swift test` run stays deterministic and offline.
+///
+/// The cache-fallback tests seed their own data and use a fake strategy,
+/// so they run unconditionally.
 final class ClaudeRuntimeVerificationTest: XCTestCase {
 
     private func withSnapshotPreserved<T>(_ body: () async throws -> T) async rethrows -> T {
@@ -30,6 +34,10 @@ final class ClaudeRuntimeVerificationTest: XCTestCase {
     }
 
     func testFullClaudeCollectorChain() async throws {
+        try XCTSkipUnless(
+            ProcessInfo.processInfo.environment["RUN_LIVE_TESTS"] == "1",
+            "Live Claude test skipped — set RUN_LIVE_TESTS=1 to enable"
+        )
         try await withSnapshotPreserved {
             let collector = ClaudeCollector()
             var config = ProviderConfig(kind: .claude)
