@@ -106,6 +106,7 @@
     <string name="export_providers">匯出服務商 CSV</string>
     <string name="export_alerts">匯出警告 CSV</string>
     <string name="export_cost_report">匯出費用報告 CSV</string>
+    <string name="export_pdf_report">匯出 PDF 報告</string>
 
     <!-- Team (extended) -->
     <string name="team_pending_invites">待處理邀請</string>

@@ -16,6 +16,7 @@ import com.clipulse.android.data.model.ProviderUsage
 import com.clipulse.android.data.model.TierDTO
 import com.clipulse.android.ui.components.*
 import com.clipulse.android.ui.theme.PulseSuccess
+import com.clipulse.android.ui.navigation.LocalSnackbarHostState
 import com.clipulse.android.ui.theme.providerColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -25,6 +26,10 @@ fun ProvidersScreen(
     onProviderClick: (String) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbar = LocalSnackbarHostState.current
+    LaunchedEffect(state.error) {
+        state.error?.let { snackbar.showSnackbar(it) }
+    }
 
     PullToRefreshBox(
         isRefreshing = state.isLoading,

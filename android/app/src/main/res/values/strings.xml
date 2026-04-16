@@ -106,6 +106,7 @@
     <string name="export_providers">Export Providers CSV</string>
     <string name="export_alerts">Export Alerts CSV</string>
     <string name="export_cost_report">Export Cost Report CSV</string>
+    <string name="export_pdf_report">Export PDF Report</string>
 
     <!-- Team (extended) -->
     <string name="team_pending_invites">Pending Invites</string>

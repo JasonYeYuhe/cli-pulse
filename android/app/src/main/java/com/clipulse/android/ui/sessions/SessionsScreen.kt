@@ -17,6 +17,7 @@ import com.clipulse.android.ui.components.formatUsage
 import com.clipulse.android.ui.theme.PulseError
 import com.clipulse.android.ui.theme.PulseSuccess
 import com.clipulse.android.ui.theme.PulseWarning
+import com.clipulse.android.ui.navigation.LocalSnackbarHostState
 import com.clipulse.android.ui.theme.providerColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -25,6 +26,10 @@ fun SessionsScreen(
     viewModel: SessionsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbar = LocalSnackbarHostState.current
+    LaunchedEffect(state.error) {
+        state.error?.let { snackbar.showSnackbar(it) }
+    }
 
     PullToRefreshBox(
         isRefreshing = state.isLoading,

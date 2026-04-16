@@ -28,6 +28,10 @@ import com.clipulse.android.ui.settings.SubscriptionScreen
 import com.clipulse.android.ui.team.TeamScreen
 import com.clipulse.android.ui.usage.CostAnalysisScreen
 
+val LocalSnackbarHostState = compositionLocalOf<SnackbarHostState> {
+    error("No SnackbarHostState provided")
+}
+
 enum class Screen(val route: String, val label: String, val icon: ImageVector) {
     Overview("overview", "Overview", Icons.Default.Dashboard),
     Providers("providers", "Providers", Icons.Default.Dns),
@@ -46,11 +50,13 @@ fun AppNavigation(oauthCode: String? = null) {
         return
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
     val tabs = Screen.entries
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             // Hide bottom bar on detail screens
             val isTopLevel = tabs.any { currentDestination?.route == it.route }
@@ -76,6 +82,7 @@ fun AppNavigation(oauthCode: String? = null) {
             }
         },
     ) { innerPadding ->
+        CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
         NavHost(
             navController = navController,
             startDestination = Screen.Overview.route,
@@ -125,6 +132,7 @@ fun AppNavigation(oauthCode: String? = null) {
             composable("cost_analysis") {
                 CostAnalysisScreen(onBack = { navController.popBackStack() })
             }
+        }
         }
     }
 }

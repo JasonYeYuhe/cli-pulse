@@ -83,6 +83,27 @@ public enum ExportService {
         return writeTemp(csv, name: "cli-pulse-cost-report.csv")
     }
 
+    // MARK: - PDF Report
+
+    #if canImport(PDFKit) && !os(watchOS)
+    /// Export a monthly PDF report. Returns the temporary file URL.
+    public static func exportPDFReport(
+        dashboard: DashboardSummary?,
+        providers: [ProviderUsage],
+        sessions: [SessionRecord],
+        dailyUsage: [DailyUsage],
+        costForecast: CostForecast?
+    ) -> URL? {
+        PDFReportGenerator.generateReport(
+            dashboard: dashboard,
+            providers: providers,
+            sessions: sessions,
+            dailyUsage: dailyUsage,
+            costForecast: costForecast
+        )
+    }
+    #endif
+
     // MARK: - Helpers
 
     private static func esc(_ value: String) -> String {

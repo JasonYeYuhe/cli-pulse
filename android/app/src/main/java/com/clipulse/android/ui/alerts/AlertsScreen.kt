@@ -15,6 +15,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.clipulse.android.data.model.AlertRecord
 import com.clipulse.android.data.model.AlertSeverity
 import com.clipulse.android.ui.components.StatusBadge
+import com.clipulse.android.ui.navigation.LocalSnackbarHostState
 import com.clipulse.android.ui.theme.SeverityCritical
 import com.clipulse.android.ui.theme.SeverityInfo
 import com.clipulse.android.ui.theme.SeverityWarning
@@ -25,6 +26,10 @@ fun AlertsScreen(
     viewModel: AlertsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbar = LocalSnackbarHostState.current
+    LaunchedEffect(state.error) {
+        state.error?.let { snackbar.showSnackbar(it) }
+    }
 
     PullToRefreshBox(
         isRefreshing = state.isLoading,

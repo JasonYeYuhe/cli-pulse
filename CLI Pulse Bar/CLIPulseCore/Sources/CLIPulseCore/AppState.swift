@@ -45,6 +45,7 @@ public final class AppState: ObservableObject {
 
     // MARK: - Cost Forecast
     @Published public var costForecast: CostForecast?
+    @Published public var dailyUsage: [DailyUsage] = []
 
     // MARK: - Auth Flow
     @Published public var otpSent = false

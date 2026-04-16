@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.clipulse.android.R
+import com.clipulse.android.ui.navigation.LocalSnackbarHostState
 import com.clipulse.android.ui.theme.providerColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,7 +30,11 @@ fun CostAnalysisScreen(
     onBack: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbar = LocalSnackbarHostState.current
     var selectedTab by remember { mutableIntStateOf(0) }
+    LaunchedEffect(state.error) {
+        state.error?.let { snackbar.showSnackbar(it) }
+    }
 
     Scaffold(
         topBar = {

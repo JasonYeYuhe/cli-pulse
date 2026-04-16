@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.clipulse.android.R
+import com.clipulse.android.ui.navigation.LocalSnackbarHostState
 
 @Composable
 fun TeamScreen(
@@ -21,6 +22,10 @@ fun TeamScreen(
     onBack: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbar = LocalSnackbarHostState.current
+    LaunchedEffect(state.error) {
+        state.error?.let { snackbar.showSnackbar(it) }
+    }
     var showCreateDialog by remember { mutableStateOf(false) }
     var showInviteDialog by remember { mutableStateOf(false) }
     var newTeamName by remember { mutableStateOf("") }

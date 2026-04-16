@@ -880,6 +880,7 @@ extension AppState {
 
     private func refreshCostForecast() async {
         let usage = await api.fetchDailyUsage(days: 30)
+        dailyUsage = usage
         costForecast = CostForecastEngine.forecast(from: usage)
     }
 

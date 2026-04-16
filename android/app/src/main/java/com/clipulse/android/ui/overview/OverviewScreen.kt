@@ -20,6 +20,8 @@ import com.clipulse.android.ui.components.MetricCard
 import com.clipulse.android.ui.components.formatCost
 import com.clipulse.android.ui.components.formatUsage
 import com.clipulse.android.util.ExportUtil
+import com.clipulse.android.util.PdfReportGenerator
+import com.clipulse.android.ui.navigation.LocalSnackbarHostState
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.ui.draw.clip
@@ -33,7 +35,11 @@ fun OverviewScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    val snackbar = LocalSnackbarHostState.current
     var showExportMenu by remember { mutableStateOf(false) }
+    LaunchedEffect(state.error) {
+        state.error?.let { snackbar.showSnackbar(it) }
+    }
 
     PullToRefreshBox(
         isRefreshing = state.isLoading,
@@ -89,6 +95,22 @@ fun OverviewScreen(
                                 showExportMenu = false
                                 val usage = viewModel.getDailyUsage()
                                 ExportUtil.exportCostReportCSV(context, usage)?.let { ExportUtil.shareFile(context, it) }
+                            },
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.export_pdf_report)) },
+                            onClick = {
+                                showExportMenu = false
+                                val d = state.dashboard
+                                PdfReportGenerator.generate(
+                                    context = context,
+                                    dashboard = d,
+                                    providers = viewModel.getProviders(),
+                                    sessions = viewModel.getSessions(),
+                                    dailyUsage = viewModel.getDailyUsage(),
+                                    costForecast = state.costForecast,
+                                )?.let { ExportUtil.shareFile(context, it, "application/pdf") }
                             },
                         )
                     }

@@ -108,6 +108,26 @@ struct OverviewTab: View {
             } label: {
                 Label("Export Providers", systemImage: "chart.bar")
             }
+
+            Divider()
+
+            #if canImport(PDFKit) && !os(watchOS)
+            Button {
+                if let url = ExportService.exportPDFReport(
+                    dashboard: state.dashboard,
+                    providers: state.providers,
+                    sessions: state.sessions,
+                    dailyUsage: state.dailyUsage,
+                    costForecast: state.costForecast
+                ) {
+                    #if os(macOS)
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                    #endif
+                }
+            } label: {
+                Label("Export PDF Report", systemImage: "doc.richtext")
+            }
+            #endif
         } label: {
             Image(systemName: "square.and.arrow.up")
                 .font(.system(size: 10))
