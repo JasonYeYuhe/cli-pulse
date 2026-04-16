@@ -22,6 +22,8 @@ data class SettingsUiState(
     val deleteSuccess: Boolean = false,
     val webhookEnabled: Boolean = false,
     val webhookUrl: String? = null,
+    val webhookFilterSeverities: List<String> = emptyList(),
+    val webhookFilterTypes: List<String> = emptyList(),
     val isDemoMode: Boolean = false,
 )
 
@@ -50,12 +52,15 @@ class SettingsViewModel @Inject constructor(
             try {
                 val tier = supabase.serverTier()
                 val settings = supabase.settings()
+                val filter = settings?.webhookEventFilter
                 _state.value = _state.value.copy(
                     tier = tier,
                     settings = settings,
                     isLoading = false,
                     webhookEnabled = settings?.webhookEnabled ?: false,
                     webhookUrl = settings?.webhookUrl,
+                    webhookFilterSeverities = filter?.severities ?: emptyList(),
+                    webhookFilterTypes = filter?.types ?: emptyList(),
                 )
             } catch (_: Exception) {
                 _state.value = _state.value.copy(isLoading = false)
@@ -88,6 +93,35 @@ class SettingsViewModel @Inject constructor(
             } catch (_: Exception) {
                 // Best-effort test
             }
+        }
+    }
+
+    fun toggleWebhookFilterSeverity(severity: String) {
+        val current = _state.value.webhookFilterSeverities.toMutableList()
+        if (current.contains(severity)) current.remove(severity) else current.add(severity)
+        _state.value = _state.value.copy(webhookFilterSeverities = current)
+        pushWebhookFilter(current, _state.value.webhookFilterTypes)
+    }
+
+    fun toggleWebhookFilterType(type: String) {
+        val current = _state.value.webhookFilterTypes.toMutableList()
+        if (current.contains(type)) current.remove(type) else current.add(type)
+        _state.value = _state.value.copy(webhookFilterTypes = current)
+        pushWebhookFilter(_state.value.webhookFilterSeverities, current)
+    }
+
+    private fun pushWebhookFilter(severities: List<String>, types: List<String>) {
+        viewModelScope.launch {
+            try {
+                val filterJson = org.json.JSONObject().apply {
+                    if (severities.isNotEmpty()) put("severities", org.json.JSONArray(severities))
+                    if (types.isNotEmpty()) put("types", org.json.JSONArray(types))
+                }
+                val patch = org.json.JSONObject().apply {
+                    put("webhook_event_filter", if (severities.isEmpty() && types.isEmpty()) org.json.JSONObject.NULL else filterJson)
+                }
+                supabase.updateSettings(patch)
+            } catch (_: Exception) { }
         }
     }
 

@@ -56,6 +56,7 @@ public final class AppState: ObservableObject {
     // MARK: - Webhook Integration
     @AppStorage("cli_pulse_webhook_enabled") public var webhookEnabled = false
     @AppStorage("cli_pulse_webhook_url") public var webhookURL = ""
+    @Published public var webhookEventFilter: WebhookEventFilter = WebhookEventFilter()
 
     // MARK: - Settings - General
     nonisolated static let tokenKeychainKey = "cli_pulse_token"

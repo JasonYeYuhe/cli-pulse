@@ -711,6 +711,7 @@ public actor APIClient {
         public var data_retention_days: Int?
         public var webhook_url: String?
         public var webhook_enabled: Bool?
+        public var webhook_event_filter: WebhookEventFilter?
 
         public init(
             notifications_enabled: Bool? = nil,
@@ -721,7 +722,8 @@ public actor APIClient {
             offline_grace_period_minutes: Int? = nil,
             data_retention_days: Int? = nil,
             webhook_url: String? = nil,
-            webhook_enabled: Bool? = nil
+            webhook_enabled: Bool? = nil,
+            webhook_event_filter: WebhookEventFilter? = nil
         ) {
             self.notifications_enabled = notifications_enabled
             self.push_policy = push_policy
@@ -732,6 +734,7 @@ public actor APIClient {
             self.data_retention_days = data_retention_days
             self.webhook_url = webhook_url
             self.webhook_enabled = webhook_enabled
+            self.webhook_event_filter = webhook_event_filter
         }
     }
 

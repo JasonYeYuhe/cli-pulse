@@ -324,6 +324,12 @@
 "integrations.webhook_hint" = "Enviar alertas a Discord, Slack o endpoint personalizado";
 "integrations.webhook_url_placeholder" = "URL de Webhook (Discord / Slack)";
 "integrations.test_webhook" = "Probar Webhook";
+"integrations.event_filter" = "Filtro de eventos";
+"integrations.event_filter_hint" = "Solo enviar webhooks para alertas coincidentes (vacío = todas)";
+"integrations.filter_severities" = "Severidades";
+"integrations.filter_types" = "Tipos de alerta";
+"integrations.filter_providers" = "Proveedores";
+"integrations.filter_all" = "Todos";
 
 /* ── Auth (OAuth) ── */
 "auth.sign_in_google" = "Iniciar sesión con Google";

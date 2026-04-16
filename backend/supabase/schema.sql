@@ -61,6 +61,7 @@ create table public.user_settings (
   login_method text not null default 'apple',
   webhook_url text,
   webhook_enabled boolean not null default false,
+  webhook_event_filter jsonb default null,
   updated_at timestamptz not null default now()
 );
 alter table public.user_settings enable row level security;

@@ -324,6 +324,12 @@
 "integrations.webhook_hint" = "Discord, Slack 또는 커스텀 엔드포인트로 알림 전송";
 "integrations.webhook_url_placeholder" = "Webhook URL (Discord / Slack)";
 "integrations.test_webhook" = "Webhook 테스트";
+"integrations.event_filter" = "이벤트 필터";
+"integrations.event_filter_hint" = "일치하는 알림에만 Webhook 전송 (비어있으면 = 전체)";
+"integrations.filter_severities" = "심각도";
+"integrations.filter_types" = "알림 유형";
+"integrations.filter_providers" = "제공자";
+"integrations.filter_all" = "전체";
 
 /* ── Auth (OAuth) ── */
 "auth.sign_in_google" = "Google로 로그인";

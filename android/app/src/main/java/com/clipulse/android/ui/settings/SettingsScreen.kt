@@ -1,6 +1,7 @@
 package com.clipulse.android.ui.settings
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -152,6 +153,48 @@ fun SettingsScreen(
                             },
                             enabled = webhookText.isNotBlank(),
                         ) { Text(stringResource(R.string.settings_test)) }
+                    }
+
+                    // Event filter section
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        stringResource(R.string.settings_event_filter),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    Text(
+                        stringResource(R.string.settings_event_filter_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(4.dp))
+
+                    // Severity filter chips
+                    Text(stringResource(R.string.settings_filter_severities), style = MaterialTheme.typography.labelMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("Critical", "Warning", "Info").forEach { severity ->
+                            val selected = state.webhookFilterSeverities.contains(severity)
+                            FilterChip(
+                                selected = selected,
+                                onClick = { viewModel.toggleWebhookFilterSeverity(severity) },
+                                label = { Text(severity, style = MaterialTheme.typography.bodySmall) },
+                            )
+                        }
+                    }
+
+                    // Type filter chips
+                    Text(stringResource(R.string.settings_filter_types), style = MaterialTheme.typography.labelMedium)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    ) {
+                        listOf("cost_spike", "quota_exceeded", "session_long", "device_offline").forEach { type ->
+                            val selected = state.webhookFilterTypes.contains(type)
+                            FilterChip(
+                                selected = selected,
+                                onClick = { viewModel.toggleWebhookFilterType(type) },
+                                label = { Text(type.replace("_", " "), style = MaterialTheme.typography.bodySmall) },
+                            )
+                        }
                     }
                 }
             }

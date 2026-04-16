@@ -328,6 +328,12 @@
 "integrations.webhook_hint" = "向 Discord、Slack 或自定义端点发送告警";
 "integrations.webhook_url_placeholder" = "Webhook URL (Discord / Slack)";
 "integrations.test_webhook" = "测试 Webhook";
+"integrations.event_filter" = "事件过滤";
+"integrations.event_filter_hint" = "仅对匹配的告警发送 Webhook（留空 = 全部）";
+"integrations.filter_severities" = "严重级别";
+"integrations.filter_types" = "告警类型";
+"integrations.filter_providers" = "服务商";
+"integrations.filter_all" = "全部";
 
 /* ── Auth (OAuth) ── */
 "auth.sign_in_google" = "使用 Google 登录";

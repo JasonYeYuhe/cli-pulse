@@ -825,9 +825,11 @@ extension AppState {
     public func pushSettingsToServer() {
         Task {
             do {
+                let filter = webhookEventFilter.isEmpty ? nil : webhookEventFilter
                 try await api.updateSettings(APIClient.SettingsPatch(
                     webhook_url: webhookURL.isEmpty ? nil : webhookURL,
-                    webhook_enabled: webhookEnabled
+                    webhook_enabled: webhookEnabled,
+                    webhook_event_filter: filter
                 ))
             } catch {
                 lastError = "Failed to save webhook settings: \(error.localizedDescription)"

@@ -45,6 +45,10 @@
     <string name="settings_webhook_url_hint">Webhook URL (Discord / Slack)</string>
     <string name="settings_save_url">URLを保存</string>
     <string name="settings_test">テスト</string>
+    <string name="settings_event_filter">イベントフィルター</string>
+    <string name="settings_event_filter_hint">一致するアラートのみWebhookを送信（空 = すべて）</string>
+    <string name="settings_filter_severities">重大度</string>
+    <string name="settings_filter_types">アラートの種類</string>
     <string name="settings_exit_demo">デモモードを終了</string>
     <string name="settings_delete_title">アカウントを削除しますか？</string>
     <string name="settings_delete_message">すべてのデータが完全に削除されます。この操作は元に戻せません。</string>
@@ -88,6 +92,13 @@
     <string name="cost_14_days">14日間</string>
     <string name="cost_30_days">30日間</string>
     <string name="cost_no_data">この期間のコストデータがありません。</string>
+
+    <!-- Forecast -->
+    <string name="forecast_title">コスト予測</string>
+    <string name="forecast_month_end">月末予測</string>
+    <string name="forecast_so_far">現在までの支出</string>
+    <string name="forecast_confidence">信頼区間</string>
+    <string name="forecast_insufficient">信頼できる予測にはデータが不足しています。</string>
 
     <!-- Export -->
     <string name="export_data">データをエクスポート</string>

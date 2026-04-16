@@ -45,6 +45,10 @@
     <string name="settings_webhook_url_hint">Webhook URL (Discord / Slack)</string>
     <string name="settings_save_url">Save URL</string>
     <string name="settings_test">Test</string>
+    <string name="settings_event_filter">Event Filter</string>
+    <string name="settings_event_filter_hint">Only send webhooks for matching alerts (empty = all)</string>
+    <string name="settings_filter_severities">Severities</string>
+    <string name="settings_filter_types">Alert Types</string>
     <string name="settings_exit_demo">Exit Demo Mode</string>
     <string name="settings_delete_title">Delete Account?</string>
     <string name="settings_delete_message">This will permanently delete all your data. This action cannot be undone.</string>
@@ -88,6 +92,13 @@
     <string name="cost_14_days">14 Days</string>
     <string name="cost_30_days">30 Days</string>
     <string name="cost_no_data">No cost data available for this period.</string>
+
+    <!-- Forecast -->
+    <string name="forecast_title">Cost Forecast</string>
+    <string name="forecast_month_end">Month-End Estimate</string>
+    <string name="forecast_so_far">Spent So Far</string>
+    <string name="forecast_confidence">Confidence Range</string>
+    <string name="forecast_insufficient">Not enough data for a reliable forecast.</string>
 
     <!-- Export -->
     <string name="export_data">Export Data</string>

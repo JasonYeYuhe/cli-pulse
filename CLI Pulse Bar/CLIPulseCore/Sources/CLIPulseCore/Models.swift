@@ -658,6 +658,24 @@ public struct SettingsSnapshot: Codable, Sendable {
     }
 }
 
+// MARK: - Webhook Event Filter
+
+public struct WebhookEventFilter: Codable, Sendable, Equatable {
+    public var severities: [String]
+    public var types: [String]
+    public var providers: [String]
+
+    public init(severities: [String] = [], types: [String] = [], providers: [String] = []) {
+        self.severities = severities
+        self.types = types
+        self.providers = providers
+    }
+
+    public var isEmpty: Bool {
+        severities.isEmpty && types.isEmpty && providers.isEmpty
+    }
+}
+
 // MARK: - Daily Usage (from CostUsageScanner)
 
 public struct DailyUsage: Codable, Identifiable, Sendable {

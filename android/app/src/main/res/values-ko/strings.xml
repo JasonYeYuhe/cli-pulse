@@ -45,6 +45,10 @@
     <string name="settings_webhook_url_hint">Webhook URL (Discord / Slack)</string>
     <string name="settings_save_url">URL 저장</string>
     <string name="settings_test">테스트</string>
+    <string name="settings_event_filter">이벤트 필터</string>
+    <string name="settings_event_filter_hint">일치하는 알림에만 Webhook 전송 (비어있으면 = 전체)</string>
+    <string name="settings_filter_severities">심각도</string>
+    <string name="settings_filter_types">알림 유형</string>
     <string name="settings_exit_demo">데모 모드 종료</string>
     <string name="settings_delete_title">계정을 삭제하시겠습니까?</string>
     <string name="settings_delete_message">모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.</string>
@@ -88,6 +92,13 @@
     <string name="cost_14_days">14일</string>
     <string name="cost_30_days">30일</string>
     <string name="cost_no_data">이 기간의 비용 데이터가 없습니다.</string>
+
+    <!-- Forecast -->
+    <string name="forecast_title">비용 예측</string>
+    <string name="forecast_month_end">월말 예측</string>
+    <string name="forecast_so_far">현재까지 지출</string>
+    <string name="forecast_confidence">신뢰 구간</string>
+    <string name="forecast_insufficient">신뢰할 수 있는 예측을 위한 데이터가 부족합니다.</string>
 
     <!-- Export -->
     <string name="export_data">데이터 내보내기</string>

@@ -416,6 +416,12 @@ public enum L10n {
         public static var webhookHint: String { tr("integrations.webhook_hint") }
         public static var webhookURLPlaceholder: String { tr("integrations.webhook_url_placeholder") }
         public static var testWebhook: String { tr("integrations.test_webhook") }
+        public static var eventFilter: String { tr("integrations.event_filter") }
+        public static var eventFilterHint: String { tr("integrations.event_filter_hint") }
+        public static var filterSeverities: String { tr("integrations.filter_severities") }
+        public static var filterTypes: String { tr("integrations.filter_types") }
+        public static var filterProviders: String { tr("integrations.filter_providers") }
+        public static var filterAll: String { tr("integrations.filter_all") }
     }
 
     // MARK: - Forecast

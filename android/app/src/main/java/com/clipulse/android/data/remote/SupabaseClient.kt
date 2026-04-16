@@ -342,6 +342,13 @@ class SupabaseClient(
             dataRetentionDays = s.optInt("data_retention_days", 7),
             webhookUrl = s.optString("webhook_url").takeIf { it.isNotBlank() },
             webhookEnabled = s.optBoolean("webhook_enabled", false),
+            webhookEventFilter = s.optJSONObject("webhook_event_filter")?.let { f ->
+                WebhookEventFilter(
+                    severities = f.optJSONArray("severities")?.let { a -> (0 until a.length()).map { a.getString(it) } },
+                    types = f.optJSONArray("types")?.let { a -> (0 until a.length()).map { a.getString(it) } },
+                    providers = f.optJSONArray("providers")?.let { a -> (0 until a.length()).map { a.getString(it) } },
+                )
+            },
         )
     }
 

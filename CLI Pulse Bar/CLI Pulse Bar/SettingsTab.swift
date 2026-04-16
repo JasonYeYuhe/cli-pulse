@@ -807,6 +807,63 @@ struct SettingsTab: View {
 
                     Spacer()
                 }
+
+                // Event filter
+                DisclosureGroup {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.integrations.eventFilterHint)
+                            .font(.system(size: 9))
+                            .foregroundStyle(.tertiary)
+
+                        // Severity filter
+                        HStack(spacing: 4) {
+                            Text(L10n.integrations.filterSeverities)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 70, alignment: .leading)
+                            ForEach(["Critical", "Warning", "Info"], id: \.self) { severity in
+                                filterChip(
+                                    label: severity,
+                                    isSelected: state.webhookEventFilter.severities.contains(severity),
+                                    color: severity == "Critical" ? .red : (severity == "Warning" ? .orange : .blue)
+                                ) {
+                                    toggleFilterItem(&state.webhookEventFilter.severities, severity)
+                                }
+                            }
+                            Spacer()
+                        }
+
+                        // Alert type filter
+                        HStack(spacing: 4) {
+                            Text(L10n.integrations.filterTypes)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 70, alignment: .leading)
+                            ForEach(["cost_spike", "quota_exceeded", "session_long", "device_offline"], id: \.self) { type in
+                                filterChip(label: type.replacingOccurrences(of: "_", with: " "), isSelected: state.webhookEventFilter.types.contains(type)) {
+                                    toggleFilterItem(&state.webhookEventFilter.types, type)
+                                }
+                            }
+                            Spacer()
+                        }
+                    }
+                    .padding(.top, 4)
+                    .onChange(of: state.webhookEventFilter) { _ in
+                        state.pushSettingsToServer()
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                            .font(.system(size: 10))
+                        Text(L10n.integrations.eventFilter)
+                            .font(.system(size: 10))
+                        if !state.webhookEventFilter.isEmpty {
+                            Text("(\(state.webhookEventFilter.severities.count + state.webhookEventFilter.types.count))")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
             }
         }
     }
@@ -1203,6 +1260,29 @@ struct SettingsTab: View {
         isDeletingAccount = true
         await state.deleteAccount()
         isDeletingAccount = false
+    }
+
+    // MARK: - Webhook Filter Helpers
+
+    private func filterChip(label: String, isSelected: Bool, color: Color = PulseTheme.accent, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 8, weight: isSelected ? .semibold : .regular))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(isSelected ? color.opacity(0.2) : Color.gray.opacity(0.1))
+                .foregroundStyle(isSelected ? color : .secondary)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func toggleFilterItem(_ array: inout [String], _ item: String) {
+        if let index = array.firstIndex(of: item) {
+            array.remove(at: index)
+        } else {
+            array.append(item)
+        }
     }
 
 }

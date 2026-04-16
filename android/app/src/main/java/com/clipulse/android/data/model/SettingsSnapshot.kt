@@ -14,4 +14,11 @@ data class SettingsSnapshot(
     val dataRetentionDays: Int = 7,
     val webhookUrl: String? = null,
     val webhookEnabled: Boolean = false,
+    val webhookEventFilter: WebhookEventFilter? = null,
+)
+
+data class WebhookEventFilter(
+    val severities: List<String>? = null,
+    val types: List<String>? = null,
+    val providers: List<String>? = null,
 )

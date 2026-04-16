@@ -15,6 +15,7 @@ import javax.inject.Inject
 data class OverviewUiState(
     val isLoading: Boolean = true,
     val dashboard: DashboardSummary? = null,
+    val costForecast: CostForecast? = null,
     val error: String? = null,
 )
 
@@ -36,7 +37,13 @@ class OverviewViewModel @Inject constructor(
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
                 repository.refreshDashboard()
-                _state.value = _state.value.copy(isLoading = false, dashboard = repository.dashboard.value)
+                repository.refreshDailyUsage(30)
+                val forecast = CostForecastEngine.forecast(repository.dailyUsage.value)
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    dashboard = repository.dashboard.value,
+                    costForecast = forecast,
+                )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(isLoading = false, error = e.message)
             }

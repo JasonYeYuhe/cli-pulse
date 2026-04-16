@@ -324,6 +324,12 @@
 "integrations.webhook_hint" = "Discord、Slack、またはカスタムエンドポイントにアラートを送信";
 "integrations.webhook_url_placeholder" = "Webhook URL (Discord / Slack)";
 "integrations.test_webhook" = "Webhookをテスト";
+"integrations.event_filter" = "イベントフィルター";
+"integrations.event_filter_hint" = "一致するアラートのみWebhookを送信（空 = すべて）";
+"integrations.filter_severities" = "重大度";
+"integrations.filter_types" = "アラートの種類";
+"integrations.filter_providers" = "プロバ��ダー";
+"integrations.filter_all" = "す���て";
 
 /* ── Auth (OAuth) ── */
 "auth.sign_in_google" = "Googleでサインイン";

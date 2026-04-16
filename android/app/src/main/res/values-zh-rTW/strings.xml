@@ -45,6 +45,10 @@
     <string name="settings_webhook_url_hint">Webhook URL (Discord / Slack)</string>
     <string name="settings_save_url">儲存 URL</string>
     <string name="settings_test">測試</string>
+    <string name="settings_event_filter">事件過濾</string>
+    <string name="settings_event_filter_hint">僅對符合的警告發送 Webhook（留空 = 全部）</string>
+    <string name="settings_filter_severities">嚴重級別</string>
+    <string name="settings_filter_types">警告類型</string>
     <string name="settings_exit_demo">離開示範模式</string>
     <string name="settings_delete_title">刪除帳號？</string>
     <string name="settings_delete_message">這將永久刪除您的所有資料，此操作無法復原。</string>
@@ -88,6 +92,13 @@
     <string name="cost_14_days">14 天</string>
     <string name="cost_30_days">30 天</string>
     <string name="cost_no_data">該時間段無費用資料。</string>
+
+    <!-- Forecast -->
+    <string name="forecast_title">費用預測</string>
+    <string name="forecast_month_end">月末預估</string>
+    <string name="forecast_so_far">已花費</string>
+    <string name="forecast_confidence">信賴區間</string>
+    <string name="forecast_insufficient">資料不足，無法可靠預測。</string>
 
     <!-- Export -->
     <string name="export_data">匯出資料</string>

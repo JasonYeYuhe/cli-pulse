@@ -1,13 +1,15 @@
 // Supabase Edge Function: send-webhook
 // Sends alert notifications to user-configured webhook URLs.
-// Supports Discord and Slack incoming webhook formats.
+// Auto-detects Discord vs Slack webhook format.
 //
 // Request:
-//   { "user_id": "uuid", "alert": { "type", "severity", "title", "message" } }
+//   { "user_id": "uuid", "alert": { "type", "severity", "title", "message", "related_provider?" } }
 //
-// SSRF Protection:
-//   - HTTPS only
-//   - Rejects private/loopback/link-local IPs
+// Features:
+//   - Slack Block Kit format for hooks.slack.com URLs
+//   - Discord embed format for discord.com/api/webhooks URLs
+//   - Event filtering via user_settings.webhook_event_filter (JSON)
+//   - SSRF protection (HTTPS only, rejects private/loopback IPs)
 //   - 60-second deduplication per alert grouping_key
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
@@ -56,6 +58,123 @@ const SEVERITY_COLORS: Record<string, number> = {
   Warning: 0xffa500,
   Info: 0x3498db,
 };
+
+const SEVERITY_EMOJI: Record<string, string> = {
+  Critical: "\u{1F6A8}",
+  Warning: "\u26A0\uFE0F",
+  Info: "\u2139\uFE0F",
+};
+
+function isSlackUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname === "hooks.slack.com";
+  } catch {
+    return false;
+  }
+}
+
+interface WebhookEventFilter {
+  severities?: string[];   // e.g. ["Critical", "Warning"]
+  types?: string[];        // e.g. ["cost_spike", "quota_exceeded"]
+  providers?: string[];    // e.g. ["Claude", "OpenRouter"]
+}
+
+function shouldSendAlert(
+  alert: { type?: string; severity?: string; related_provider?: string },
+  filter: WebhookEventFilter | null,
+): boolean {
+  if (!filter) return true;
+  if (filter.severities?.length && !filter.severities.includes(alert.severity || "Info")) {
+    return false;
+  }
+  if (filter.types?.length && !filter.types.includes(alert.type || "")) {
+    return false;
+  }
+  if (filter.providers?.length && alert.related_provider && !filter.providers.includes(alert.related_provider)) {
+    return false;
+  }
+  return true;
+}
+
+function buildSlackPayload(alert: {
+  type?: string;
+  severity?: string;
+  title?: string;
+  message?: string;
+  related_provider?: string;
+}): Record<string, unknown> {
+  const emoji = SEVERITY_EMOJI[alert.severity || "Info"] || "\u2139\uFE0F";
+  const blocks: Record<string, unknown>[] = [
+    {
+      type: "header",
+      text: { type: "plain_text", text: `${emoji} CLI Pulse: ${alert.severity || "Info"}`, emoji: true },
+    },
+    {
+      type: "section",
+      text: { type: "mrkdwn", text: `*${alert.title || "Alert"}*` },
+    },
+  ];
+
+  const fields: { type: string; text: string }[] = [];
+  if (alert.type) fields.push({ type: "mrkdwn", text: `*Type:* ${alert.type}` });
+  if (alert.severity) fields.push({ type: "mrkdwn", text: `*Severity:* ${alert.severity}` });
+  if (alert.related_provider) fields.push({ type: "mrkdwn", text: `*Provider:* ${alert.related_provider}` });
+
+  if (fields.length > 0) {
+    blocks.push({ type: "section", fields });
+  }
+
+  if (alert.message) {
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: alert.message.substring(0, 3000) },
+    });
+  }
+
+  blocks.push({
+    type: "context",
+    elements: [
+      { type: "mrkdwn", text: `CLI Pulse \u2022 ${new Date().toISOString()}` },
+    ],
+  });
+
+  return { blocks };
+}
+
+function buildDiscordPayload(alert: {
+  type?: string;
+  severity?: string;
+  title?: string;
+  message?: string;
+  related_provider?: string;
+}): Record<string, unknown> {
+  const color = SEVERITY_COLORS[alert.severity || "Info"] || 0x95a5a6;
+  const fields: { name: string; value: string; inline: boolean }[] = [
+    { name: "Type", value: alert.type || "Alert", inline: true },
+    { name: "Severity", value: alert.severity || "Info", inline: true },
+  ];
+  if (alert.message) {
+    fields.push({ name: "Details", value: alert.message.substring(0, 1024), inline: false });
+  }
+  if (alert.related_provider) {
+    fields.push({ name: "Provider", value: alert.related_provider, inline: true });
+  }
+
+  return {
+    content: null,
+    embeds: [
+      {
+        title: `CLI Pulse: ${alert.severity || "Info"}`,
+        description: alert.title || "Alert",
+        color,
+        fields,
+        footer: { text: "CLI Pulse Alert" },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+}
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -118,12 +237,18 @@ serve(async (req: Request) => {
 
     const { data: settings, error: fetchError } = await supabase
       .from("user_settings")
-      .select("webhook_url, webhook_enabled")
+      .select("webhook_url, webhook_enabled, webhook_event_filter")
       .eq("user_id", user_id)
       .single();
 
     if (fetchError || !settings?.webhook_enabled || !settings?.webhook_url) {
       return new Response(JSON.stringify({ skipped: true, reason: "webhook not configured" }), { status: 200 });
+    }
+
+    // Apply event filter (if configured)
+    const eventFilter: WebhookEventFilter | null = settings.webhook_event_filter || null;
+    if (!shouldSendAlert(alert, eventFilter)) {
+      return new Response(JSON.stringify({ skipped: true, reason: "filtered" }), { status: 200 });
     }
 
     // Validate URL
@@ -132,31 +257,10 @@ serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: validation.error }), { status: 400 });
     }
 
-    // Build Discord-compatible payload (also works with Slack incoming webhooks)
-    const color = SEVERITY_COLORS[alert.severity] || 0x95a5a6;
-    const payload = {
-      content: null,
-      embeds: [
-        {
-          title: `CLI Pulse: ${alert.severity}`,
-          description: alert.title,
-          color,
-          fields: [
-            { name: "Type", value: alert.type || "Alert", inline: true },
-            { name: "Severity", value: alert.severity || "Info", inline: true },
-          ],
-          footer: { text: "CLI Pulse Alert" },
-          timestamp: new Date().toISOString(),
-        },
-      ],
-    };
-
-    if (alert.message) {
-      payload.embeds[0].fields.push({ name: "Details", value: alert.message.substring(0, 1024), inline: false });
-    }
-    if (alert.related_provider) {
-      payload.embeds[0].fields.push({ name: "Provider", value: alert.related_provider, inline: true });
-    }
+    // Build payload — auto-detect Slack vs Discord format
+    const payload = isSlackUrl(settings.webhook_url)
+      ? buildSlackPayload(alert)
+      : buildDiscordPayload(alert);
 
     // Send webhook (5s timeout to prevent tarpit attacks)
     const webhookResp = await fetch(settings.webhook_url, {
