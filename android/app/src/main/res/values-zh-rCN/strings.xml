@@ -28,6 +28,8 @@
     <string name="active_sessions">活跃会话</string>
     <string name="online_devices">在线设备</string>
     <string name="unresolved_alerts">未处理告警</string>
+    <string name="overview_requests">请求数</string>
+    <string name="overview_no_data">暂无数据。配对设备以开始监控。</string>
 
     <!-- Settings -->
     <string name="settings_account">账户</string>
@@ -76,6 +78,20 @@
     <string name="subscription_7_days">7 天</string>
     <string name="subscription_90_days">90 天</string>
     <string name="subscription_365_days">365 天</string>
+
+    <!-- Export -->
+    <string name="export_data">导出数据</string>
+    <string name="export_sessions">导出会话 CSV</string>
+    <string name="export_providers">导出服务商 CSV</string>
+    <string name="export_alerts">导出告警 CSV</string>
+    <string name="export_cost_report">导出费用报告 CSV</string>
+
+    <!-- Team (extended) -->
+    <string name="team_pending_invites">待处理邀请</string>
+    <string name="team_pending">待处理</string>
+    <string name="team_make_admin">设为管理员</string>
+    <string name="team_make_member">设为成员</string>
+    <string name="team_manage_member">管理成员</string>
 
     <!-- Common -->
     <string name="cancel">取消</string>

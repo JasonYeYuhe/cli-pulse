@@ -43,6 +43,40 @@ object ExportUtil {
         } catch (_: Exception) { null }
     }
 
+    fun exportAlertsCSV(context: Context, alerts: List<com.clipulse.android.data.model.AlertRecord>): File? {
+        val exportDir = File(context.cacheDir, "cli_pulse_exports").also { it.mkdirs() }
+        val file = File(exportDir, "cli-pulse-alerts.csv")
+        return try {
+            BufferedWriter(FileWriter(file)).use { w ->
+                w.write("ID,Type,Severity,Title,Message,Created,Resolved,Provider,Device\n")
+                for (a in alerts) {
+                    w.write("${esc(a.id)},${esc(a.type)},${esc(a.severity)},${esc(a.title)},")
+                    w.write("${esc(a.message)},${esc(a.createdAt)},${a.isResolved},")
+                    w.write("${esc(a.relatedProvider ?: "")},${esc(a.relatedDeviceName ?: "")}\n")
+                }
+            }
+            file
+        } catch (_: Exception) { null }
+    }
+
+    fun exportCostReportCSV(
+        context: Context,
+        dailyUsage: List<com.clipulse.android.data.model.DailyUsage>,
+    ): File? {
+        val exportDir = File(context.cacheDir, "cli_pulse_exports").also { it.mkdirs() }
+        val file = File(exportDir, "cli-pulse-cost-report.csv")
+        return try {
+            BufferedWriter(FileWriter(file)).use { w ->
+                w.write("Date,Provider,Model,Input Tokens,Cached Tokens,Output Tokens,Total Tokens,Cost\n")
+                for (u in dailyUsage) {
+                    w.write("${esc(u.date)},${esc(u.provider)},${esc(u.model)},")
+                    w.write("${u.inputTokens},${u.cachedTokens},${u.outputTokens},${u.totalTokens},${u.cost}\n")
+                }
+            }
+            file
+        } catch (_: Exception) { null }
+    }
+
     fun shareFile(context: Context, file: File, mimeType: String = "text/csv") {
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         val intent = Intent(Intent.ACTION_SEND).apply {

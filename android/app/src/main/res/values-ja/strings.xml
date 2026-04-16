@@ -28,6 +28,8 @@
     <string name="active_sessions">アクティブセッション</string>
     <string name="online_devices">オンラインデバイス</string>
     <string name="unresolved_alerts">未解決アラート</string>
+    <string name="overview_requests">リクエスト</string>
+    <string name="overview_no_data">データがまだありません。デバイスをペアリングして監視を開始しましょう。</string>
 
     <!-- Settings -->
     <string name="settings_account">アカウント</string>
@@ -76,6 +78,20 @@
     <string name="subscription_7_days">7日間</string>
     <string name="subscription_90_days">90日間</string>
     <string name="subscription_365_days">365日間</string>
+
+    <!-- Export -->
+    <string name="export_data">データをエクスポート</string>
+    <string name="export_sessions">セッション CSV エクスポート</string>
+    <string name="export_providers">プロバイダー CSV エクスポート</string>
+    <string name="export_alerts">アラート CSV エクスポート</string>
+    <string name="export_cost_report">コストレポート CSV エクスポート</string>
+
+    <!-- Team (extended) -->
+    <string name="team_pending_invites">保留中の招待</string>
+    <string name="team_pending">保留中</string>
+    <string name="team_make_admin">管理者にする</string>
+    <string name="team_make_member">メンバーにする</string>
+    <string name="team_manage_member">メンバーを管理</string>
 
     <!-- Common -->
     <string name="cancel">キャンセル</string>

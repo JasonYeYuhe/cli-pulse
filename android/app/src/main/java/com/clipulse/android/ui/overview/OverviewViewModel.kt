@@ -2,7 +2,7 @@ package com.clipulse.android.ui.overview
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.clipulse.android.data.model.DashboardSummary
+import com.clipulse.android.data.model.*
 import com.clipulse.android.data.remote.ApiError
 import com.clipulse.android.data.repository.DashboardRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -42,6 +42,11 @@ class OverviewViewModel @Inject constructor(
             }
         }
     }
+
+    fun getSessions(): List<SessionRecord> = repository.sessions.value
+    fun getProviders(): List<ProviderUsage> = repository.providers.value
+    fun getAlerts(): List<AlertRecord> = repository.alerts.value
+    fun getDailyUsage(): List<DailyUsage> = repository.dailyUsage.value
 
     private fun startAutoRefresh() {
         viewModelScope.launch {

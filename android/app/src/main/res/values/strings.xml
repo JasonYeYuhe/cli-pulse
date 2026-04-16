@@ -28,6 +28,8 @@
     <string name="active_sessions">Active Sessions</string>
     <string name="online_devices">Online Devices</string>
     <string name="unresolved_alerts">Alerts</string>
+    <string name="overview_requests">Requests</string>
+    <string name="overview_no_data">No data yet. Pair a device to start monitoring.</string>
 
     <!-- Settings -->
     <string name="settings_account">Account</string>
@@ -76,6 +78,20 @@
     <string name="subscription_7_days">7 days</string>
     <string name="subscription_90_days">90 days</string>
     <string name="subscription_365_days">365 days</string>
+
+    <!-- Export -->
+    <string name="export_data">Export Data</string>
+    <string name="export_sessions">Export Sessions CSV</string>
+    <string name="export_providers">Export Providers CSV</string>
+    <string name="export_alerts">Export Alerts CSV</string>
+    <string name="export_cost_report">Export Cost Report CSV</string>
+
+    <!-- Team (extended) -->
+    <string name="team_pending_invites">Pending Invites</string>
+    <string name="team_pending">Pending</string>
+    <string name="team_make_admin">Make Admin</string>
+    <string name="team_make_member">Make Member</string>
+    <string name="team_manage_member">Manage member</string>
 
     <!-- Common -->
     <string name="cancel">Cancel</string>

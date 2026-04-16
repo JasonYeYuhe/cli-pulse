@@ -3,16 +3,22 @@ package com.clipulse.android.ui.overview
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.clipulse.android.R
 import com.clipulse.android.ui.components.MetricCard
 import com.clipulse.android.ui.components.formatCost
 import com.clipulse.android.ui.components.formatUsage
+import com.clipulse.android.util.ExportUtil
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,6 +26,8 @@ fun OverviewScreen(
     viewModel: OverviewViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    var showExportMenu by remember { mutableStateOf(false) }
 
     PullToRefreshBox(
         isRefreshing = state.isLoading,
@@ -31,10 +39,55 @@ fun OverviewScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
-            Text(
-                "Overview",
-                style = MaterialTheme.typography.headlineMedium,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.tab_overview),
+                    style = MaterialTheme.typography.headlineMedium,
+                )
+                Box {
+                    IconButton(onClick = { showExportMenu = true }) {
+                        Icon(Icons.Default.FileDownload, contentDescription = stringResource(R.string.export_data))
+                    }
+                    DropdownMenu(expanded = showExportMenu, onDismissRequest = { showExportMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.export_sessions)) },
+                            onClick = {
+                                showExportMenu = false
+                                val sessions = viewModel.getSessions()
+                                ExportUtil.exportSessionsCSV(context, sessions)?.let { ExportUtil.shareFile(context, it) }
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.export_providers)) },
+                            onClick = {
+                                showExportMenu = false
+                                val providers = viewModel.getProviders()
+                                ExportUtil.exportProviderSummaryCSV(context, providers)?.let { ExportUtil.shareFile(context, it) }
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.export_alerts)) },
+                            onClick = {
+                                showExportMenu = false
+                                val alerts = viewModel.getAlerts()
+                                ExportUtil.exportAlertsCSV(context, alerts)?.let { ExportUtil.shareFile(context, it) }
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.export_cost_report)) },
+                            onClick = {
+                                showExportMenu = false
+                                val usage = viewModel.getDailyUsage()
+                                ExportUtil.exportCostReportCSV(context, usage)?.let { ExportUtil.shareFile(context, it) }
+                            },
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(16.dp))
 
             state.error?.let { error ->
@@ -61,12 +114,12 @@ fun OverviewScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     MetricCard(
-                        title = "Today's Usage",
+                        title = stringResource(R.string.today_usage),
                         value = formatUsage(d.totalUsageToday),
                         modifier = Modifier.weight(1f),
                     )
                     MetricCard(
-                        title = "Est. Cost",
+                        title = stringResource(R.string.estimated_cost),
                         value = formatCost(d.totalEstimatedCostToday),
                         modifier = Modifier.weight(1f),
                     )
@@ -78,12 +131,12 @@ fun OverviewScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     MetricCard(
-                        title = "Active Sessions",
+                        title = stringResource(R.string.active_sessions),
                         value = d.activeSessions.toString(),
                         modifier = Modifier.weight(1f),
                     )
                     MetricCard(
-                        title = "Online Devices",
+                        title = stringResource(R.string.online_devices),
                         value = d.onlineDevices.toString(),
                         modifier = Modifier.weight(1f),
                     )
@@ -95,12 +148,12 @@ fun OverviewScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     MetricCard(
-                        title = "Requests",
+                        title = stringResource(R.string.overview_requests),
                         value = d.totalRequestsToday.toString(),
                         modifier = Modifier.weight(1f),
                     )
                     MetricCard(
-                        title = "Alerts",
+                        title = stringResource(R.string.unresolved_alerts),
                         value = d.unresolvedAlerts.toString(),
                         subtitle = when {
                             d.alertSummary.critical > 0 -> "${d.alertSummary.critical} critical"
@@ -116,7 +169,7 @@ fun OverviewScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        "No data yet. Pair a device to start monitoring.",
+                        stringResource(R.string.overview_no_data),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

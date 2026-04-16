@@ -28,6 +28,8 @@
     <string name="active_sessions">活躍工作階段</string>
     <string name="online_devices">線上裝置</string>
     <string name="unresolved_alerts">未處理警告</string>
+    <string name="overview_requests">請求數</string>
+    <string name="overview_no_data">尚無資料。配對裝置以開始監控。</string>
 
     <!-- Settings -->
     <string name="settings_account">帳號</string>
@@ -76,6 +78,20 @@
     <string name="subscription_7_days">7 天</string>
     <string name="subscription_90_days">90 天</string>
     <string name="subscription_365_days">365 天</string>
+
+    <!-- Export -->
+    <string name="export_data">匯出資料</string>
+    <string name="export_sessions">匯出工作階段 CSV</string>
+    <string name="export_providers">匯出服務商 CSV</string>
+    <string name="export_alerts">匯出警告 CSV</string>
+    <string name="export_cost_report">匯出費用報告 CSV</string>
+
+    <!-- Team (extended) -->
+    <string name="team_pending_invites">待處理邀請</string>
+    <string name="team_pending">待處理</string>
+    <string name="team_make_admin">設為管理員</string>
+    <string name="team_make_member">設為成員</string>
+    <string name="team_manage_member">管理成員</string>
 
     <!-- Common -->
     <string name="cancel">取消</string>

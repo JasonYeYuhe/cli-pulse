@@ -28,6 +28,8 @@
     <string name="active_sessions">Sesiones activas</string>
     <string name="online_devices">Dispositivos en línea</string>
     <string name="unresolved_alerts">Alertas</string>
+    <string name="overview_requests">Solicitudes</string>
+    <string name="overview_no_data">Sin datos aún. Empareja un dispositivo para comenzar.</string>
 
     <!-- Settings -->
     <string name="settings_account">Cuenta</string>
@@ -76,6 +78,20 @@
     <string name="subscription_7_days">7 días</string>
     <string name="subscription_90_days">90 días</string>
     <string name="subscription_365_days">365 días</string>
+
+    <!-- Export -->
+    <string name="export_data">Exportar datos</string>
+    <string name="export_sessions">Exportar sesiones CSV</string>
+    <string name="export_providers">Exportar proveedores CSV</string>
+    <string name="export_alerts">Exportar alertas CSV</string>
+    <string name="export_cost_report">Exportar informe de costos CSV</string>
+
+    <!-- Team (extended) -->
+    <string name="team_pending_invites">Invitaciones pendientes</string>
+    <string name="team_pending">Pendiente</string>
+    <string name="team_make_admin">Hacer admin</string>
+    <string name="team_make_member">Hacer miembro</string>
+    <string name="team_manage_member">Gestionar miembro</string>
 
     <!-- Common -->
     <string name="cancel">Cancelar</string>

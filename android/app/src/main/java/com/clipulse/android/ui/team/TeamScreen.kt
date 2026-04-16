@@ -68,39 +68,50 @@ fun TeamScreen(
         }
 
         if (state.selectedTeam != null) {
-            // ── Member list for selected team ──
-            if (state.members.isEmpty() && !state.isLoading) {
+            // ── Member list ──
+            if (state.members.isEmpty() && state.invites.isEmpty() && !state.isLoading) {
                 Text(stringResource(R.string.team_no_members), style = MaterialTheme.typography.bodyMedium)
             }
             for (member in state.members) {
-                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                    Row(
-                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                member.name.ifBlank { member.email },
-                                style = MaterialTheme.typography.titleSmall,
-                            )
-                            Text(
-                                member.email,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                member.role,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        if (state.selectedTeam?.role in listOf("owner", "admin") && member.role == "member") {
-                            IconButton(onClick = {
-                                state.selectedTeam?.id?.let { teamId -> viewModel.removeMember(teamId, member.userId) }
-                            }) {
-                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.remove))
+                MemberCard(
+                    member = member,
+                    isAdmin = state.selectedTeam?.role in listOf("owner", "admin"),
+                    onRemove = { state.selectedTeam?.id?.let { teamId -> viewModel.removeMember(teamId, member.userId) } },
+                    onChangeRole = { newRole -> state.selectedTeam?.id?.let { teamId -> viewModel.changeRole(teamId, member.userId, newRole) } },
+                )
+            }
+
+            // ── Pending invites ──
+            if (state.invites.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    stringResource(R.string.team_pending_invites),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(4.dp))
+                for (invite in state.invites) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Row(
+                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(invite.email, style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    invite.role,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
+                            AssistChip(
+                                onClick = {},
+                                label = { Text(stringResource(R.string.team_pending)) },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                ),
+                            )
                         }
                     }
                 }
@@ -202,5 +213,65 @@ fun TeamScreen(
                 TextButton(onClick = { showInviteDialog = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
+    }
+}
+
+@Composable
+private fun MemberCard(
+    member: TeamMember,
+    isAdmin: Boolean,
+    onRemove: () -> Unit,
+    onChangeRole: (String) -> Unit,
+) {
+    var showRoleMenu by remember { mutableStateOf(false) }
+
+    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Row(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    member.name.ifBlank { member.email },
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    member.email,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    member.role,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            if (isAdmin && member.role != "owner") {
+                Box {
+                    IconButton(onClick = { showRoleMenu = true }) {
+                        Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.team_manage_member))
+                    }
+                    DropdownMenu(expanded = showRoleMenu, onDismissRequest = { showRoleMenu = false }) {
+                        if (member.role != "admin") {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.team_make_admin)) },
+                                onClick = { showRoleMenu = false; onChangeRole("admin") },
+                            )
+                        }
+                        if (member.role != "member") {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.team_make_member)) },
+                                onClick = { showRoleMenu = false; onChangeRole("member") },
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.remove)) },
+                            onClick = { showRoleMenu = false; onRemove() },
+                        )
+                    }
+                }
+            }
+        }
     }
 }

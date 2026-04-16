@@ -5,14 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.clipulse.android.data.remote.SupabaseClient
 import com.clipulse.android.data.remote.TokenStore
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
-import java.net.URLEncoder
 import javax.inject.Inject
 
 data class TeamMember(
@@ -22,10 +18,18 @@ data class TeamMember(
     val role: String,
 )
 
+data class TeamInvite(
+    val id: String,
+    val email: String,
+    val role: String,
+    val createdAt: String,
+)
+
 data class TeamUiState(
     val teams: List<SupabaseClient.TeamInfo> = emptyList(),
     val selectedTeam: SupabaseClient.TeamInfo? = null,
     val members: List<TeamMember> = emptyList(),
+    val invites: List<TeamInvite> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
 )
@@ -56,23 +60,35 @@ class TeamViewModel @Inject constructor(
 
     fun selectTeam(team: SupabaseClient.TeamInfo) {
         _state.value = _state.value.copy(selectedTeam = team)
-        loadMembers(team.id)
+        loadTeamDetails(team.id)
     }
 
     fun deselectTeam() {
-        _state.value = _state.value.copy(selectedTeam = null, members = emptyList())
+        _state.value = _state.value.copy(selectedTeam = null, members = emptyList(), invites = emptyList())
     }
 
-    fun loadMembers(teamId: String) {
+    private fun loadTeamDetails(teamId: String) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
-                val raw = supabase.fetchTeamMembers(teamId)
-                val members = raw.map { TeamMember(it.userId, it.name, it.email, it.role) }
-                _state.value = _state.value.copy(isLoading = false, members = members)
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(isLoading = false, error = e.message)
+                val (rawMembers, rawInvites) = supabase.fetchTeamDetails(teamId)
+                val members = rawMembers.map { TeamMember(it.userId, it.name, it.email, it.role) }
+                val invites = rawInvites.map { TeamInvite(it.id, it.email, it.role, it.createdAt) }
+                _state.value = _state.value.copy(isLoading = false, members = members, invites = invites)
+            } catch (_: Exception) {
+                // Fallback to members-only if team_details RPC is unavailable
+                loadMembersFallback(teamId)
             }
+        }
+    }
+
+    private suspend fun loadMembersFallback(teamId: String) {
+        try {
+            val raw = supabase.fetchTeamMembers(teamId)
+            val members = raw.map { TeamMember(it.userId, it.name, it.email, it.role) }
+            _state.value = _state.value.copy(isLoading = false, members = members, invites = emptyList())
+        } catch (e: Exception) {
+            _state.value = _state.value.copy(isLoading = false, error = e.message)
         }
     }
 
@@ -97,7 +113,7 @@ class TeamViewModel @Inject constructor(
                     put("p_role", "member")
                 }
                 supabase.rpcPublic("invite_member", params)
-                loadMembers(teamId)
+                loadTeamDetails(teamId)
             } catch (e: Exception) {
                 _state.value = _state.value.copy(error = e.message)
             }
@@ -112,7 +128,18 @@ class TeamViewModel @Inject constructor(
                     put("p_user_id", userId)
                 }
                 supabase.rpcPublic("remove_member", params)
-                loadMembers(teamId)
+                loadTeamDetails(teamId)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(error = e.message)
+            }
+        }
+    }
+
+    fun changeRole(teamId: String, userId: String, newRole: String) {
+        viewModelScope.launch {
+            try {
+                supabase.updateMemberRole(teamId, userId, newRole)
+                loadTeamDetails(teamId)
             } catch (e: Exception) {
                 _state.value = _state.value.copy(error = e.message)
             }

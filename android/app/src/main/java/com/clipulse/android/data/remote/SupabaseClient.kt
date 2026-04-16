@@ -640,6 +640,41 @@ class SupabaseClient(
         }
     }
 
+    data class TeamInviteInfo(val id: String, val email: String, val role: String, val createdAt: String)
+
+    suspend fun fetchTeamDetails(teamId: String): Pair<List<TeamMemberInfo>, List<TeamInviteInfo>> = withContext(Dispatchers.IO) {
+        val result = rpc("team_details", JSONObject().apply { put("p_team_id", teamId) })
+        val membersArr = result.optJSONArray("members") ?: JSONArray()
+        val invitesArr = result.optJSONArray("invites") ?: JSONArray()
+        val members = (0 until membersArr.length()).mapNotNull { i ->
+            val row = membersArr.getJSONObject(i)
+            TeamMemberInfo(
+                userId = row.optString("user_id"),
+                name = row.optString("name"),
+                email = row.optString("email"),
+                role = row.optString("role", "member"),
+            )
+        }
+        val invites = (0 until invitesArr.length()).map { i ->
+            val row = invitesArr.getJSONObject(i)
+            TeamInviteInfo(
+                id = row.optString("id"),
+                email = row.optString("email"),
+                role = row.optString("role", "member"),
+                createdAt = row.optString("created_at"),
+            )
+        }
+        members to invites
+    }
+
+    suspend fun updateMemberRole(teamId: String, userId: String, role: String) = withContext(Dispatchers.IO) {
+        rpc("update_member_role", JSONObject().apply {
+            put("p_team_id", teamId)
+            put("p_user_id", userId)
+            put("p_role", role)
+        })
+    }
+
     // ── Account Deletion ─────────────────────────────────
 
     suspend fun deleteAccount() = withContext(Dispatchers.IO) {

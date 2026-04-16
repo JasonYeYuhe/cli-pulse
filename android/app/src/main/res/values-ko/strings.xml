@@ -28,6 +28,8 @@
     <string name="active_sessions">활성 세션</string>
     <string name="online_devices">온라인 기기</string>
     <string name="unresolved_alerts">미해결 알림</string>
+    <string name="overview_requests">요청</string>
+    <string name="overview_no_data">아직 데이터가 없습니다. 기기를 페어링하여 모니터링을 시작하세요.</string>
 
     <!-- Settings -->
     <string name="settings_account">계정</string>
@@ -76,6 +78,20 @@
     <string name="subscription_7_days">7일</string>
     <string name="subscription_90_days">90일</string>
     <string name="subscription_365_days">365일</string>
+
+    <!-- Export -->
+    <string name="export_data">데이터 내보내기</string>
+    <string name="export_sessions">세션 CSV 내보내기</string>
+    <string name="export_providers">제공자 CSV 내보내기</string>
+    <string name="export_alerts">알림 CSV 내보내기</string>
+    <string name="export_cost_report">비용 보고서 CSV 내보내기</string>
+
+    <!-- Team (extended) -->
+    <string name="team_pending_invites">대기 중인 초대</string>
+    <string name="team_pending">대기 중</string>
+    <string name="team_make_admin">관리자로 변경</string>
+    <string name="team_make_member">멤버로 변경</string>
+    <string name="team_manage_member">멤버 관리</string>
 
     <!-- Common -->
     <string name="cancel">취소</string>
