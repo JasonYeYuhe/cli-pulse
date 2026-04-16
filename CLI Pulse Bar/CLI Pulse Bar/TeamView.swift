@@ -24,12 +24,14 @@ struct TeamView: View {
                 Button(action: { showCreateSheet = true }) {
                     Image(systemName: "plus.circle")
                 }
+                .accessibilityLabel(L10n.team.createTeam)
                 .disabled(!appState.subscriptionManager.isProOrAbove)
             }
 
             if !appState.subscriptionManager.isProOrAbove {
                 HStack {
                     Image(systemName: "lock.fill")
+                        .accessibilityHidden(true)
                     Text(L10n.team.requiresProHint)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -178,6 +180,7 @@ private struct TeamRow: View {
             HStack {
                 Image(systemName: "person.3.fill")
                     .foregroundStyle(.blue)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading) {
                     Text(team.name).font(.body)
                     if let role = team.role {
@@ -187,6 +190,7 @@ private struct TeamRow: View {
                 Spacer()
                 Image(systemName: "chevron.right")
                     .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
             }
             .padding(8)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
@@ -244,6 +248,7 @@ private struct TeamDetailView: View {
                         } label: {
                             Image(systemName: "ellipsis.circle")
                         }
+                        .accessibilityLabel(L10n.team.remove)
                     }
                 }
             }

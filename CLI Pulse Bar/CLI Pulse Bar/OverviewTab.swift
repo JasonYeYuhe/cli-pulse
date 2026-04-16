@@ -107,6 +107,7 @@ struct OverviewTab: View {
             Image(systemName: "square.and.arrow.up")
                 .font(.system(size: 10))
         }
+        .accessibilityLabel("Export")
         .menuStyle(.borderlessButton)
     }
 
@@ -117,6 +118,7 @@ struct OverviewTab: View {
             Image(systemName: "arrow.clockwise")
                 .font(.system(size: 10))
         }
+        .accessibilityLabel(L10n.common.refresh)
         .buttonStyle(.plain)
         .disabled(state.isLoading)
     }
