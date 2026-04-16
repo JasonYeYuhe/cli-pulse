@@ -79,6 +79,16 @@
     <string name="subscription_90_days">90 days</string>
     <string name="subscription_365_days">365 days</string>
 
+    <!-- Cost Analysis -->
+    <string name="cost_analysis_title">Cost Analysis</string>
+    <string name="cost_by_provider">Cost by Provider</string>
+    <string name="cost_by_model">Cost by Model</string>
+    <string name="cost_daily_trend">Daily Trend</string>
+    <string name="cost_7_days">7 Days</string>
+    <string name="cost_14_days">14 Days</string>
+    <string name="cost_30_days">30 Days</string>
+    <string name="cost_no_data">No cost data available for this period.</string>
+
     <!-- Export -->
     <string name="export_data">Export Data</string>
     <string name="export_sessions">Export Sessions CSV</string>

@@ -47,6 +47,12 @@ fun providerColor(kind: ProviderKind): Color = when (kind) {
     ProviderKind.GLM -> Color(0xFF1A73E8)
 }
 
+/** Resolve provider color from a display-name string. */
+fun providerColor(name: String): Color {
+    val kind = ProviderKind.fromString(name)
+    return if (kind != null) providerColor(kind) else Color(0xFF6B7280)
+}
+
 // Severity colors
 val SeverityCritical = Color(0xFFEF4444)
 val SeverityWarning = Color(0xFFF59E0B)

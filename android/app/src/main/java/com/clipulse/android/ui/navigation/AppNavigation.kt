@@ -26,6 +26,7 @@ import com.clipulse.android.ui.devices.DevicesScreen
 import com.clipulse.android.ui.settings.SettingsScreen
 import com.clipulse.android.ui.settings.SubscriptionScreen
 import com.clipulse.android.ui.team.TeamScreen
+import com.clipulse.android.ui.usage.CostAnalysisScreen
 
 enum class Screen(val route: String, val label: String, val icon: ImageVector) {
     Overview("overview", "Overview", Icons.Default.Dashboard),
@@ -80,7 +81,11 @@ fun AppNavigation(oauthCode: String? = null) {
             startDestination = Screen.Overview.route,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable(Screen.Overview.route) { OverviewScreen() }
+            composable(Screen.Overview.route) {
+                OverviewScreen(
+                    onCostAnalysis = { navController.navigate("cost_analysis") },
+                )
+            }
             composable(Screen.Providers.route) {
                 ProvidersScreen(
                     onProviderClick = { providerName ->
@@ -116,6 +121,9 @@ fun AppNavigation(oauthCode: String? = null) {
             }
             composable("teams") {
                 TeamScreen(onBack = { navController.popBackStack() })
+            }
+            composable("cost_analysis") {
+                CostAnalysisScreen(onBack = { navController.popBackStack() })
             }
         }
     }

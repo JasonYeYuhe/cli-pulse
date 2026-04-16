@@ -79,6 +79,16 @@
     <string name="subscription_90_days">90 天</string>
     <string name="subscription_365_days">365 天</string>
 
+    <!-- Cost Analysis -->
+    <string name="cost_analysis_title">費用分析</string>
+    <string name="cost_by_provider">依服務商</string>
+    <string name="cost_by_model">依模型</string>
+    <string name="cost_daily_trend">日趨勢</string>
+    <string name="cost_7_days">7 天</string>
+    <string name="cost_14_days">14 天</string>
+    <string name="cost_30_days">30 天</string>
+    <string name="cost_no_data">該時間段無費用資料。</string>
+
     <!-- Export -->
     <string name="export_data">匯出資料</string>
     <string name="export_sessions">匯出工作階段 CSV</string>

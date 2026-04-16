@@ -19,11 +19,13 @@ import com.clipulse.android.ui.components.MetricCard
 import com.clipulse.android.ui.components.formatCost
 import com.clipulse.android.ui.components.formatUsage
 import com.clipulse.android.util.ExportUtil
+import androidx.compose.material.icons.filled.Analytics
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OverviewScreen(
     viewModel: OverviewViewModel = hiltViewModel(),
+    onCostAnalysis: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
@@ -162,6 +164,17 @@ fun OverviewScreen(
                         },
                         modifier = Modifier.weight(1f),
                     )
+                }
+                Spacer(Modifier.height(16.dp))
+
+                // Cost Analysis entry point
+                OutlinedButton(
+                    onClick = onCostAnalysis,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Default.Analytics, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.cost_analysis_title))
                 }
             } else if (!state.isLoading) {
                 Box(

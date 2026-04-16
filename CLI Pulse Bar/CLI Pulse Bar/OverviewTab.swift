@@ -350,23 +350,33 @@ struct OverviewTab: View {
                 }
             }
 
-            // Model-level cost breakdown (collapsible)
+            // Model-level cost breakdown with bar chart
             if !state.costSummary.costByModel.isEmpty {
                 DisclosureGroup("By Model") {
-                    ForEach(state.costSummary.costByModel.prefix(8)) { item in
-                        HStack {
-                            Text(item.model)
-                                .font(.system(size: 9))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                            Spacer()
-                            Text("\(TokenFormatter.format(item.totalTokens)) tokens")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.tertiary)
-                            Text(CostFormatter.format(item.cost))
-                                .font(.system(size: 9, weight: .medium, design: .monospaced))
-                                .foregroundStyle(.green)
-                                .frame(width: 55, alignment: .trailing)
+                    let sorted = state.costSummary.costByModel.sorted { $0.cost > $1.cost }
+                    let maxCost = sorted.first?.cost ?? 1
+                    ForEach(sorted.prefix(10)) { item in
+                        VStack(spacing: 2) {
+                            HStack {
+                                Text(item.model)
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                Spacer()
+                                Text("\(TokenFormatter.format(item.totalTokens)) tokens")
+                                    .font(.system(size: 8))
+                                    .foregroundStyle(.tertiary)
+                                Text(CostFormatter.format(item.cost))
+                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(.green)
+                                    .frame(width: 55, alignment: .trailing)
+                            }
+                            GeometryReader { geo in
+                                Capsule()
+                                    .fill(Color.green.opacity(0.3))
+                                    .frame(width: maxCost > 0 ? geo.size.width * CGFloat(item.cost / maxCost) : 0, height: 3)
+                            }
+                            .frame(height: 3)
                         }
                     }
                 }

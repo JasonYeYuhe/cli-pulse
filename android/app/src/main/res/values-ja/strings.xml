@@ -79,6 +79,16 @@
     <string name="subscription_90_days">90日間</string>
     <string name="subscription_365_days">365日間</string>
 
+    <!-- Cost Analysis -->
+    <string name="cost_analysis_title">コスト分析</string>
+    <string name="cost_by_provider">プロバイダー別コスト</string>
+    <string name="cost_by_model">モデル別コスト</string>
+    <string name="cost_daily_trend">日次トレンド</string>
+    <string name="cost_7_days">7日間</string>
+    <string name="cost_14_days">14日間</string>
+    <string name="cost_30_days">30日間</string>
+    <string name="cost_no_data">この期間のコストデータがありません。</string>
+
     <!-- Export -->
     <string name="export_data">データをエクスポート</string>
     <string name="export_sessions">セッション CSV エクスポート</string>

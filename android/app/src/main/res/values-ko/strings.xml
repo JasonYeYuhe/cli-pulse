@@ -79,6 +79,16 @@
     <string name="subscription_90_days">90일</string>
     <string name="subscription_365_days">365일</string>
 
+    <!-- Cost Analysis -->
+    <string name="cost_analysis_title">비용 분석</string>
+    <string name="cost_by_provider">제공자별 비용</string>
+    <string name="cost_by_model">모델별 비용</string>
+    <string name="cost_daily_trend">일일 추세</string>
+    <string name="cost_7_days">7일</string>
+    <string name="cost_14_days">14일</string>
+    <string name="cost_30_days">30일</string>
+    <string name="cost_no_data">이 기간의 비용 데이터가 없습니다.</string>
+
     <!-- Export -->
     <string name="export_data">데이터 내보내기</string>
     <string name="export_sessions">세션 CSV 내보내기</string>
