@@ -332,3 +332,11 @@
 /* ── Auth (OAuth) ── */
 "auth.sign_in_google" = "使用 Google 登录";
 "auth.sign_in_github" = "使用 GitHub 登录";
+
+/* ── 预测 ── */
+"forecast.title" = "费用预测";
+"forecast.month_end" = "月末预估";
+"forecast.so_far" = "已花费";
+"forecast.confidence" = "置信范围";
+"forecast.estimate" = "预估";
+"forecast.insufficient_data" = "数据不足，无法预测";

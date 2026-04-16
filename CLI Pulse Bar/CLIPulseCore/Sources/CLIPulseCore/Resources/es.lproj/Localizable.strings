@@ -328,3 +328,11 @@
 /* ── Auth (OAuth) ── */
 "auth.sign_in_google" = "Iniciar sesión con Google";
 "auth.sign_in_github" = "Iniciar sesión con GitHub";
+
+/* ── Pronóstico ── */
+"forecast.title" = "Pronóstico de costos";
+"forecast.month_end" = "Estimación fin de mes";
+"forecast.so_far" = "Gastado hasta ahora";
+"forecast.confidence" = "Rango de confianza";
+"forecast.estimate" = "Estimación";
+"forecast.insufficient_data" = "Se necesitan más datos para el pronóstico";

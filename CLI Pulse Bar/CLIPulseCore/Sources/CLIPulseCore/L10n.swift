@@ -418,6 +418,17 @@ public enum L10n {
         public static var testWebhook: String { tr("integrations.test_webhook") }
     }
 
+    // MARK: - Forecast
+
+    public enum forecast {
+        public static var title: String { tr("forecast.title") }
+        public static var monthEnd: String { tr("forecast.month_end") }
+        public static var soFar: String { tr("forecast.so_far") }
+        public static var confidence: String { tr("forecast.confidence") }
+        public static var estimate: String { tr("forecast.estimate") }
+        public static var insufficientData: String { tr("forecast.insufficient_data") }
+    }
+
     // MARK: - Common
 
     public enum common {

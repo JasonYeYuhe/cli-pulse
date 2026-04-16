@@ -873,6 +873,12 @@ extension AppState {
         buildProviderDetails()
         updateCostSummary()
         publishWidgetData()
+        Task { await refreshCostForecast() }
+    }
+
+    private func refreshCostForecast() async {
+        let usage = await api.fetchDailyUsage(days: 30)
+        costForecast = CostForecastEngine.forecast(from: usage)
     }
 
     func refreshContext() -> DataRefreshManager.Context {

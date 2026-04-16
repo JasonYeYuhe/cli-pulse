@@ -328,3 +328,11 @@
 /* ── Auth (OAuth) ── */
 "auth.sign_in_google" = "Google로 로그인";
 "auth.sign_in_github" = "GitHub로 로그인";
+
+/* ── 예측 ── */
+"forecast.title" = "비용 예측";
+"forecast.month_end" = "월말 예상";
+"forecast.so_far" = "현재까지 지출";
+"forecast.confidence" = "신뢰 범위";
+"forecast.estimate" = "예상";
+"forecast.insufficient_data" = "예측을 위한 데이터가 부족합니다";

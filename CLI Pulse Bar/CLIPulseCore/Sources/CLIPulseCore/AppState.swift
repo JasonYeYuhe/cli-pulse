@@ -43,6 +43,9 @@ public final class AppState: ObservableObject {
     // MARK: - Cost Usage Scan (precise token data from local JSONL logs, macOS only)
     @Published public var costUsageScanResult: CostUsageScanResult?
 
+    // MARK: - Cost Forecast
+    @Published public var costForecast: CostForecast?
+
     // MARK: - Auth Flow
     @Published public var otpSent = false
     @Published public var otpEmail = ""

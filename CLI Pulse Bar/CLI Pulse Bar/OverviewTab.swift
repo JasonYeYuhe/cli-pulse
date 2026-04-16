@@ -36,6 +36,11 @@ struct OverviewTab: View {
                     // Cost summary
                     if state.showCost {
                         costSection
+
+                        // Cost forecast
+                        if let forecast = state.costForecast {
+                            forecastCard(forecast)
+                        }
                     }
 
                     providerBreakdown(dash)
@@ -384,6 +389,80 @@ struct OverviewTab: View {
     }
 
     // MARK: - Provider Breakdown
+
+    // MARK: - Cost Forecast
+
+    private func forecastCard(_ forecast: CostForecast) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                SectionHeader(title: L10n.forecast.title, icon: "chart.line.uptrend.xyaxis")
+                Spacer()
+                Text(L10n.forecast.estimate)
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundStyle(.blue)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Color.blue.opacity(0.15))
+                    .clipShape(Capsule())
+            }
+
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.forecast.monthEnd)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                    Text(CostFormatter.format(forecast.predictedMonthTotal))
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.blue)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.forecast.soFar)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                    Text(CostFormatter.format(forecast.actualToDate))
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.green)
+                }
+                Spacer()
+            }
+
+            // Confidence range
+            if forecast.isReliable {
+                HStack(spacing: 4) {
+                    Text(L10n.forecast.confidence)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                    Text("\(CostFormatter.format(forecast.lowerBound)) – \(CostFormatter.format(forecast.upperBound))")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text(L10n.forecast.insufficientData)
+                    .font(.system(size: 9))
+                    .foregroundStyle(.orange)
+            }
+
+            // Progress bar: days elapsed
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.blue.opacity(0.1))
+                        .frame(height: 4)
+                    Capsule()
+                        .fill(Color.blue)
+                        .frame(width: geo.size.width * CGFloat(forecast.currentDayOfMonth) / CGFloat(forecast.daysInMonth), height: 4)
+                }
+            }
+            .frame(height: 4)
+
+            Text("\(forecast.currentDayOfMonth)/\(forecast.daysInMonth) days")
+                .font(.system(size: 8))
+                .foregroundStyle(.quaternary)
+        }
+        .padding(10)
+        .background(.background.opacity(0.6))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
 
     private func providerBreakdown(_ dash: DashboardSummary) -> some View {
         VStack(alignment: .leading, spacing: 8) {

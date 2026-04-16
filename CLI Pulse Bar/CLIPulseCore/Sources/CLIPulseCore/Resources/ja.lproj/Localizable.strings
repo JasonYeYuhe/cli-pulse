@@ -328,3 +328,11 @@
 /* ── Auth (OAuth) ── */
 "auth.sign_in_google" = "Googleでサインイン";
 "auth.sign_in_github" = "GitHubでサインイン";
+
+/* ── 予測 ── */
+"forecast.title" = "コスト予測";
+"forecast.month_end" = "月末予測";
+"forecast.so_far" = "現在までの支出";
+"forecast.confidence" = "信頼区間";
+"forecast.estimate" = "予測";
+"forecast.insufficient_data" = "予測に十分なデータがありません";
