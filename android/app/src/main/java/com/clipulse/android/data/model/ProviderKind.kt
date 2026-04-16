@@ -25,7 +25,8 @@ enum class ProviderKind(val displayValue: String) {
     Kiro("Kiro"),
     VertexAI("Vertex AI"),
     Perplexity("Perplexity"),
-    VolcanoEngine("Volcano Engine");
+    VolcanoEngine("Volcano Engine"),
+    GLM("GLM");
 
     companion object {
         fun fromString(value: String): ProviderKind? =

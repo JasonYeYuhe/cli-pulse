@@ -37,4 +37,5 @@ val ProviderKind.icon: ImageVector
         ProviderKind.VertexAI -> Icons.Default.Circle
         ProviderKind.Perplexity -> Icons.Default.Search
         ProviderKind.VolcanoEngine -> Icons.Default.LocalFireDepartment
+        ProviderKind.GLM -> Icons.Default.Chat
     }

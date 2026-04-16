@@ -60,6 +60,7 @@ public enum CollectorRegistry {
         MiniMaxCollector(),
         AugmentCollector(),
         VolcanoEngineCollector(),
+        GLMCollector(),
     ]
 
     /// Returns the collector for a given provider, if one exists and is available.

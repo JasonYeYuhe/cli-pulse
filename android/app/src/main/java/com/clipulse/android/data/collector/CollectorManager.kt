@@ -27,6 +27,7 @@ class CollectorManager(
         ProviderKind.Cursor to CursorCollector(),
         ProviderKind.Ollama to OllamaCollector(),
         ProviderKind.Augment to AugmentCollector(),
+        ProviderKind.GLM to GLMCollector(),
     )
 
     fun availableCollectors(): List<ProviderKind> =

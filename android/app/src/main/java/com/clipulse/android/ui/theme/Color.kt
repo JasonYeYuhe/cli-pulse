@@ -44,6 +44,7 @@ fun providerColor(kind: ProviderKind): Color = when (kind) {
     ProviderKind.Droid -> Color(0xFF6B7280)
     ProviderKind.Antigravity -> Color(0xFF6B7280)
     ProviderKind.Synthetic -> Color(0xFF6B7280)
+    ProviderKind.GLM -> Color(0xFF1A73E8)
 }
 
 // Severity colors

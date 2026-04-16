@@ -33,6 +33,7 @@ public enum ProviderKind: String, Codable, CaseIterable, Identifiable, Sendable 
     case vertexAI = "Vertex AI"
     case perplexity = "Perplexity"
     case volcanoEngine = "Volcano Engine"
+    case glm = "GLM"
 
     public var id: String { rawValue }
 
@@ -53,6 +54,7 @@ public enum ProviderKind: String, Codable, CaseIterable, Identifiable, Sendable 
         case .vertexAI: return 0.003
         case .perplexity: return 0.002
         case .volcanoEngine: return 0.001
+        case .glm: return 0.001
         default: return 0.001
         }
     }
@@ -84,6 +86,7 @@ public enum ProviderKind: String, Codable, CaseIterable, Identifiable, Sendable 
         case .vertexAI: return "v.circle"
         case .perplexity: return "magnifyingglass.circle"
         case .volcanoEngine: return "flame"
+        case .glm: return "text.bubble"
         }
     }
 }
