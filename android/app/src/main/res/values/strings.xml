@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">CLI Pulse</string>
+
+    <!-- Tabs -->
     <string name="tab_overview">Overview</string>
     <string name="tab_providers">Providers</string>
     <string name="tab_sessions">Sessions</string>
     <string name="tab_alerts">Alerts</string>
     <string name="tab_settings">Settings</string>
+
+    <!-- Auth -->
     <string name="sign_in_google">Sign in with Google</string>
     <string name="sign_in_email">Sign in with Email</string>
     <string name="sign_in_password">Sign in with Password</string>
@@ -14,6 +18,9 @@
     <string name="verify">Verify</string>
     <string name="sign_out">Sign Out</string>
     <string name="delete_account">Delete Account</string>
+    <string name="try_demo">Try Demo</string>
+
+    <!-- Dashboard -->
     <string name="loading">Loading…</string>
     <string name="error_generic">Something went wrong</string>
     <string name="today_usage">Today\'s Usage</string>
@@ -21,4 +28,61 @@
     <string name="active_sessions">Active Sessions</string>
     <string name="online_devices">Online Devices</string>
     <string name="unresolved_alerts">Alerts</string>
+
+    <!-- Settings -->
+    <string name="settings_account">Account</string>
+    <string name="settings_tier">Tier: %1$s</string>
+    <string name="settings_subscription">Subscription</string>
+    <string name="settings_devices">Devices</string>
+    <string name="settings_teams">Teams</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_enabled">Enabled</string>
+    <string name="settings_thresholds">Thresholds</string>
+    <string name="settings_integrations">Integrations</string>
+    <string name="settings_webhook_notifications">Webhook Notifications</string>
+    <string name="settings_webhook_url_hint">Webhook URL (Discord / Slack)</string>
+    <string name="settings_save_url">Save URL</string>
+    <string name="settings_test">Test</string>
+    <string name="settings_exit_demo">Exit Demo Mode</string>
+    <string name="settings_delete_title">Delete Account?</string>
+    <string name="settings_delete_message">This will permanently delete all your data. This action cannot be undone.</string>
+    <string name="settings_save">Save</string>
+
+    <!-- Team -->
+    <string name="team_no_members">No members yet.</string>
+    <string name="team_no_teams">No teams yet</string>
+    <string name="team_no_teams_hint">Create a team to share usage monitoring with your colleagues.</string>
+    <string name="team_role">Role: %1$s</string>
+    <string name="team_create">Create Team</string>
+    <string name="team_name_hint">Team Name</string>
+    <string name="team_invite_member">Invite Member</string>
+    <string name="team_email_hint">Email address</string>
+
+    <!-- Subscription -->
+    <string name="subscription_title">Subscription</string>
+    <string name="subscription_current_plan">Current Plan: %1$s</string>
+    <string name="subscription_processing">Payment processing…</string>
+    <string name="subscription_plan_features">Plan Features</string>
+    <string name="subscription_providers">Providers</string>
+    <string name="subscription_devices">Devices</string>
+    <string name="subscription_data_retention">Data Retention</string>
+    <string name="subscription_available_plans">Available Plans</string>
+    <string name="subscription_restore">Restore Purchases</string>
+    <string name="subscription_per_year">/year</string>
+    <string name="subscription_per_month">/month</string>
+    <string name="subscription_current">Current</string>
+    <string name="subscription_subscribe">Subscribe</string>
+    <string name="subscription_unlimited">Unlimited</string>
+    <string name="subscription_7_days">7 days</string>
+    <string name="subscription_90_days">90 days</string>
+    <string name="subscription_365_days">365 days</string>
+
+    <!-- Common -->
+    <string name="cancel">Cancel</string>
+    <string name="create">Create</string>
+    <string name="invite">Invite</string>
+    <string name="remove">Remove</string>
+    <string name="back">Back</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
 </resources>

@@ -18,7 +18,7 @@ struct TeamView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Teams")
+                Text(L10n.team.title)
                     .font(.headline)
                 Spacer()
                 Button(action: { showCreateSheet = true }) {
@@ -30,7 +30,7 @@ struct TeamView: View {
             if !appState.subscriptionManager.isProOrAbove {
                 HStack {
                     Image(systemName: "lock.fill")
-                    Text("Team features require Pro or Team subscription")
+                    Text(L10n.team.requiresProHint)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -44,7 +44,7 @@ struct TeamView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity)
             } else if teams.isEmpty {
-                Text("No teams yet. Create one to get started.")
+                Text(L10n.team.noTeams)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 8)
@@ -210,7 +210,7 @@ private struct TeamDetailView: View {
                 Text(detail.team.name).font(.headline)
                 Spacer()
                 if canManage {
-                    Button("Invite", action: onInvite)
+                    Button(L10n.team.invite, action: onInvite)
                         .font(.caption)
                 }
             }
@@ -225,7 +225,7 @@ private struct TeamDetailView: View {
                 .foregroundStyle(.secondary)
             }
 
-            Text("Members").font(.subheadline).padding(.top, 4)
+            Text(L10n.team.members).font(.subheadline).padding(.top, 4)
             ForEach(detail.members) { member in
                 HStack {
                     VStack(alignment: .leading) {
@@ -236,11 +236,11 @@ private struct TeamDetailView: View {
                     if member.role != "owner" && canManage {
                         Menu {
                             if isOwner {
-                                Button("Make Admin") { onRoleChange(member.user_id, "admin") }
-                                Button("Make Member") { onRoleChange(member.user_id, "member") }
+                                Button(L10n.team.makeAdmin) { onRoleChange(member.user_id, "admin") }
+                                Button(L10n.team.makeMember) { onRoleChange(member.user_id, "member") }
                                 Divider()
                             }
-                            Button("Remove", role: .destructive) { onRemove(member.user_id) }
+                            Button(L10n.team.remove, role: .destructive) { onRemove(member.user_id) }
                         } label: {
                             Image(systemName: "ellipsis.circle")
                         }
@@ -249,12 +249,12 @@ private struct TeamDetailView: View {
             }
 
             if !detail.invites.isEmpty {
-                Text("Pending Invites").font(.subheadline).padding(.top, 4)
+                Text(L10n.team.pendingInvites).font(.subheadline).padding(.top, 4)
                 ForEach(detail.invites) { invite in
                     HStack {
                         Text(invite.email).font(.body)
                         Spacer()
-                        Text("Pending").font(.caption).foregroundStyle(.orange)
+                        Text(L10n.team.pending).font(.caption).foregroundStyle(.orange)
                     }
                 }
             }
@@ -269,13 +269,13 @@ private struct CreateTeamSheet: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("Create Team").font(.headline)
-            TextField("Team Name", text: $name)
+            Text(L10n.team.createTeam).font(.headline)
+            TextField(L10n.team.teamName, text: $name)
                 .textFieldStyle(.roundedBorder)
             HStack {
-                Button("Cancel") { dismiss() }
+                Button(L10n.common.cancel) { dismiss() }
                 Spacer()
-                Button("Create", action: onCreate).disabled(name.isEmpty)
+                Button(L10n.team.create, action: onCreate).disabled(name.isEmpty)
             }
         }
         .padding()
@@ -290,13 +290,13 @@ private struct InviteSheet: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("Invite Member").font(.headline)
-            TextField("Email Address", text: $email)
+            Text(L10n.team.inviteMember).font(.headline)
+            TextField(L10n.team.emailAddress, text: $email)
                 .textFieldStyle(.roundedBorder)
             HStack {
-                Button("Cancel") { dismiss() }
+                Button(L10n.common.cancel) { dismiss() }
                 Spacer()
-                Button("Send Invite", action: onInvite).disabled(email.isEmpty)
+                Button(L10n.team.sendInvite, action: onInvite).disabled(email.isEmpty)
             }
         }
         .padding()

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CLI Pulse</string>
+
+    <!-- Tabs -->
+    <string name="tab_overview">Resumen</string>
+    <string name="tab_providers">Proveedores</string>
+    <string name="tab_sessions">Sesiones</string>
+    <string name="tab_alerts">Alertas</string>
+    <string name="tab_settings">Ajustes</string>
+
+    <!-- Auth -->
+    <string name="sign_in_google">Iniciar sesión con Google</string>
+    <string name="sign_in_email">Iniciar sesión con email</string>
+    <string name="sign_in_password">Iniciar sesión con contraseña</string>
+    <string name="enter_otp">Introducir código de verificación</string>
+    <string name="send_code">Enviar código</string>
+    <string name="verify">Verificar</string>
+    <string name="sign_out">Cerrar sesión</string>
+    <string name="delete_account">Eliminar cuenta</string>
+    <string name="try_demo">Probar demo</string>
+
+    <!-- Dashboard -->
+    <string name="loading">Cargando…</string>
+    <string name="error_generic">Algo salió mal</string>
+    <string name="today_usage">Uso de hoy</string>
+    <string name="estimated_cost">Costo est.</string>
+    <string name="active_sessions">Sesiones activas</string>
+    <string name="online_devices">Dispositivos en línea</string>
+    <string name="unresolved_alerts">Alertas</string>
+
+    <!-- Settings -->
+    <string name="settings_account">Cuenta</string>
+    <string name="settings_tier">Nivel: %1$s</string>
+    <string name="settings_subscription">Suscripción</string>
+    <string name="settings_devices">Dispositivos</string>
+    <string name="settings_teams">Equipos</string>
+    <string name="settings_notifications">Notificaciones</string>
+    <string name="settings_enabled">Activado</string>
+    <string name="settings_thresholds">Umbrales</string>
+    <string name="settings_integrations">Integraciones</string>
+    <string name="settings_webhook_notifications">Notificaciones Webhook</string>
+    <string name="settings_webhook_url_hint">URL de Webhook (Discord / Slack)</string>
+    <string name="settings_save_url">Guardar URL</string>
+    <string name="settings_test">Probar</string>
+    <string name="settings_exit_demo">Salir del modo demo</string>
+    <string name="settings_delete_title">¿Eliminar cuenta?</string>
+    <string name="settings_delete_message">Esto eliminará permanentemente todos tus datos. Esta acción no se puede deshacer.</string>
+    <string name="settings_save">Guardar</string>
+
+    <!-- Team -->
+    <string name="team_no_members">Sin miembros aún.</string>
+    <string name="team_no_teams">Sin equipos aún</string>
+    <string name="team_no_teams_hint">Crea un equipo para compartir el monitoreo de uso con tus colegas.</string>
+    <string name="team_role">Rol: %1$s</string>
+    <string name="team_create">Crear equipo</string>
+    <string name="team_name_hint">Nombre del equipo</string>
+    <string name="team_invite_member">Invitar miembro</string>
+    <string name="team_email_hint">Dirección de email</string>
+
+    <!-- Subscription -->
+    <string name="subscription_title">Suscripción</string>
+    <string name="subscription_current_plan">Plan actual: %1$s</string>
+    <string name="subscription_processing">Procesando pago…</string>
+    <string name="subscription_plan_features">Características del plan</string>
+    <string name="subscription_providers">Proveedores</string>
+    <string name="subscription_devices">Dispositivos</string>
+    <string name="subscription_data_retention">Retención de datos</string>
+    <string name="subscription_available_plans">Planes disponibles</string>
+    <string name="subscription_restore">Restaurar compras</string>
+    <string name="subscription_per_year">/año</string>
+    <string name="subscription_per_month">/mes</string>
+    <string name="subscription_current">Actual</string>
+    <string name="subscription_subscribe">Suscribirse</string>
+    <string name="subscription_unlimited">Ilimitado</string>
+    <string name="subscription_7_days">7 días</string>
+    <string name="subscription_90_days">90 días</string>
+    <string name="subscription_365_days">365 días</string>
+
+    <!-- Common -->
+    <string name="cancel">Cancelar</string>
+    <string name="create">Crear</string>
+    <string name="invite">Invitar</string>
+    <string name="remove">Eliminar</string>
+    <string name="back">Atrás</string>
+    <string name="save">Guardar</string>
+    <string name="delete">Eliminar</string>
+</resources>

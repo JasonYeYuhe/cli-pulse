@@ -10,8 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.clipulse.android.R
 
 @Composable
 fun TeamScreen(
@@ -28,7 +30,7 @@ fun TeamScreen(
         topBar = {
             @OptIn(ExperimentalMaterial3Api::class)
             TopAppBar(
-                title = { Text(state.selectedTeam?.name ?: "Teams") },
+                title = { Text(state.selectedTeam?.name ?: stringResource(R.string.settings_teams)) },
                 navigationIcon = {
                     IconButton(onClick = {
                         if (state.selectedTeam != null) {
@@ -37,17 +39,17 @@ fun TeamScreen(
                             onBack()
                         }
                     }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     if (state.selectedTeam != null) {
                         IconButton(onClick = { showInviteDialog = true }) {
-                            Icon(Icons.Filled.PersonAdd, contentDescription = "Invite Member")
+                            Icon(Icons.Filled.PersonAdd, contentDescription = stringResource(R.string.team_invite_member))
                         }
                     } else {
                         IconButton(onClick = { showCreateDialog = true }) {
-                            Icon(Icons.Filled.Add, contentDescription = "Create Team")
+                            Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.team_create))
                         }
                     }
                 },
@@ -68,7 +70,7 @@ fun TeamScreen(
         if (state.selectedTeam != null) {
             // ── Member list for selected team ──
             if (state.members.isEmpty() && !state.isLoading) {
-                Text("No members yet.", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.team_no_members), style = MaterialTheme.typography.bodyMedium)
             }
             for (member in state.members) {
                 Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -97,7 +99,7 @@ fun TeamScreen(
                             IconButton(onClick = {
                                 state.selectedTeam?.id?.let { teamId -> viewModel.removeMember(teamId, member.userId) }
                             }) {
-                                Icon(Icons.Filled.Close, contentDescription = "Remove")
+                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.remove))
                             }
                         }
                     }
@@ -108,10 +110,10 @@ fun TeamScreen(
             if (state.teams.isEmpty() && !state.isLoading) {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("No teams yet", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.team_no_teams), style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Create a team to share usage monitoring with your colleagues.",
+                            stringResource(R.string.team_no_teams_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -134,7 +136,7 @@ fun TeamScreen(
                         Column {
                             Text(team.name, style = MaterialTheme.typography.titleMedium)
                             Text(
-                                "Role: ${team.role}",
+                                stringResource(R.string.team_role, team.role),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -155,12 +157,12 @@ fun TeamScreen(
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text("Create Team") },
+            title = { Text(stringResource(R.string.team_create)) },
             text = {
                 OutlinedTextField(
                     value = newTeamName,
                     onValueChange = { newTeamName = it },
-                    label = { Text("Team Name") },
+                    label = { Text(stringResource(R.string.team_name_hint)) },
                     singleLine = true,
                 )
             },
@@ -169,10 +171,10 @@ fun TeamScreen(
                     viewModel.createTeam(newTeamName)
                     newTeamName = ""
                     showCreateDialog = false
-                }) { Text("Create") }
+                }) { Text(stringResource(R.string.create)) }
             },
             dismissButton = {
-                TextButton(onClick = { showCreateDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showCreateDialog = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -180,12 +182,12 @@ fun TeamScreen(
     if (showInviteDialog) {
         AlertDialog(
             onDismissRequest = { showInviteDialog = false },
-            title = { Text("Invite Member") },
+            title = { Text(stringResource(R.string.team_invite_member)) },
             text = {
                 OutlinedTextField(
                     value = inviteEmail,
                     onValueChange = { inviteEmail = it },
-                    label = { Text("Email address") },
+                    label = { Text(stringResource(R.string.team_email_hint)) },
                     singleLine = true,
                 )
             },
@@ -194,10 +196,10 @@ fun TeamScreen(
                     state.selectedTeam?.let { viewModel.inviteMember(it.id, inviteEmail) }
                     inviteEmail = ""
                     showInviteDialog = false
-                }) { Text("Invite") }
+                }) { Text(stringResource(R.string.invite)) }
             },
             dismissButton = {
-                TextButton(onClick = { showInviteDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showInviteDialog = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }

@@ -299,3 +299,32 @@
 "onboarding.set_up_sync" = "Configurar sincronización en la nube";
 "onboarding.synced_mode" = "Sincronización en la nube — datos sincronizando entre dispositivos";
 "onboarding.not_synced_hint" = "Configure el auxiliar en su Mac para sincronización multidispositivo, historial y acceso desde iPhone.";
+
+/* ── Equipo ── */
+"team.title" = "Equipos";
+"team.requires_pro_hint" = "Las funciones de equipo requieren suscripción Pro o Team";
+"team.no_teams" = "Sin equipos aún. Cree uno para empezar.";
+"team.members" = "Miembros";
+"team.pending_invites" = "Invitaciones pendientes";
+"team.pending" = "Pendiente";
+"team.invite" = "Invitar";
+"team.make_admin" = "Hacer admin";
+"team.make_member" = "Hacer miembro";
+"team.remove" = "Eliminar";
+"team.create_team" = "Crear equipo";
+"team.team_name" = "Nombre del equipo";
+"team.create" = "Crear";
+"team.invite_member" = "Invitar miembro";
+"team.email_address" = "Dirección de email";
+"team.send_invite" = "Enviar invitación";
+
+/* ── Integraciones ── */
+"integrations.title" = "Integraciones";
+"integrations.webhook_notifications" = "Notificaciones Webhook";
+"integrations.webhook_hint" = "Enviar alertas a Discord, Slack o endpoint personalizado";
+"integrations.webhook_url_placeholder" = "URL de Webhook (Discord / Slack)";
+"integrations.test_webhook" = "Probar Webhook";
+
+/* ── Auth (OAuth) ── */
+"auth.sign_in_google" = "Iniciar sesión con Google";
+"auth.sign_in_github" = "Iniciar sesión con GitHub";

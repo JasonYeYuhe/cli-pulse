@@ -299,3 +299,32 @@
 "onboarding.set_up_sync" = "クラウド同期をセットアップ";
 "onboarding.synced_mode" = "クラウド同期 — デバイス間でデータ同期中";
 "onboarding.not_synced_hint" = "Macでヘルパーをセットアップして、マルチデバイス同期、履歴、iPhoneアクセスを有効にしましょう。";
+
+/* ── チーム ── */
+"team.title" = "チーム";
+"team.requires_pro_hint" = "チーム機能にはProまたはTeamサブスクリプションが必要です";
+"team.no_teams" = "チームはまだありません。作成して始めましょう。";
+"team.members" = "メンバー";
+"team.pending_invites" = "保留中の招待";
+"team.pending" = "保留中";
+"team.invite" = "招待";
+"team.make_admin" = "管理者にする";
+"team.make_member" = "メンバーにする";
+"team.remove" = "削除";
+"team.create_team" = "チームを作成";
+"team.team_name" = "チーム名";
+"team.create" = "作成";
+"team.invite_member" = "メンバーを招待";
+"team.email_address" = "メールアドレス";
+"team.send_invite" = "招待を送信";
+
+/* ── 連携 ── */
+"integrations.title" = "連携";
+"integrations.webhook_notifications" = "Webhook通知";
+"integrations.webhook_hint" = "Discord、Slack、またはカスタムエンドポイントにアラートを送信";
+"integrations.webhook_url_placeholder" = "Webhook URL (Discord / Slack)";
+"integrations.test_webhook" = "Webhookをテスト";
+
+/* ── Auth (OAuth) ── */
+"auth.sign_in_google" = "Googleでサインイン";
+"auth.sign_in_github" = "GitHubでサインイン";

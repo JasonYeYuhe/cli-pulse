@@ -87,7 +87,7 @@ struct iOSLoginView: View {
                     } label: {
                         HStack {
                             Image(systemName: "globe")
-                            Text("Sign in with Google")
+                            Text(L10n.auth.signInGoogle)
                                 .font(.headline)
                         }
                         .frame(maxWidth: .infinity)
@@ -103,7 +103,7 @@ struct iOSLoginView: View {
                     } label: {
                         HStack {
                             Image(systemName: "chevron.left.forwardslash.chevron.right")
-                            Text("Sign in with GitHub")
+                            Text(L10n.auth.signInGithub)
                                 .font(.headline)
                         }
                         .frame(maxWidth: .infinity)

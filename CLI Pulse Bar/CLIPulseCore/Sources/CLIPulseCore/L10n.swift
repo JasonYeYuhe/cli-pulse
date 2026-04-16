@@ -195,6 +195,8 @@ public enum L10n {
         public static var codePlaceholder: String { tr("auth.code_placeholder") }
         public static var passwordOptional: String { tr("auth.password_optional") }
         public static var passwordPlaceholder: String { tr("auth.password_placeholder") }
+        public static var signInGoogle: String { tr("auth.sign_in_google") }
+        public static var signInGithub: String { tr("auth.sign_in_github") }
     }
 
     // MARK: - Subscription
@@ -381,6 +383,39 @@ public enum L10n {
         public static var setUpSync: String { tr("onboarding.set_up_sync") }
         public static var syncedMode: String { tr("onboarding.synced_mode") }
         public static var notSyncedHint: String { tr("onboarding.not_synced_hint") }
+    }
+
+    // MARK: - Common
+
+    // MARK: - Team
+
+    public enum team {
+        public static var title: String { tr("team.title") }
+        public static var requiresProHint: String { tr("team.requires_pro_hint") }
+        public static var noTeams: String { tr("team.no_teams") }
+        public static var members: String { tr("team.members") }
+        public static var pendingInvites: String { tr("team.pending_invites") }
+        public static var pending: String { tr("team.pending") }
+        public static var invite: String { tr("team.invite") }
+        public static var makeAdmin: String { tr("team.make_admin") }
+        public static var makeMember: String { tr("team.make_member") }
+        public static var remove: String { tr("team.remove") }
+        public static var createTeam: String { tr("team.create_team") }
+        public static var teamName: String { tr("team.team_name") }
+        public static var create: String { tr("team.create") }
+        public static var inviteMember: String { tr("team.invite_member") }
+        public static var emailAddress: String { tr("team.email_address") }
+        public static var sendInvite: String { tr("team.send_invite") }
+    }
+
+    // MARK: - Integrations
+
+    public enum integrations {
+        public static var title: String { tr("integrations.title") }
+        public static var webhookNotifications: String { tr("integrations.webhook_notifications") }
+        public static var webhookHint: String { tr("integrations.webhook_hint") }
+        public static var webhookURLPlaceholder: String { tr("integrations.webhook_url_placeholder") }
+        public static var testWebhook: String { tr("integrations.test_webhook") }
     }
 
     // MARK: - Common

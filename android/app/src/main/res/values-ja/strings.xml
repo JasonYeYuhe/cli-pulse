@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">CLI Pulse</string>
+
+    <!-- Tabs -->
     <string name="tab_overview">概要</string>
     <string name="tab_providers">プロバイダー</string>
     <string name="tab_sessions">セッション</string>
     <string name="tab_alerts">アラート</string>
     <string name="tab_settings">設定</string>
+
+    <!-- Auth -->
     <string name="sign_in_google">Googleでサインイン</string>
     <string name="sign_in_email">メールでサインイン</string>
     <string name="sign_in_password">パスワードでサインイン</string>
@@ -14,6 +18,9 @@
     <string name="verify">確認</string>
     <string name="sign_out">サインアウト</string>
     <string name="delete_account">アカウント削除</string>
+    <string name="try_demo">デモを試す</string>
+
+    <!-- Dashboard -->
     <string name="loading">読み込み中…</string>
     <string name="error_generic">エラーが発生しました</string>
     <string name="today_usage">本日の使用量</string>
@@ -21,4 +28,61 @@
     <string name="active_sessions">アクティブセッション</string>
     <string name="online_devices">オンラインデバイス</string>
     <string name="unresolved_alerts">未解決アラート</string>
+
+    <!-- Settings -->
+    <string name="settings_account">アカウント</string>
+    <string name="settings_tier">プラン: %1$s</string>
+    <string name="settings_subscription">サブスクリプション</string>
+    <string name="settings_devices">デバイス</string>
+    <string name="settings_teams">チーム</string>
+    <string name="settings_notifications">通知</string>
+    <string name="settings_enabled">有効</string>
+    <string name="settings_thresholds">閾値</string>
+    <string name="settings_integrations">連携</string>
+    <string name="settings_webhook_notifications">Webhook通知</string>
+    <string name="settings_webhook_url_hint">Webhook URL (Discord / Slack)</string>
+    <string name="settings_save_url">URLを保存</string>
+    <string name="settings_test">テスト</string>
+    <string name="settings_exit_demo">デモモードを終了</string>
+    <string name="settings_delete_title">アカウントを削除しますか？</string>
+    <string name="settings_delete_message">すべてのデータが完全に削除されます。この操作は元に戻せません。</string>
+    <string name="settings_save">保存</string>
+
+    <!-- Team -->
+    <string name="team_no_members">メンバーはまだいません。</string>
+    <string name="team_no_teams">チームはまだありません</string>
+    <string name="team_no_teams_hint">チームを作成して、同僚と使用状況の監視を共有しましょう。</string>
+    <string name="team_role">役割: %1$s</string>
+    <string name="team_create">チームを作成</string>
+    <string name="team_name_hint">チーム名</string>
+    <string name="team_invite_member">メンバーを招待</string>
+    <string name="team_email_hint">メールアドレス</string>
+
+    <!-- Subscription -->
+    <string name="subscription_title">サブスクリプション</string>
+    <string name="subscription_current_plan">現在のプラン: %1$s</string>
+    <string name="subscription_processing">支払い処理中…</string>
+    <string name="subscription_plan_features">プラン機能</string>
+    <string name="subscription_providers">プロバイダー</string>
+    <string name="subscription_devices">デバイス</string>
+    <string name="subscription_data_retention">データ保持期間</string>
+    <string name="subscription_available_plans">利用可能なプラン</string>
+    <string name="subscription_restore">購入を復元</string>
+    <string name="subscription_per_year">/年</string>
+    <string name="subscription_per_month">/月</string>
+    <string name="subscription_current">現在</string>
+    <string name="subscription_subscribe">購読する</string>
+    <string name="subscription_unlimited">無制限</string>
+    <string name="subscription_7_days">7日間</string>
+    <string name="subscription_90_days">90日間</string>
+    <string name="subscription_365_days">365日間</string>
+
+    <!-- Common -->
+    <string name="cancel">キャンセル</string>
+    <string name="create">作成</string>
+    <string name="invite">招待</string>
+    <string name="remove">削除</string>
+    <string name="back">戻る</string>
+    <string name="save">保存</string>
+    <string name="delete">削除</string>
 </resources>

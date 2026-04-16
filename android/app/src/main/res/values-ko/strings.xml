@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">CLI Pulse</string>
+
+    <!-- Tabs -->
     <string name="tab_overview">개요</string>
     <string name="tab_providers">제공자</string>
     <string name="tab_sessions">세션</string>
     <string name="tab_alerts">알림</string>
     <string name="tab_settings">설정</string>
+
+    <!-- Auth -->
     <string name="sign_in_google">Google로 로그인</string>
     <string name="sign_in_email">이메일로 로그인</string>
     <string name="sign_in_password">비밀번호로 로그인</string>
@@ -14,6 +18,9 @@
     <string name="verify">확인</string>
     <string name="sign_out">로그아웃</string>
     <string name="delete_account">계정 삭제</string>
+    <string name="try_demo">데모 사용</string>
+
+    <!-- Dashboard -->
     <string name="loading">로딩 중…</string>
     <string name="error_generic">문제가 발생했습니다</string>
     <string name="today_usage">오늘 사용량</string>
@@ -21,4 +28,61 @@
     <string name="active_sessions">활성 세션</string>
     <string name="online_devices">온라인 기기</string>
     <string name="unresolved_alerts">미해결 알림</string>
+
+    <!-- Settings -->
+    <string name="settings_account">계정</string>
+    <string name="settings_tier">등급: %1$s</string>
+    <string name="settings_subscription">구독</string>
+    <string name="settings_devices">기기</string>
+    <string name="settings_teams">팀</string>
+    <string name="settings_notifications">알림</string>
+    <string name="settings_enabled">활성화</string>
+    <string name="settings_thresholds">임계값</string>
+    <string name="settings_integrations">연동</string>
+    <string name="settings_webhook_notifications">Webhook 알림</string>
+    <string name="settings_webhook_url_hint">Webhook URL (Discord / Slack)</string>
+    <string name="settings_save_url">URL 저장</string>
+    <string name="settings_test">테스트</string>
+    <string name="settings_exit_demo">데모 모드 종료</string>
+    <string name="settings_delete_title">계정을 삭제하시겠습니까?</string>
+    <string name="settings_delete_message">모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.</string>
+    <string name="settings_save">저장</string>
+
+    <!-- Team -->
+    <string name="team_no_members">아직 멤버가 없습니다.</string>
+    <string name="team_no_teams">아직 팀이 없습니다</string>
+    <string name="team_no_teams_hint">팀을 만들어 동료와 사용 현황을 공유하세요.</string>
+    <string name="team_role">역할: %1$s</string>
+    <string name="team_create">팀 만들기</string>
+    <string name="team_name_hint">팀 이름</string>
+    <string name="team_invite_member">멤버 초대</string>
+    <string name="team_email_hint">이메일 주소</string>
+
+    <!-- Subscription -->
+    <string name="subscription_title">구독</string>
+    <string name="subscription_current_plan">현재 플랜: %1$s</string>
+    <string name="subscription_processing">결제 처리 중…</string>
+    <string name="subscription_plan_features">플랜 기능</string>
+    <string name="subscription_providers">제공자</string>
+    <string name="subscription_devices">기기</string>
+    <string name="subscription_data_retention">데이터 보존</string>
+    <string name="subscription_available_plans">이용 가능한 플랜</string>
+    <string name="subscription_restore">구매 복원</string>
+    <string name="subscription_per_year">/년</string>
+    <string name="subscription_per_month">/월</string>
+    <string name="subscription_current">현재</string>
+    <string name="subscription_subscribe">구독하기</string>
+    <string name="subscription_unlimited">무제한</string>
+    <string name="subscription_7_days">7일</string>
+    <string name="subscription_90_days">90일</string>
+    <string name="subscription_365_days">365일</string>
+
+    <!-- Common -->
+    <string name="cancel">취소</string>
+    <string name="create">만들기</string>
+    <string name="invite">초대</string>
+    <string name="remove">삭제</string>
+    <string name="back">뒤로</string>
+    <string name="save">저장</string>
+    <string name="delete">삭제</string>
 </resources>

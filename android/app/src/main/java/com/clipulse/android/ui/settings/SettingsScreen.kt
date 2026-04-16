@@ -9,8 +9,10 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.clipulse.android.R
 
 @Composable
 fun SettingsScreen(
@@ -28,13 +30,13 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
-        Text("Settings", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.tab_settings), style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(16.dp))
 
         // Account info
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Account", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.settings_account), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
                 state.userName?.let { name ->
                     Text(name, style = MaterialTheme.typography.bodyMedium)
@@ -43,19 +45,19 @@ fun SettingsScreen(
                     Text(email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.height(8.dp))
-                Text("Tier: ${state.tier}", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.settings_tier, state.tier), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = onManageSubscription, modifier = Modifier.weight(1f)) {
-                        Text("Subscription")
+                        Text(stringResource(R.string.settings_subscription))
                     }
                     OutlinedButton(onClick = onViewDevices, modifier = Modifier.weight(1f)) {
-                        Text("Devices")
+                        Text(stringResource(R.string.settings_devices))
                     }
                 }
                 Spacer(Modifier.height(4.dp))
                 OutlinedButton(onClick = onViewTeams, modifier = Modifier.fillMaxWidth()) {
-                    Text("Teams")
+                    Text(stringResource(R.string.settings_teams))
                 }
             }
         }
@@ -67,14 +69,14 @@ fun SettingsScreen(
         if (settings != null) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Notifications", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.settings_notifications), style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text("Enabled", modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.settings_enabled), modifier = Modifier.weight(1f))
                         Switch(
                             checked = settings.notificationsEnabled,
                             onCheckedChange = { viewModel.updateSetting("notifications_enabled", it) },
@@ -87,7 +89,7 @@ fun SettingsScreen(
 
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Thresholds", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.settings_thresholds), style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
 
                     EditableSettingRow("Usage Spike (tokens)", settings.usageSpikeThreshold) {
@@ -113,14 +115,14 @@ fun SettingsScreen(
         Spacer(Modifier.height(16.dp))
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Integrations", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.settings_integrations), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Webhook Notifications", modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.settings_webhook_notifications), modifier = Modifier.weight(1f))
                     Switch(
                         checked = state.webhookEnabled,
                         onCheckedChange = { viewModel.updateSetting("webhook_enabled", it) },
@@ -133,7 +135,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = webhookText,
                         onValueChange = { webhookText = it },
-                        label = { Text("Webhook URL (Discord / Slack)") },
+                        label = { Text(stringResource(R.string.settings_webhook_url_hint)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                     )
@@ -142,14 +144,14 @@ fun SettingsScreen(
                         OutlinedButton(
                             onClick = { viewModel.updateSetting("webhook_url", webhookText) },
                             enabled = webhookText.isNotBlank(),
-                        ) { Text("Save URL") }
+                        ) { Text(stringResource(R.string.settings_save_url)) }
                         OutlinedButton(
                             onClick = {
                                 viewModel.updateSetting("webhook_url", webhookText)
                                 viewModel.testWebhook()
                             },
                             enabled = webhookText.isNotBlank(),
-                        ) { Text("Test") }
+                        ) { Text(stringResource(R.string.settings_test)) }
                     }
                 }
             }
@@ -169,7 +171,7 @@ fun SettingsScreen(
             ) {
                 Icon(Icons.Filled.ExitToApp, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Exit Demo Mode")
+                Text(stringResource(R.string.settings_exit_demo))
             }
         } else {
             OutlinedButton(
@@ -181,7 +183,7 @@ fun SettingsScreen(
             ) {
                 Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Sign Out")
+                Text(stringResource(R.string.sign_out))
             }
         }
 
@@ -204,14 +206,14 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
         ) {
-            Text("Delete Account")
+            Text(stringResource(R.string.delete_account))
         }
 
         if (showDeleteConfirm) {
             AlertDialog(
                 onDismissRequest = { showDeleteConfirm = false },
-                title = { Text("Delete Account?") },
-                text = { Text("This will permanently delete all your data. This action cannot be undone.") },
+                title = { Text(stringResource(R.string.settings_delete_title)) },
+                text = { Text(stringResource(R.string.settings_delete_message)) },
                 confirmButton = {
                     TextButton(
                         onClick = {
@@ -220,12 +222,12 @@ fun SettingsScreen(
                         },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     ) {
-                        Text("Delete")
+                        Text(stringResource(R.string.delete))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteConfirm = false }) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.cancel))
                     }
                 },
             )
@@ -254,7 +256,7 @@ private fun EditableDecimalRow(label: String, currentValue: Double, onUpdate: (D
             IconButton(onClick = {
                 editing = false
                 textValue.toDoubleOrNull()?.let { onUpdate(it) }
-            }) { Icon(Icons.Filled.Check, contentDescription = "Save") }
+            }) { Icon(Icons.Filled.Check, contentDescription = null) }
         } else {
             TextButton(onClick = { editing = true }) {
                 Text(String.format("%.2f", currentValue))

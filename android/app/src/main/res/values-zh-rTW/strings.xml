@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">CLI Pulse</string>
+
+    <!-- Tabs -->
     <string name="tab_overview">總覽</string>
     <string name="tab_providers">服務商</string>
     <string name="tab_sessions">工作階段</string>
     <string name="tab_alerts">警告</string>
     <string name="tab_settings">設定</string>
+
+    <!-- Auth -->
     <string name="sign_in_google">使用 Google 登入</string>
     <string name="sign_in_email">使用電子郵件登入</string>
     <string name="sign_in_password">使用密碼登入</string>
@@ -14,6 +18,9 @@
     <string name="verify">驗證</string>
     <string name="sign_out">登出</string>
     <string name="delete_account">刪除帳號</string>
+    <string name="try_demo">試用示範</string>
+
+    <!-- Dashboard -->
     <string name="loading">載入中…</string>
     <string name="error_generic">發生錯誤</string>
     <string name="today_usage">今日用量</string>
@@ -21,4 +28,61 @@
     <string name="active_sessions">活躍工作階段</string>
     <string name="online_devices">線上裝置</string>
     <string name="unresolved_alerts">未處理警告</string>
+
+    <!-- Settings -->
+    <string name="settings_account">帳號</string>
+    <string name="settings_tier">等級: %1$s</string>
+    <string name="settings_subscription">訂閱</string>
+    <string name="settings_devices">裝置</string>
+    <string name="settings_teams">團隊</string>
+    <string name="settings_notifications">通知</string>
+    <string name="settings_enabled">已啟用</string>
+    <string name="settings_thresholds">閾值</string>
+    <string name="settings_integrations">整合</string>
+    <string name="settings_webhook_notifications">Webhook 通知</string>
+    <string name="settings_webhook_url_hint">Webhook URL (Discord / Slack)</string>
+    <string name="settings_save_url">儲存 URL</string>
+    <string name="settings_test">測試</string>
+    <string name="settings_exit_demo">離開示範模式</string>
+    <string name="settings_delete_title">刪除帳號？</string>
+    <string name="settings_delete_message">這將永久刪除您的所有資料，此操作無法復原。</string>
+    <string name="settings_save">儲存</string>
+
+    <!-- Team -->
+    <string name="team_no_members">尚無成員。</string>
+    <string name="team_no_teams">尚無團隊</string>
+    <string name="team_no_teams_hint">建立團隊，與同事共享使用監控。</string>
+    <string name="team_role">角色: %1$s</string>
+    <string name="team_create">建立團隊</string>
+    <string name="team_name_hint">團隊名稱</string>
+    <string name="team_invite_member">邀請成員</string>
+    <string name="team_email_hint">電子郵件地址</string>
+
+    <!-- Subscription -->
+    <string name="subscription_title">訂閱</string>
+    <string name="subscription_current_plan">目前方案: %1$s</string>
+    <string name="subscription_processing">付款處理中…</string>
+    <string name="subscription_plan_features">方案功能</string>
+    <string name="subscription_providers">服務商</string>
+    <string name="subscription_devices">裝置</string>
+    <string name="subscription_data_retention">資料保留</string>
+    <string name="subscription_available_plans">可用方案</string>
+    <string name="subscription_restore">恢復購買</string>
+    <string name="subscription_per_year">/年</string>
+    <string name="subscription_per_month">/月</string>
+    <string name="subscription_current">目前</string>
+    <string name="subscription_subscribe">訂閱</string>
+    <string name="subscription_unlimited">不限</string>
+    <string name="subscription_7_days">7 天</string>
+    <string name="subscription_90_days">90 天</string>
+    <string name="subscription_365_days">365 天</string>
+
+    <!-- Common -->
+    <string name="cancel">取消</string>
+    <string name="create">建立</string>
+    <string name="invite">邀請</string>
+    <string name="remove">移除</string>
+    <string name="back">返回</string>
+    <string name="save">儲存</string>
+    <string name="delete">刪除</string>
 </resources>

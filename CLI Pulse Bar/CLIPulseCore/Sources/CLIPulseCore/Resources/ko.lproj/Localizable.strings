@@ -299,3 +299,32 @@
 "onboarding.set_up_sync" = "클라우드 동기화 설정";
 "onboarding.synced_mode" = "클라우드 동기화 — 기기 간 데이터 동기화 중";
 "onboarding.not_synced_hint" = "Mac에서 도우미를 설정하여 다중 기기 동기화, 기록 및 iPhone 접근을 활성화하세요.";
+
+/* ── 팀 ── */
+"team.title" = "팀";
+"team.requires_pro_hint" = "팀 기능에는 Pro 또는 Team 구독이 필요합니다";
+"team.no_teams" = "아직 팀이 없습니다. 하나를 만들어 시작하세요.";
+"team.members" = "멤버";
+"team.pending_invites" = "대기 중인 초대";
+"team.pending" = "대기 중";
+"team.invite" = "초대";
+"team.make_admin" = "관리자로 변경";
+"team.make_member" = "멤버로 변경";
+"team.remove" = "삭제";
+"team.create_team" = "팀 만들기";
+"team.team_name" = "팀 이름";
+"team.create" = "만들기";
+"team.invite_member" = "멤버 초대";
+"team.email_address" = "이메일 주소";
+"team.send_invite" = "초대 보내기";
+
+/* ── 연동 ── */
+"integrations.title" = "연동";
+"integrations.webhook_notifications" = "Webhook 알림";
+"integrations.webhook_hint" = "Discord, Slack 또는 커스텀 엔드포인트로 알림 전송";
+"integrations.webhook_url_placeholder" = "Webhook URL (Discord / Slack)";
+"integrations.test_webhook" = "Webhook 테스트";
+
+/* ── Auth (OAuth) ── */
+"auth.sign_in_google" = "Google로 로그인";
+"auth.sign_in_github" = "GitHub로 로그인";

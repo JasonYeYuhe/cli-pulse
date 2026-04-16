@@ -12,10 +12,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.android.billingclient.api.ProductDetails
+import com.clipulse.android.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,10 +32,10 @@ fun SubscriptionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Subscription") },
+                title = { Text(stringResource(R.string.subscription_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
             )
@@ -59,14 +61,14 @@ fun SubscriptionScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        "Current Plan: ${state.tier.replaceFirstChar { it.uppercase() }}",
+                        stringResource(R.string.subscription_current_plan, state.tier.replaceFirstChar { it.uppercase() }),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
                     if (state.isPending) {
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "Payment processing...",
+                            stringResource(R.string.subscription_processing),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.tertiary,
                         )
@@ -79,11 +81,11 @@ fun SubscriptionScreen(
             // Feature comparison
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Plan Features", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.subscription_plan_features), style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(12.dp))
-                    FeatureRow("Providers", "3", "Unlimited", "Unlimited")
-                    FeatureRow("Devices", "1", "5", "Unlimited")
-                    FeatureRow("Data Retention", "7 days", "90 days", "365 days")
+                    FeatureRow(stringResource(R.string.subscription_providers), "3", stringResource(R.string.subscription_unlimited), stringResource(R.string.subscription_unlimited))
+                    FeatureRow(stringResource(R.string.subscription_devices), "1", "5", stringResource(R.string.subscription_unlimited))
+                    FeatureRow(stringResource(R.string.subscription_data_retention), stringResource(R.string.subscription_7_days), stringResource(R.string.subscription_90_days), stringResource(R.string.subscription_365_days))
                 }
             }
 
@@ -92,7 +94,7 @@ fun SubscriptionScreen(
             // Available products
             if (state.products.isNotEmpty()) {
                 Text(
-                    "Available Plans",
+                    stringResource(R.string.subscription_available_plans),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
@@ -122,7 +124,7 @@ fun SubscriptionScreen(
             ) {
                 Icon(Icons.Default.Refresh, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Restore Purchases")
+                Text(stringResource(R.string.subscription_restore))
             }
         }
     }
@@ -151,8 +153,8 @@ private fun ProductCard(
     val price = offer?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice ?: ""
     val period = offer?.pricingPhases?.pricingPhaseList?.firstOrNull()?.billingPeriod ?: ""
     val periodLabel = when {
-        period.contains("Y") -> "/year"
-        period.contains("M") -> "/month"
+        period.contains("Y") -> stringResource(R.string.subscription_per_year)
+        period.contains("M") -> stringResource(R.string.subscription_per_month)
         else -> ""
     }
 
@@ -184,12 +186,12 @@ private fun ProductCard(
             if (isCurrentPlan) {
                 AssistChip(
                     onClick = {},
-                    label = { Text("Current") },
+                    label = { Text(stringResource(R.string.subscription_current)) },
                     leadingIcon = { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) },
                 )
             } else {
                 Button(onClick = onPurchase) {
-                    Text("Subscribe")
+                    Text(stringResource(R.string.subscription_subscribe))
                 }
             }
         }
