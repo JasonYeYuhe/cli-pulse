@@ -15,7 +15,9 @@ import java.util.concurrent.TimeUnit
  *
  * NOTE: This uses an unofficial endpoint — treat as experimental.
  */
-class CodexCollector : ProviderCollector {
+class CodexCollector(
+    internal val baseUrl: String = "https://chatgpt.com",
+) : ProviderCollector {
     override val kind = ProviderKind.Codex
 
     override fun isAvailable(apiKey: String?): Boolean = !apiKey.isNullOrBlank()
@@ -27,7 +29,7 @@ class CodexCollector : ProviderCollector {
             .build()
 
         val req = Request.Builder()
-            .url("https://chatgpt.com/backend-api/wham/usage")
+            .url("$baseUrl/backend-api/wham/usage")
             .get()
             .addHeader("Authorization", "Bearer $apiKey")
             .addHeader("Accept", "application/json")

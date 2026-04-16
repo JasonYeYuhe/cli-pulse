@@ -44,3 +44,10 @@ data class CachedDevice(
     val json: String,
     val updatedAt: Long = System.currentTimeMillis(),
 )
+
+@Entity(tableName = "cached_daily_usage")
+data class CachedDailyUsage(
+    @PrimaryKey val id: String,
+    val json: String,
+    val updatedAt: Long = System.currentTimeMillis(),
+)

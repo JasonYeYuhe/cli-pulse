@@ -33,6 +33,9 @@ class DashboardRepository(
     private val _alerts = MutableStateFlow<List<AlertRecord>>(emptyList())
     val alerts: StateFlow<List<AlertRecord>> = _alerts
 
+    private val _dailyUsage = MutableStateFlow<List<DailyUsage>>(emptyList())
+    val dailyUsage: StateFlow<List<DailyUsage>> = _dailyUsage
+
     /** Load cached data into StateFlows (call on startup). */
     suspend fun loadFromCache() {
         cache.getDashboard()?.let { cached ->
@@ -49,6 +52,9 @@ class DashboardRepository(
 
         val cachedDevices = cache.getDevices().mapNotNull { parseDevice(it.json) }
         if (cachedDevices.isNotEmpty()) _devices.value = cachedDevices
+
+        val cachedDailyUsage = cache.getDailyUsage().mapNotNull { parseDailyUsage(it.json) }
+        if (cachedDailyUsage.isNotEmpty()) _dailyUsage.value = cachedDailyUsage
     }
 
     /** Load demo data into StateFlows when in demo mode. */
@@ -68,6 +74,7 @@ class DashboardRepository(
         _sessions.value = emptyList()
         _devices.value = emptyList()
         _alerts.value = emptyList()
+        _dailyUsage.value = emptyList()
     }
 
     suspend fun refreshAll() = coroutineScope {
@@ -81,6 +88,7 @@ class DashboardRepository(
         launch { refreshSessions() }
         launch { refreshAlerts() }
         launch { refreshDevices() }
+        launch { refreshDailyUsage() }
     }
 
     suspend fun refreshDashboard() {
@@ -113,6 +121,14 @@ class DashboardRepository(
         cache.replaceAlerts(data.map { CachedAlert(id = it.id, json = serializeAlert(it)) })
     }
 
+    suspend fun refreshDailyUsage(days: Int = 30) {
+        val data = supabase.dailyUsage(days)
+        _dailyUsage.value = data
+        cache.replaceDailyUsage(data.map {
+            CachedDailyUsage(id = "${it.date}-${it.provider}-${it.model}", json = serializeDailyUsage(it))
+        })
+    }
+
     suspend fun acknowledgeAlert(id: String) {
         supabase.acknowledgeAlert(id)
         refreshAlerts()
@@ -135,6 +151,7 @@ class DashboardRepository(
         cache.clearSessions()
         cache.clearAlerts()
         cache.clearDevices()
+        cache.clearDailyUsage()
     }
 
     // ── Serialization (lightweight JSON) ──
@@ -260,6 +277,25 @@ class DashboardRepository(
             lastSyncAt = j.optString("lastSyncAt").takeIf { it.isNotBlank() },
             helperVersion = j.optString("helperVersion"),
             currentSessionCount = 0,
+        )
+    } catch (_: Exception) { null }
+
+    private fun serializeDailyUsage(d: DailyUsage): String = JSONObject().apply {
+        put("date", d.date); put("provider", d.provider); put("model", d.model)
+        put("inputTokens", d.inputTokens); put("cachedTokens", d.cachedTokens)
+        put("outputTokens", d.outputTokens); put("cost", d.cost)
+    }.toString()
+
+    private fun parseDailyUsage(json: String): DailyUsage? = try {
+        val j = JSONObject(json)
+        DailyUsage(
+            date = j.optString("date"),
+            provider = j.optString("provider"),
+            model = j.optString("model"),
+            inputTokens = j.optInt("inputTokens"),
+            cachedTokens = j.optInt("cachedTokens"),
+            outputTokens = j.optInt("outputTokens"),
+            cost = j.optDouble("cost", 0.0),
         )
     } catch (_: Exception) { null }
 }

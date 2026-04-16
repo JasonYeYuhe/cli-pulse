@@ -6,7 +6,9 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-class GLMCollector : ProviderCollector {
+class GLMCollector(
+    internal val baseUrl: String = "https://open.bigmodel.cn",
+) : ProviderCollector {
     override val kind = ProviderKind.GLM
 
     override fun isAvailable(apiKey: String?): Boolean = !apiKey.isNullOrBlank()
@@ -18,7 +20,7 @@ class GLMCollector : ProviderCollector {
             .build()
 
         val req = Request.Builder()
-            .url("https://open.bigmodel.cn/api/paas/v4/models")
+            .url("$baseUrl/api/paas/v4/models")
             .get()
             .addHeader("Authorization", "Bearer $apiKey")
             .addHeader("Accept", "application/json")

@@ -6,7 +6,9 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-class ClaudeCollector : ProviderCollector {
+class ClaudeCollector(
+    internal val baseUrl: String = "https://api.anthropic.com",
+) : ProviderCollector {
     override val kind = ProviderKind.Claude
 
     override fun isAvailable(apiKey: String?): Boolean = !apiKey.isNullOrBlank()
@@ -18,7 +20,7 @@ class ClaudeCollector : ProviderCollector {
             .build()
 
         val req = Request.Builder()
-            .url("https://api.anthropic.com/api/oauth/usage")
+            .url("$baseUrl/api/oauth/usage")
             .get()
             .addHeader("Authorization", "Bearer $apiKey")
             .addHeader("anthropic-beta", "oauth-2025-04-20")

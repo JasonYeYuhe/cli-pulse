@@ -766,6 +766,48 @@ struct SettingsTab: View {
             }
             .toggleStyle(.switch)
             .controlSize(.small)
+
+            Divider()
+
+            SectionHeader(title: "Integrations", icon: "link")
+
+            Toggle(isOn: Binding(
+                get: { state.webhookEnabled },
+                set: { state.webhookEnabled = $0; state.pushSettingsToServer() }
+            )) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Webhook Notifications")
+                        .font(.system(size: 11))
+                    Text("Send alerts to Discord, Slack, or custom endpoint")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .toggleStyle(.switch)
+            .controlSize(.small)
+
+            if state.webhookEnabled {
+                TextField("Webhook URL (Discord / Slack)", text: $state.webhookURL)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 11))
+                    .onSubmit { state.pushSettingsToServer() }
+
+                HStack {
+                    Button {
+                        state.pushSettingsToServer()
+                        Task { await state.testWebhook() }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "paperplane")
+                            Text("Test Webhook")
+                        }
+                    }
+                    .controlSize(.small)
+                    .disabled(state.webhookURL.isEmpty)
+
+                    Spacer()
+                }
+            }
         }
     }
 

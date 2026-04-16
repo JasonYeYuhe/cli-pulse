@@ -214,6 +214,28 @@ class SupabaseClient(
         }
     }
 
+    // ── Daily Usage ──────────────────────────────────────
+
+    suspend fun dailyUsage(days: Int = 30): List<DailyUsage> = withContext(Dispatchers.IO) {
+        val params = JSONObject().put("days", days)
+        val arr = rpcArray("get_daily_usage", params)
+        (0 until arr.length()).mapNotNull { i ->
+            val r = arr.getJSONObject(i)
+            val date = r.optString("metric_date").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val provider = r.optString("provider").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val model = r.optString("model").takeIf { it.isNotBlank() } ?: ""
+            DailyUsage(
+                date = date,
+                provider = provider,
+                model = model,
+                inputTokens = r.optInt("input_tokens"),
+                cachedTokens = r.optInt("cached_tokens"),
+                outputTokens = r.optInt("output_tokens"),
+                cost = r.optDouble("cost", 0.0),
+            )
+        }
+    }
+
     // ── Devices ──────────────────────────────────────────
 
     suspend fun devices(): List<DeviceRecord> = withContext(Dispatchers.IO) {

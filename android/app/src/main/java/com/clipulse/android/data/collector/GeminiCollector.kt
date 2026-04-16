@@ -8,7 +8,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-class GeminiCollector : ProviderCollector {
+class GeminiCollector(
+    internal val baseUrl: String = "https://cloudcode-pa.googleapis.com",
+) : ProviderCollector {
     override val kind = ProviderKind.Gemini
 
     override fun isAvailable(apiKey: String?): Boolean = !apiKey.isNullOrBlank()
@@ -26,7 +28,7 @@ class GeminiCollector : ProviderCollector {
         // Step 1: Get tier info
         try {
             val tierReq = Request.Builder()
-                .url("https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist")
+                .url("$baseUrl/v1internal:loadCodeAssist")
                 .post("{}".toRequestBody(jsonMedia))
                 .addHeader("Authorization", "Bearer $apiKey")
                 .addHeader("Content-Type", "application/json")
@@ -43,7 +45,7 @@ class GeminiCollector : ProviderCollector {
 
         // Step 2: Get quota usage
         val quotaReq = Request.Builder()
-            .url("https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota")
+            .url("$baseUrl/v1internal:retrieveUserQuota")
             .post("{}".toRequestBody(jsonMedia))
             .addHeader("Authorization", "Bearer $apiKey")
             .addHeader("Content-Type", "application/json")

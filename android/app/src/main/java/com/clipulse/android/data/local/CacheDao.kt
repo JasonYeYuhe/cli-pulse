@@ -83,4 +83,20 @@ interface CacheDao {
         clearDevices()
         saveDevices(devices)
     }
+
+    // Daily Usage
+    @Query("SELECT * FROM cached_daily_usage")
+    suspend fun getDailyUsage(): List<CachedDailyUsage>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveDailyUsage(items: List<CachedDailyUsage>)
+
+    @Query("DELETE FROM cached_daily_usage")
+    suspend fun clearDailyUsage()
+
+    @Transaction
+    suspend fun replaceDailyUsage(items: List<CachedDailyUsage>) {
+        clearDailyUsage()
+        saveDailyUsage(items)
+    }
 }

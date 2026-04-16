@@ -6,7 +6,9 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-class OpenRouterCollector : ProviderCollector {
+class OpenRouterCollector(
+    internal val baseUrl: String = "https://openrouter.ai",
+) : ProviderCollector {
     override val kind = ProviderKind.OpenRouter
 
     override fun isAvailable(apiKey: String?): Boolean = !apiKey.isNullOrBlank()
@@ -18,7 +20,7 @@ class OpenRouterCollector : ProviderCollector {
             .build()
 
         val req = Request.Builder()
-            .url("https://openrouter.ai/api/v1/credits")
+            .url("$baseUrl/api/v1/credits")
             .get()
             .addHeader("Authorization", "Bearer $apiKey")
             .build()

@@ -47,9 +47,7 @@ object AppModule {
         } else {
             // Release: no destructive fallback — forces us to add explicit
             // Migration objects before bumping AppDatabase.version.
-            // If we forget, Room will throw IllegalStateException on upgrade
-            // instead of silently wiping user caches.
-            // Add migrations here: builder.addMigrations(MIGRATION_1_2, ...)
+            builder.addMigrations(AppDatabase.MIGRATION_1_2)
             builder.addCallback(object : androidx.room.RoomDatabase.Callback() {
                     override fun onDestructiveMigration(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                         Log.w("AppDatabase", "Destructive migration triggered — cache cleared")
