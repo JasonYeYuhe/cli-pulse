@@ -12,7 +12,7 @@ import androidx.room.RoomDatabase
         CachedDevice::class,
     ],
     version = 1,
-    exportSchema = false,
+    exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun cacheDao(): CacheDao

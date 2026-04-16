@@ -855,9 +855,8 @@ public actor APIClient {
     }
 
     public func myTeams() async throws -> [TeamDTO] {
-        guard let uid = userId, Self.isValidUUID(uid) else { throw APIError.invalidResponse }
-        let safeUid = Self.sanitizeParam(uid)
-        return try await restGet("/rest/v1/team_members?user_id=eq.\(safeUid)&select=team_id,role,joined_at,teams(id,name,owner_id,created_at)")
+        let data: Data = try await rpcRaw("my_teams")
+        return try JSONDecoder().decode([TeamDTO].self, from: data)
     }
 
     public func inviteMember(teamId: String, email: String) async throws {
@@ -1258,6 +1257,27 @@ public actor APIClient {
 
     private func rpc<Response: Decodable>(_ function: String, retried: Bool = false) async throws -> Response {
         try await rpc(function, params: EmptyBody(), retried: retried)
+    }
+
+    /// RPC that returns raw Data (useful for jsonb-returning functions).
+    private func rpcRaw(_ function: String, retried: Bool = false) async throws -> Data {
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/rpc/\(function)") else {
+            throw APIError.invalidResponse
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        applyHeaders(&request)
+        request.httpBody = try encoder.encode(EmptyBody())
+        let (data, response) = try await dataWithRetry(for: request)
+        let http = response as? HTTPURLResponse
+        if http?.statusCode == 401, !retried {
+            let _ = try await refreshAccessToken()
+            return try await rpcRaw(function, retried: true)
+        }
+        guard let httpOK = http, (200...299).contains(httpOK.statusCode) else {
+            throw APIError.httpError(status: http?.statusCode ?? 0, body: String(data: data, encoding: .utf8) ?? "")
+        }
+        return data
     }
 
     private func rpc<Response: Decodable, Params: Encodable>(

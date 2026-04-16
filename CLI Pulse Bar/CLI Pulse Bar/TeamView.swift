@@ -38,7 +38,9 @@ struct TeamView: View {
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
             }
 
-            if isLoading {
+            if !appState.subscriptionManager.isProOrAbove {
+                // Don't load teams for free-tier users
+            } else if isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity)
             } else if teams.isEmpty {
@@ -82,7 +84,10 @@ struct TeamView: View {
                     .foregroundStyle(.red)
             }
         }
-        .task { await loadTeams() }
+        .task {
+            guard appState.subscriptionManager.isProOrAbove else { return }
+            await loadTeams()
+        }
         .sheet(isPresented: $showCreateSheet) {
             CreateTeamSheet(name: $newTeamName) {
                 Task { await createTeam() }
@@ -103,8 +108,9 @@ struct TeamView: View {
         isLoading = true
         do {
             teams = try await appState.api.myTeams()
+            error = nil
         } catch {
-            self.error = error.localizedDescription
+            self.error = "Unable to load teams. Please try again later."
         }
         isLoading = false
     }

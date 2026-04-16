@@ -40,3 +40,17 @@ CLI Pulse Bar/docs/
 
 # Extra Xcode user state
 CLI Pulse Bar/CLI Pulse Bar.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Temp diff/debug artifacts
+diff.txt
+full_diff.txt
+staged_diff.txt
+CLAUDE_FIX_PROMPT_*.txt
+PROJECT_HEALTH_HANDOFF_*.md
+
+# Supabase local state
+backend/supabase/.temp/
+supabase/
+
+# Room schema exports (generated, tracked for migration testing)
+# android/app/schemas/

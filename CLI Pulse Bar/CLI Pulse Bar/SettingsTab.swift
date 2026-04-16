@@ -1,5 +1,6 @@
 import SwiftUI
 import ServiceManagement
+import StoreKit
 import CLIPulseCore
 
 struct SettingsTab: View {
@@ -7,10 +8,16 @@ struct SettingsTab: View {
     @Environment(\.openWindow) private var openWindow
     @State private var email = ""
     @State private var otpCode = ""
+    @State private var password = ""
+    @State private var usePasswordLogin = false
     @State private var serverInput = ""
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var helperEnabled = HelperLogin.isEnabled
     @State private var settingsSection: SettingsSection = .general
+    @State private var showDeleteAccountAlert = false
+    @State private var showDeleteAccountConfirm = false
+    @State private var deleteConfirmText = ""
+    @State private var isDeletingAccount = false
 
     enum SettingsSection: String, CaseIterable {
         case general = "General"
@@ -55,7 +62,40 @@ struct SettingsTab: View {
 
             SectionHeader(title: L10n.settings.signIn, icon: "person.circle")
 
-            if state.otpSent {
+            if usePasswordLogin {
+                // Password sign-in mode
+                TextField(L10n.settings.email, text: $email)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 11))
+
+                SecureField("Password", text: $password)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 11))
+
+                Button {
+                    Task { await state.signInWithPassword(email: email, password: password) }
+                } label: {
+                    HStack {
+                        if state.isLoading { ProgressView().controlSize(.small) }
+                        Text("Sign In")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(PulseTheme.accent)
+                .disabled(email.isEmpty || !email.contains("@") || password.isEmpty || state.isLoading)
+
+                Button {
+                    usePasswordLogin = false
+                    password = ""
+                    state.lastError = nil
+                } label: {
+                    Text("Use email code instead")
+                        .font(.system(size: 10))
+                }
+            } else if state.otpSent {
                 Text(L10n.auth.codeSentTo(state.otpEmail))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
@@ -101,6 +141,14 @@ struct SettingsTab: View {
                 .buttonStyle(.borderedProminent)
                 .tint(PulseTheme.accent)
                 .disabled(email.isEmpty || !email.contains("@") || state.isLoading)
+
+                Button {
+                    usePasswordLogin = true
+                    state.lastError = nil
+                } label: {
+                    Text("Sign in with password")
+                        .font(.system(size: 10))
+                }
             }
 
             if let error = state.lastError {
@@ -467,6 +515,8 @@ struct SettingsTab: View {
 
     // MARK: - Subscription
 
+    @State private var iapError: String?
+
     private var subscriptionSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader(title: L10n.settings.subscription, icon: "creditcard")
@@ -519,22 +569,97 @@ struct SettingsTab: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(PulseTheme.accent)
             } else {
+                // Inline IAP cards for free-tier users
+                if state.subscriptionManager.products.isEmpty {
+                    if state.subscriptionManager.isLoading {
+                        HStack {
+                            ProgressView().controlSize(.small)
+                            Text("Loading plans...")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Text("Subscription plans are not available at this time.")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                        Button {
+                            Task { await state.subscriptionManager.loadProducts() }
+                        } label: {
+                            Text("Retry")
+                                .font(.system(size: 10))
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(PulseTheme.accent)
+                    }
+                } else {
+                    inlineIAPCards
+                }
+
+                if let iapError {
+                    Text(iapError)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.red)
+                }
+
                 Button {
                     openWindow(id: "subscription")
                 } label: {
-                    HStack {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 9))
-                        Text(L10n.settings.upgradePro)
-                            .font(.system(size: 11, weight: .semibold))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
+                    Text("View all plans & details")
+                        .font(.system(size: 10))
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(PulseTheme.accent)
+                .buttonStyle(.plain)
+                .foregroundStyle(PulseTheme.accent)
             }
         }
+    }
+
+    private var inlineIAPCards: some View {
+        VStack(spacing: 6) {
+            if let pro = state.subscriptionManager.proMonthly {
+                inlineProductRow(product: pro, label: "Pro Monthly", features: "Unlimited providers, 5 devices")
+            }
+            if let proY = state.subscriptionManager.proYearly {
+                inlineProductRow(product: proY, label: "Pro Yearly", features: "Save 17%")
+            }
+            if let team = state.subscriptionManager.teamMonthly {
+                inlineProductRow(product: team, label: "Team Monthly", features: "Unlimited everything, team features")
+            }
+            if let teamY = state.subscriptionManager.teamYearly {
+                inlineProductRow(product: teamY, label: "Team Yearly", features: "Save 17%")
+            }
+        }
+    }
+
+    private func inlineProductRow(product: Product, label: String, features: String) -> some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 10, weight: .semibold))
+                Text(features)
+                    .font(.system(size: 8))
+                    .foregroundStyle(.tertiary)
+            }
+            Spacer()
+            Button {
+                Task {
+                    iapError = nil
+                    do {
+                        _ = try await state.subscriptionManager.purchase(product)
+                    } catch {
+                        iapError = error.localizedDescription
+                    }
+                }
+            } label: {
+                Text(product.displayPrice)
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(PulseTheme.accent)
+            .controlSize(.small)
+        }
+        .padding(6)
+        .background(PulseTheme.cardBackground.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 
     // MARK: - General
@@ -982,6 +1107,45 @@ struct SettingsTab: View {
             .buttonStyle(.plain)
             .foregroundStyle(.orange)
 
+            // Delete Account
+            Button {
+                showDeleteAccountAlert = true
+            } label: {
+                HStack {
+                    if isDeletingAccount { ProgressView().controlSize(.small) }
+                    Label("Delete Account", systemImage: "trash")
+                        .font(.system(size: 11))
+                }
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.red)
+            .disabled(isDeletingAccount)
+            .alert("Delete Account", isPresented: $showDeleteAccountAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Continue", role: .destructive) {
+                    showDeleteAccountConfirm = true
+                }
+            } message: {
+                Text("This will permanently delete your account and all associated data including sessions, devices, alerts, and team memberships. This action cannot be undone.")
+            }
+            .alert("Confirm Deletion", isPresented: $showDeleteAccountConfirm) {
+                TextField("Type DELETE to confirm", text: $deleteConfirmText)
+                Button("Cancel", role: .cancel) {
+                    deleteConfirmText = ""
+                }
+                Button("Delete My Account", role: .destructive) {
+                    guard deleteConfirmText == "DELETE" else {
+                        deleteConfirmText = ""
+                        return
+                    }
+                    deleteConfirmText = ""
+                    Task { await performDeleteAccount() }
+                }
+                .disabled(deleteConfirmText != "DELETE")
+            } message: {
+                Text("Type DELETE to confirm permanent account deletion.")
+            }
+
             Button {
                 NSApplication.shared.terminate(nil)
             } label: {
@@ -991,6 +1155,12 @@ struct SettingsTab: View {
             .buttonStyle(.plain)
             .foregroundStyle(.red)
         }
+    }
+
+    private func performDeleteAccount() async {
+        isDeletingAccount = true
+        await state.deleteAccount()
+        isDeletingAccount = false
     }
 
 }
