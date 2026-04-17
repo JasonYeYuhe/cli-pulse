@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any
 
 from system_collector import CollectedAlert, collect_alerts, collect_device_snapshot, collect_sessions, estimate_provider_quotas, estimate_provider_remaining
+from git_collector import GitCollector, project_paths_from_sessions
+import user_secret as _user_secret_module
 
 
 CONFIG_PATH = Path.home() / ".cli-pulse-helper.json"
@@ -197,11 +199,29 @@ def sync(_: argparse.Namespace) -> None:
 
 
 def daemon(args: argparse.Namespace) -> None:
-    """Run continuously: heartbeat + sync every interval seconds."""
+    """Run continuously: heartbeat + sync every interval seconds.
+
+    Yield score: if CLI_PULSE_TRACK_GIT=1 in the environment (or the user's
+    user_settings.track_git_activity is true once Stage 7 lands), runs a git
+    log scan whenever the active project set changes or every 10 minutes,
+    whichever comes first. Per Codex review: never every cycle.
+    """
     import signal
 
     interval = max(args.interval, 60)  # Match Swift helper minimum (60s)
     stopping = False
+
+    track_git = os.environ.get("CLI_PULSE_TRACK_GIT") == "1"
+    git_scanner: GitCollector | None = None
+    if track_git:
+        try:
+            git_scanner = GitCollector(secret=_user_secret_module.load_or_create_secret())
+            print("[yield] git activity tracking enabled (CLI_PULSE_TRACK_GIT=1)")
+        except Exception as exc:
+            print(f"[yield] failed to initialize git tracking: {exc}")
+    last_scanned_projects: frozenset[str] = frozenset()
+    last_scan_at: float = 0.0
+    GIT_SCAN_BACKSTOP_SECONDS = 600  # 10 minutes
 
     def _handle_shutdown(signum, _frame):
         nonlocal stopping
@@ -218,6 +238,28 @@ def daemon(args: argparse.Namespace) -> None:
             try:
                 heartbeat(args)
                 sync(args)
+
+                if git_scanner is not None:
+                    # Re-collect just for the project set; the sync above already
+                    # handled the session payload, this is purely for git scanning.
+                    sessions = collect_sessions()
+                    paths = project_paths_from_sessions(sessions)
+                    current_projects = frozenset(str(p) for p in paths)
+                    now_ts = time.time()
+                    set_changed = current_projects != last_scanned_projects
+                    backstop_due = (now_ts - last_scan_at) >= GIT_SCAN_BACKSTOP_SECONDS
+                    if paths and (set_changed or backstop_due):
+                        commits = git_scanner.collect(paths)
+                        if commits:
+                            try:
+                                supabase_rpc("ingest_commits",
+                                             {"p_commits": [c.to_dict() for c in commits]})
+                                print(f"[yield] submitted {len(commits)} commits "
+                                      f"across {len(paths)} project(s)")
+                            except SyncError as exc:
+                                print(f"[yield] commit submit failed: {exc}")
+                        last_scanned_projects = current_projects
+                        last_scan_at = now_ts
             except ConfigError:
                 raise  # Fatal config errors should stop the daemon
             except (Exception, SyncError) as exc:
