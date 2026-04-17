@@ -1192,6 +1192,29 @@ public actor APIClient {
         }
     }
 
+    // MARK: - Yield Score
+
+    /// Fetch raw daily yield rows from Supabase (rollup table `yield_score_daily`).
+    /// Caller aggregates with `YieldScoreAggregator.summarize` over the desired range.
+    /// Returns an empty array on failure (network, auth, parse) — yield is non-essential.
+    public func fetchYieldScoreDaily(days: Int = 90) async -> [YieldScoreRow] {
+        guard let userId else { return [] }
+        let safeUserId = Self.sanitizeParam(userId)
+        let calendar = Calendar(identifier: .gregorian)
+        guard let cutoff = calendar.date(byAdding: .day, value: -days, to: Date()) else { return [] }
+        let isoFormatter = DateFormatter()
+        isoFormatter.dateFormat = "yyyy-MM-dd"
+        isoFormatter.timeZone = TimeZone(identifier: "UTC")
+        let cutoffStr = isoFormatter.string(from: cutoff)
+        let path = "/rest/v1/yield_score_daily?user_id=eq.\(safeUserId)&day=gte.\(cutoffStr)&select=provider,day,total_cost,weighted_commit_count,raw_commit_count,ambiguous_commit_count&order=day.desc"
+        do {
+            let rows: [YieldScoreRow] = try await restGet(path)
+            return rows
+        } catch {
+            return []
+        }
+    }
+
     // MARK: - Health
 
     public func health() async throws -> Bool {

@@ -47,6 +47,16 @@ public final class AppState: ObservableObject {
     @Published public var costForecast: CostForecast?
     @Published public var dailyUsage: [DailyUsage] = []
 
+    // MARK: - Yield Score
+    @Published public var yieldScoreDailyRows: [YieldScoreRow] = []
+    @Published public var yieldScoreRange: YieldScoreRange = .thirtyDays
+
+    /// Aggregated per-provider summaries over the currently-selected range.
+    /// Re-derived on every access; cheap because rows is small (≤ providers × days).
+    public var yieldScoreSummaries: [YieldScoreSummary] {
+        YieldScoreAggregator.summarize(rows: yieldScoreDailyRows, range: yieldScoreRange)
+    }
+
     // MARK: - Auth Flow
     @Published public var otpSent = false
     @Published public var otpEmail = ""

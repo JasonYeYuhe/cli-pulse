@@ -876,12 +876,20 @@ extension AppState {
         updateCostSummary()
         publishWidgetData()
         Task { await refreshCostForecast() }
+        Task { await refreshYieldScore() }
     }
 
     private func refreshCostForecast() async {
         let usage = await api.fetchDailyUsage(days: 30)
         dailyUsage = usage
         costForecast = CostForecastEngine.forecast(from: usage)
+    }
+
+    /// Pull last 90 days of daily yield rollups so the UI can re-aggregate
+    /// over any of the supported windows (7/30/90) without an extra round trip.
+    private func refreshYieldScore() async {
+        let rows = await api.fetchYieldScoreDaily(days: 90)
+        yieldScoreDailyRows = rows
     }
 
     func refreshContext() -> DataRefreshManager.Context {
