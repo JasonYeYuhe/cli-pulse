@@ -14,6 +14,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
+import user_secret as _user_secret_module
+
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -92,6 +94,8 @@ class CollectedSession:
     cpu_usage: float
     command: str
     collection_confidence: str = "medium"  # high, medium, low
+    project_hash: Optional[str] = None  # HMAC-SHA256 of absolute project path; None when path unknown
+    project_root: Optional[str] = None  # absolute path; never sent to server, used by git scanner only
     _child_pids: list[str] = field(default_factory=list, repr=False)
 
 
@@ -181,6 +185,7 @@ def collect_device_snapshot() -> DeviceSnapshot:
 def collect_sessions() -> list[CollectedSession]:
     rows = _process_rows()
     raw_sessions: list[CollectedSession] = []
+    secret = _user_secret_module.load_or_create_secret()
 
     for row in rows:
         if _should_ignore_command(row["command"]):
@@ -196,6 +201,8 @@ def collect_sessions() -> list[CollectedSession]:
         command = row["command"]
         cpu = float(row["pcpu"])
         project = _guess_project(command)
+        project_root = _guess_project_root(command)
+        project_hash = _user_secret_module.project_hash(secret, project_root) if project_root else None
 
         raw_sessions.append(
             CollectedSession(
@@ -213,6 +220,8 @@ def collect_sessions() -> list[CollectedSession]:
                 cpu_usage=cpu,
                 command=command,
                 collection_confidence=confidence,
+                project_hash=project_hash,
+                project_root=str(project_root) if project_root else None,
                 _child_pids=[row["pid"]],
             )
         )
@@ -272,6 +281,8 @@ def _deduplicate_sessions(sessions: list[CollectedSession]) -> list[CollectedSes
             exact_cost=None,
             cpu_usage=round(total_cpu, 1),
             command=primary.command,
+            project_hash=primary.project_hash,
+            project_root=primary.project_root,
             collection_confidence=primary.collection_confidence,
             _child_pids=all_pids,
         ))
@@ -1283,32 +1294,45 @@ _PROJECT_MARKERS = [
 ]
 
 
-def _guess_project(command: str) -> str:
-    """Guess the project name from the command string.
+def _guess_project_root(command: str) -> Optional[Path]:
+    """Best-effort absolute project root inferred from a command's file path arguments.
 
-    Strategy:
-    1. Extract file paths from the command
-    2. Walk up from each path looking for project markers (.git, package.json, etc.)
-    3. Use the directory name containing the marker as the project name
-    4. Fall back to the deepest non-system directory component
-    5. Final fallback: current working directory name
+    Returns the directory containing a project marker (.git, package.json, etc.)
+    if one is found, else None. Used to compute project_hash for yield score
+    attribution; callers that just need a display name should use _guess_project.
     """
     path_matches = re.findall(r"(/(?:Users|home|opt|var|tmp|srv)[^\s\"']+)", command)
 
     for match in path_matches:
         p = Path(match)
-        # Walk up looking for project root markers
         for ancestor in [p] + list(p.parents):
             if str(ancestor) in {"/", "/Users", "/home", "/opt", "/var", "/tmp", "/srv"}:
                 break
             for marker in _PROJECT_MARKERS:
                 if (ancestor / marker).exists():
-                    return ancestor.name
-        # Fallback: use deepest meaningful directory
+                    return ancestor
+
+    return None
+
+
+def _guess_project(command: str) -> str:
+    """Guess the project display name from the command string.
+
+    Strategy:
+    1. Try _guess_project_root (path with marker) first
+    2. Fall back to the deepest non-system directory component of the command
+    3. Final fallback: current working directory name
+    """
+    root = _guess_project_root(command)
+    if root is not None:
+        return root.name
+
+    path_matches = re.findall(r"(/(?:Users|home|opt|var|tmp|srv)[^\s\"']+)", command)
+    for match in path_matches:
+        p = Path(match)
         parts = [part for part in p.parts if part not in {"/", "Users", "home", "opt", "var", "tmp", "srv"}]
-        # Skip username, take the next meaningful directory
         if len(parts) >= 2:
-            return parts[1]  # parts[0] is usually the username
+            return parts[1]
         if parts:
             return parts[-1]
 

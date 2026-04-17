@@ -148,6 +148,7 @@ def sync(_: argparse.Namespace) -> None:
             "name": item.name,
             "provider": item.provider,
             "project": item.project,
+            "project_hash": item.project_hash,
             "status": item.status,
             "total_usage": item.total_usage,
             "exact_cost": item.exact_cost,
