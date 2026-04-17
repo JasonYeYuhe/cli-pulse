@@ -438,6 +438,7 @@ public struct SessionRecord: Codable, Identifiable, Sendable, Hashable {
     public let name: String
     public let provider: String
     public let project: String
+    public let project_hash: String?  // HMAC-SHA256 of absolute path; nil if path unknown
     public let device_name: String
     public let started_at: String
     public let last_active_at: String
@@ -475,12 +476,14 @@ public struct SessionRecord: Codable, Identifiable, Sendable, Hashable {
         device_name: String, started_at: String, last_active_at: String,
         status: String, total_usage: Int, estimated_cost: Double,
         cost_status: String, requests: Int, error_count: Int,
-        collection_confidence: String? = nil
+        collection_confidence: String? = nil,
+        project_hash: String? = nil
     ) {
         self.id = id
         self.name = name
         self.provider = provider
         self.project = project
+        self.project_hash = project_hash
         self.device_name = device_name
         self.started_at = started_at
         self.last_active_at = last_active_at

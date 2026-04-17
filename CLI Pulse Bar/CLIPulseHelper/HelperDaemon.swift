@@ -254,7 +254,7 @@ final class HelperDaemon {
     // MARK: - Helpers
 
     private func sessionToDict(_ session: SessionRecord) -> [String: Any] {
-        [
+        var dict: [String: Any] = [
             "id": session.id,
             "name": session.name,
             "provider": session.provider,
@@ -268,6 +268,12 @@ final class HelperDaemon {
             "started_at": session.started_at,
             "last_active_at": session.last_active_at,
         ]
+        // Yield score plumbing: omit key entirely when nil so server preserves
+        // any previously-stored hash via COALESCE in helper_sync.
+        if let projectHash = session.project_hash {
+            dict["project_hash"] = projectHash
+        }
+        return dict
     }
 }
 #endif

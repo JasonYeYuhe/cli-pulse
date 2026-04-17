@@ -104,6 +104,10 @@ public final class LocalScanner: @unchecked Sendable {
             }
         }
 
+        // Load per-device secret once per scan so we can compute project_hash for sessions
+        // whose path we can resolve. Failures here are silent: we just emit project_hash=nil.
+        let secret: Data? = (try? UserSecret.loadOrCreate())
+
         for (pid, match) in bestByPID {
             let row = match.row
             let elapsed = elapsedToSeconds(row.etime)
@@ -111,6 +115,10 @@ public final class LocalScanner: @unchecked Sendable {
             let usage = max(500, Int(Double(elapsed) * max(1.5, cpu + 1.0)))
             let cost = estimateCost(provider: match.provider, usage: usage, rateLookup: costRateLookup)
             let project = guessProject(row.command)
+            let projectHash: String? = {
+                guard let secret, let root = guessProjectRoot(row.command) else { return nil }
+                return UserSecret.projectHash(secret: secret, absolutePath: root)
+            }()
 
             let session = SessionRecord(
                 id: "local-\(pid)",
@@ -126,7 +134,8 @@ public final class LocalScanner: @unchecked Sendable {
                 cost_status: cost > 1 ? "warning" : "normal",
                 requests: max(1, elapsed / 45),
                 error_count: 0,
-                collection_confidence: match.confidence
+                collection_confidence: match.confidence,
+                project_hash: projectHash
             )
             sessions.append(session)
 
@@ -289,6 +298,33 @@ public final class LocalScanner: @unchecked Sendable {
             }
         }
         return "unknown"
+    }
+
+    /// Best-effort absolute project root path inferred from command's path arguments.
+    /// Used only to compute project_hash (HMAC) before discarding — never transmitted.
+    /// Walks up looking for a marker file; returns nil if no project structure is found.
+    private static let projectMarkers = [".git", "package.json", "Cargo.toml", "pyproject.toml", "go.mod", "pom.xml", "Gemfile"]
+    private func guessProjectRoot(_ command: String) -> String? {
+        let parts = command.split(separator: " ").map(String.init)
+        let fm = FileManager.default
+        for part in parts {
+            // Look for absolute paths under common user roots
+            guard part.hasPrefix("/Users/") || part.hasPrefix("/home/") || part.hasPrefix("/opt/") || part.hasPrefix("/var/") else { continue }
+            var dir = (part as NSString).standardizingPath
+            // Walk up looking for a project marker
+            while dir.count > 1 && dir != "/" && dir != "/Users" && dir != "/home" {
+                for marker in Self.projectMarkers {
+                    let markerPath = (dir as NSString).appendingPathComponent(marker)
+                    if fm.fileExists(atPath: markerPath) {
+                        return dir
+                    }
+                }
+                let parent = (dir as NSString).deletingLastPathComponent
+                if parent == dir { break }
+                dir = parent
+            }
+        }
+        return nil
     }
 
     private func prettyName(_ command: String) -> String {
