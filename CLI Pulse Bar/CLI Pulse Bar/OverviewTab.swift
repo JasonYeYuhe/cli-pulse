@@ -41,6 +41,9 @@ struct OverviewTab: View {
                         if let forecast = state.costForecast {
                             forecastCard(forecast)
                         }
+
+                        // Yield score (cost-to-code)
+                        YieldScoreCard()
                     }
 
                     providerBreakdown(dash)

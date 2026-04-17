@@ -12,6 +12,7 @@
 		A10001 /* CLIPulseBarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10001 /* CLIPulseBarApp.swift */; };
 		A10006 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10006 /* MenuBarView.swift */; };
 		A10007 /* OverviewTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10007 /* OverviewTab.swift */; };
+		A10099 /* YieldScoreCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10099 /* YieldScoreCard.swift */; };
 		A10008 /* ProvidersTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10008 /* ProvidersTab.swift */; };
 		A10009 /* SessionsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10009 /* SessionsTab.swift */; };
 		A10010 /* AlertsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10010 /* AlertsTab.swift */; };
@@ -125,6 +126,7 @@
 		B10001 /* CLIPulseBarApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIPulseBarApp.swift; sourceTree = "<group>"; };
 		B10006 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		B10007 /* OverviewTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewTab.swift; sourceTree = "<group>"; };
+		B10099 /* YieldScoreCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YieldScoreCard.swift; sourceTree = "<group>"; };
 		B10008 /* ProvidersTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProvidersTab.swift; sourceTree = "<group>"; };
 		B10009 /* SessionsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsTab.swift; sourceTree = "<group>"; };
 		B10010 /* AlertsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertsTab.swift; sourceTree = "<group>"; };
@@ -246,6 +248,7 @@
 				B30024 /* TeamView.swift */,
 				B30022 /* OnboardingWizardView.swift */,
 				B10007 /* OverviewTab.swift */,
+				B10099 /* YieldScoreCard.swift */,
 				B10008 /* ProvidersTab.swift */,
 				B10009 /* SessionsTab.swift */,
 				B10010 /* AlertsTab.swift */,
@@ -539,6 +542,7 @@
 				A30024 /* TeamView.swift in Sources */,
 				A30022 /* OnboardingWizardView.swift in Sources */,
 				A10007 /* OverviewTab.swift in Sources */,
+				A10099 /* YieldScoreCard.swift in Sources */,
 				A10008 /* ProvidersTab.swift in Sources */,
 				A10009 /* SessionsTab.swift in Sources */,
 				A10010 /* AlertsTab.swift in Sources */,
