@@ -198,6 +198,27 @@ def sync(_: argparse.Namespace) -> None:
     print(f"synced {response.get('sessions_synced', 0)} sessions")
 
 
+def _fetch_track_git_activity(config: HelperConfig) -> bool:
+    """Read user_settings.track_git_activity for the helper's owner.
+
+    Falls back to False on any error (no auth token, network failure, missing row)
+    so privacy default holds. Helper has no user-bearing token; it queries via
+    a small RPC that returns the boolean by device id + helper secret.
+    """
+    # The helper authenticates to Supabase by device_id + helper_secret, not by
+    # JWT, so it can't query /rest/v1/user_settings directly under RLS.
+    # We expose a SECURITY DEFINER RPC `get_track_git_activity(p_device_id, p_helper_secret)`
+    # added in the same migration. If it's not present yet, return False.
+    try:
+        result = supabase_rpc("get_track_git_activity", {
+            "p_device_id": config.device_id,
+            "p_helper_secret": config.helper_secret,
+        })
+        return bool(result) if isinstance(result, bool) else False
+    except SyncError:
+        return False
+
+
 def daemon(args: argparse.Namespace) -> None:
     """Run continuously: heartbeat + sync every interval seconds.
 
@@ -211,17 +232,17 @@ def daemon(args: argparse.Namespace) -> None:
     interval = max(args.interval, 60)  # Match Swift helper minimum (60s)
     stopping = False
 
-    track_git = os.environ.get("CLI_PULSE_TRACK_GIT") == "1"
+    # Yield score: source of truth is user_settings.track_git_activity on the server.
+    # Re-checked every cycle so toggling the setting in the macOS app takes effect
+    # within one heartbeat cycle. Env override CLI_PULSE_TRACK_GIT=1 forces on for
+    # CI / dev / users who don't want to use the macOS UI.
     git_scanner: GitCollector | None = None
-    if track_git:
-        try:
-            git_scanner = GitCollector(secret=_user_secret_module.load_or_create_secret())
-            print("[yield] git activity tracking enabled (CLI_PULSE_TRACK_GIT=1)")
-        except Exception as exc:
-            print(f"[yield] failed to initialize git tracking: {exc}")
     last_scanned_projects: frozenset[str] = frozenset()
     last_scan_at: float = 0.0
     GIT_SCAN_BACKSTOP_SECONDS = 600  # 10 minutes
+    env_force_git = os.environ.get("CLI_PULSE_TRACK_GIT") == "1"
+    if env_force_git:
+        print("[yield] git activity tracking forced on via CLI_PULSE_TRACK_GIT=1")
 
     def _handle_shutdown(signum, _frame):
         nonlocal stopping
@@ -238,6 +259,22 @@ def daemon(args: argparse.Namespace) -> None:
             try:
                 heartbeat(args)
                 sync(args)
+
+                # Re-evaluate the user's track_git_activity opt-in each cycle so
+                # toggling it in the macOS UI takes effect within one heartbeat.
+                config = load_config()
+                track_git = env_force_git or _fetch_track_git_activity(config)
+                if track_git and git_scanner is None:
+                    try:
+                        git_scanner = GitCollector(secret=_user_secret_module.load_or_create_secret())
+                        print("[yield] git activity tracking enabled")
+                    except Exception as exc:
+                        print(f"[yield] failed to initialize git tracking: {exc}")
+                elif not track_git and git_scanner is not None:
+                    print("[yield] git activity tracking disabled by user")
+                    git_scanner = None
+                    last_scanned_projects = frozenset()
+                    last_scan_at = 0.0
 
                 if git_scanner is not None:
                     # Re-collect just for the project set; the sync above already

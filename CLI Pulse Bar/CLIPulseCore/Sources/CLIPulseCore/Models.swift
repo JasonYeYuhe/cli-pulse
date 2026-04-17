@@ -638,6 +638,7 @@ public struct SettingsSnapshot: Codable, Sendable {
     public let repeated_failure_threshold: Int
     public let alert_cooldown_minutes: Int
     public let data_retention_days: Int
+    public let track_git_activity: Bool
 
     public init(
         notifications_enabled: Bool, push_policy: String,
@@ -645,7 +646,8 @@ public struct SettingsSnapshot: Codable, Sendable {
         usage_spike_threshold: Int, project_budget_threshold_usd: Double,
         session_too_long_threshold_minutes: Int, offline_grace_period_minutes: Int,
         repeated_failure_threshold: Int, alert_cooldown_minutes: Int,
-        data_retention_days: Int
+        data_retention_days: Int,
+        track_git_activity: Bool = false
     ) {
         self.notifications_enabled = notifications_enabled
         self.push_policy = push_policy
@@ -658,6 +660,7 @@ public struct SettingsSnapshot: Codable, Sendable {
         self.repeated_failure_threshold = repeated_failure_threshold
         self.alert_cooldown_minutes = alert_cooldown_minutes
         self.data_retention_days = data_retention_days
+        self.track_git_activity = track_git_activity
     }
 }
 

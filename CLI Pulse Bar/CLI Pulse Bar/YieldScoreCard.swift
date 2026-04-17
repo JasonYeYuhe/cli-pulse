@@ -54,10 +54,7 @@ struct YieldScoreCard: View {
     }
 
     private var trackingEnabled: Bool {
-        // Stage 7 will replace this with state.gitTrackingEnabled. For now we
-        // surface the card whenever the server has any rows — implies the
-        // helper has produced data, so tracking is on for at least one device.
-        !state.yieldScoreDailyRows.isEmpty
+        state.gitTrackingEnabled
     }
 
     private var disabledView: some View {

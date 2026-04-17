@@ -285,6 +285,7 @@ public actor APIClient {
         let repeated_failure_threshold: Int?
         let alert_cooldown_minutes: Int?
         let data_retention_days: Int?
+        let track_git_activity: Bool?
     }
 
     private struct UserTierPayload: Decodable {
@@ -689,7 +690,8 @@ public actor APIClient {
             offline_grace_period_minutes: settings?.offline_grace_period_minutes ?? 5,
             repeated_failure_threshold: settings?.repeated_failure_threshold ?? 3,
             alert_cooldown_minutes: settings?.alert_cooldown_minutes ?? 30,
-            data_retention_days: settings?.data_retention_days ?? 7
+            data_retention_days: settings?.data_retention_days ?? 7,
+            track_git_activity: settings?.track_git_activity ?? false
         )
     }
 
@@ -712,6 +714,7 @@ public actor APIClient {
         public var webhook_url: String?
         public var webhook_enabled: Bool?
         public var webhook_event_filter: WebhookEventFilter?
+        public var track_git_activity: Bool?
 
         public init(
             notifications_enabled: Bool? = nil,
@@ -723,7 +726,8 @@ public actor APIClient {
             data_retention_days: Int? = nil,
             webhook_url: String? = nil,
             webhook_enabled: Bool? = nil,
-            webhook_event_filter: WebhookEventFilter? = nil
+            webhook_event_filter: WebhookEventFilter? = nil,
+            track_git_activity: Bool? = nil
         ) {
             self.notifications_enabled = notifications_enabled
             self.push_policy = push_policy
@@ -735,6 +739,7 @@ public actor APIClient {
             self.webhook_url = webhook_url
             self.webhook_enabled = webhook_enabled
             self.webhook_event_filter = webhook_event_filter
+            self.track_git_activity = track_git_activity
         }
     }
 

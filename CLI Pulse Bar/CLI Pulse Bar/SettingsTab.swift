@@ -18,6 +18,7 @@ struct SettingsTab: View {
     @State private var showDeleteAccountConfirm = false
     @State private var deleteConfirmText = ""
     @State private var isDeletingAccount = false
+    @State private var showGitTrackingConsent = false
 
     enum SettingsSection: String, CaseIterable {
         case general = "General"
@@ -1129,6 +1130,38 @@ struct SettingsTab: View {
             }
             .toggleStyle(.switch)
             .controlSize(.small)
+
+            Toggle(isOn: Binding(
+                get: { state.gitTrackingEnabled },
+                set: { newValue in
+                    if newValue && !state.gitTrackingEnabled {
+                        // First-enable: show disclosure before flipping
+                        showGitTrackingConsent = true
+                    } else {
+                        state.gitTrackingEnabled = newValue
+                        state.pushGitTrackingSettingToServer()
+                    }
+                }
+            )) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Track git activity (Yield Score)")
+                        .font(.system(size: 11))
+                    Text("Hashed commit metadata only — no message, diff, or path uploaded")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .toggleStyle(.switch)
+            .controlSize(.small)
+            .alert("Enable git activity tracking?", isPresented: $showGitTrackingConsent) {
+                Button("Cancel", role: .cancel) {}
+                Button("Enable") {
+                    state.gitTrackingEnabled = true
+                    state.pushGitTrackingSettingToServer()
+                }
+            } message: {
+                Text("CLI Pulse will scan git logs in projects where AI sessions are active. Only the commit hash, an HMAC of the project path, the commit timestamp, and a merge-commit flag leave your device. Commit messages, diffs, file paths, and author identity are never uploaded.")
+            }
 
             Divider()
 

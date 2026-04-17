@@ -50,6 +50,9 @@ public final class AppState: ObservableObject {
     // MARK: - Yield Score
     @Published public var yieldScoreDailyRows: [YieldScoreRow] = []
     @Published public var yieldScoreRange: YieldScoreRange = .thirtyDays
+    /// Server-persisted opt-in for git activity tracking. Source of truth is
+    /// `user_settings.track_git_activity`. Mirrored locally for UI toggle binding.
+    @Published public var gitTrackingEnabled: Bool = false
 
     /// Aggregated per-provider summaries over the currently-selected range.
     /// Re-derived on every access; cheap because rows is small (≤ providers × days).

@@ -887,9 +887,27 @@ extension AppState {
 
     /// Pull last 90 days of daily yield rollups so the UI can re-aggregate
     /// over any of the supported windows (7/30/90) without an extra round trip.
+    /// Also re-syncs the user's track_git_activity opt-in from the server.
     private func refreshYieldScore() async {
         let rows = await api.fetchYieldScoreDaily(days: 90)
         yieldScoreDailyRows = rows
+        if let snapshot = try? await api.settings() {
+            gitTrackingEnabled = snapshot.track_git_activity
+        }
+    }
+
+    /// Push the user's git tracking opt-in to the server. Caller is responsible
+    /// for showing a privacy disclosure dialog on first enable.
+    public func pushGitTrackingSettingToServer() {
+        Task {
+            do {
+                try await api.updateSettings(APIClient.SettingsPatch(
+                    track_git_activity: gitTrackingEnabled
+                ))
+            } catch {
+                lastError = "Failed to save git tracking setting: \(error.localizedDescription)"
+            }
+        }
     }
 
     func refreshContext() -> DataRefreshManager.Context {
