@@ -111,8 +111,13 @@ public enum UserSecret {
     #endif
 
     private static func secretFileURL() -> URL {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let dir = home.appendingPathComponent(".cli_pulse", isDirectory: true)
+        #if os(watchOS) || os(iOS) || os(tvOS) || os(visionOS)
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        #else
+        let base = FileManager.default.homeDirectoryForCurrentUser
+        #endif
+        let dir = base.appendingPathComponent(".cli_pulse", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true,
                                                  attributes: [.posixPermissions: 0o700])
         return dir.appendingPathComponent("secret.bin")
