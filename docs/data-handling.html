@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLI Pulse — Data Handling</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+       background:#f5f5f7;color:#1d1d1f;line-height:1.7}
+  .container{max-width:880px;margin:48px auto;padding:0 24px}
+  h1{font-size:2rem;font-weight:700;margin-bottom:4px}
+  .date{color:#86868b;font-size:.95rem;margin-bottom:24px}
+  .lede{background:#fff;border-radius:14px;padding:20px 24px;margin-bottom:28px;
+        border:1px solid rgba(0,0,0,.06);font-size:1.02rem}
+  h2{font-size:1.25rem;font-weight:600;margin:32px 0 12px}
+  h3{font-size:1.05rem;font-weight:600;margin:20px 0 8px}
+  p{font-size:1rem;color:#424245;margin-bottom:14px}
+  ul{padding-left:22px;margin-bottom:14px}
+  li{font-size:1rem;color:#424245;margin-bottom:6px}
+  a{color:#0066cc;text-decoration:none}
+  a:hover{text-decoration:underline}
+  table{width:100%;border-collapse:collapse;margin:12px 0 20px;background:#fff;
+        border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,.08);font-size:.92rem}
+  th,td{padding:10px 12px;text-align:left;vertical-align:top;border-bottom:1px solid rgba(0,0,0,.06)}
+  th{background:#fafafa;font-weight:600;color:#1d1d1f}
+  tr:last-child td{border-bottom:none}
+  .local{color:#2d7a3e;font-weight:600;white-space:nowrap}
+  .sync{color:#1a73c9;font-weight:600;white-space:nowrap}
+  .never{color:#9c2a2a;font-weight:600;white-space:nowrap}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:rgba(0,0,0,.05);
+       padding:1px 6px;border-radius:4px;font-size:.9em}
+  .footer{text-align:center;color:#86868b;font-size:.85rem;margin-top:48px;padding-bottom:40px}
+  nav.crumbs{font-size:.9rem;color:#86868b;margin-bottom:16px}
+  nav.crumbs a{color:#0066cc}
+</style>
+</head>
+<body>
+<div class="container">
+  <nav class="crumbs"><a href="index.html">CLI Pulse</a> &rsaquo; Data Handling</nav>
+
+  <h1>Data Handling</h1>
+  <p class="date">CLI Pulse &mdash; Last Updated: April 28, 2026</p>
+
+  <div class="lede">
+    This page lists every data category CLI Pulse touches and tells you whether it stays on your device, is synced to your CLI Pulse account, or is never collected at all. The authoritative privacy policy is on <a href="privacy.html">privacy.html</a>; this page is a quick lookup.
+  </div>
+
+  <h2>Data category table</h2>
+
+  <table>
+    <thead>
+      <tr><th>Category</th><th>Disposition</th><th>Where it lives</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Provider API keys</strong> (OpenAI, Anthropic, Google, OpenRouter, etc.)</td>
+        <td class="local">Stored locally / not uploaded</td>
+        <td>macOS Keychain on Mac; iOS Keychain on iPhone / iPad / Apple Watch; AndroidX EncryptedSharedPreferences on Android. Used directly against the provider's API over TLS.</td>
+      </tr>
+      <tr>
+        <td><strong>Provider session cookies</strong> (manual cookie headers)</td>
+        <td class="local">Stored locally / not uploaded</td>
+        <td>Device Keychain. Used locally as a <code>Cookie</code> header to the provider.</td>
+      </tr>
+      <tr>
+        <td><strong>Bridged provider OAuth tokens</strong> (read from <code>~/.codex/auth.json</code>, <code>~/.claude/.credentials.json</code>, <code>~/.gemini/oauth_creds.json</code>)</td>
+        <td class="local">Stored locally / not uploaded</td>
+        <td>macOS Keychain (app-group shared between the sandboxed main app and the local helper). Used locally only.</td>
+      </tr>
+      <tr>
+        <td><strong>Local session logs</strong> &mdash; raw contents of <code>~/.codex/sessions/</code> and <code>~/.claude/projects/</code> JSONL files</td>
+        <td class="local">Scanned locally / raw contents not uploaded</td>
+        <td>Read on-device via security-scoped bookmarks the user explicitly grants. The scanner computes token counts and other metrics locally.</td>
+      </tr>
+      <tr>
+        <td><strong>Aggregated usage metrics</strong> (per-day token counts, request counts, model name, provider name, date)</td>
+        <td class="sync">Synced to your CLI Pulse account</td>
+        <td>Supabase, linked to your account, so iPhone, Apple Watch, and Android show the same history as your Mac.</td>
+      </tr>
+      <tr>
+        <td><strong>Cost estimates</strong> (derived from per-day token counts and the provider's published pricing)</td>
+        <td class="sync">Synced to your CLI Pulse account</td>
+        <td>Supabase. Computed locally, then synced as numbers.</td>
+      </tr>
+      <tr>
+        <td><strong>Provider quota / remaining / reset summaries</strong></td>
+        <td class="sync">Synced to your CLI Pulse account</td>
+        <td>Supabase, so mobile clients can show current quota state without re-running the local scanner.</td>
+      </tr>
+      <tr>
+        <td><strong>Session display metadata</strong> (session name, status, project identifier)</td>
+        <td class="sync">Synced to your CLI Pulse account</td>
+        <td>Supabase. Project identifiers are <strong>minimized or hashed</strong> in transit. Raw JSONL contents are not synced.</td>
+      </tr>
+      <tr>
+        <td><strong>Device heartbeat / status</strong> (device name, OS version, helper version)</td>
+        <td class="sync">Synced to your CLI Pulse account</td>
+        <td>Supabase. Shows which Macs / iPhones / Watches are reporting.</td>
+      </tr>
+      <tr>
+        <td><strong>Alerts you keep</strong></td>
+        <td class="sync">Synced to your CLI Pulse account</td>
+        <td>Supabase. Alerts you resolve locally are stored in device <code>UserDefaults</code> and not synced.</td>
+      </tr>
+      <tr>
+        <td><strong>CLI Pulse account email</strong></td>
+        <td class="sync">Synced (required to authenticate)</td>
+        <td>Supabase Auth.</td>
+      </tr>
+      <tr>
+        <td><strong>Apple / Google sign-in tokens</strong></td>
+        <td class="sync">Used at sign-in only, not persisted by us</td>
+        <td>Exchanged once with Supabase for a session, then dropped.</td>
+      </tr>
+      <tr>
+        <td><strong>Supabase session access / refresh token</strong></td>
+        <td class="local">Received and stored locally, not re-uploaded</td>
+        <td>Device Keychain. Keeps you signed in.</td>
+      </tr>
+      <tr>
+        <td><strong>Git activity (Yield Score)</strong> &mdash; commit hash, HMAC of project path, commit timestamp, merge-commit flag</td>
+        <td class="sync">Synced only when the toggle is ON</td>
+        <td>Supabase. Off by default. Toggle is in Settings &rarr; Privacy.</td>
+      </tr>
+      <tr>
+        <td><strong>Git commit messages, diffs, file paths, author identity</strong></td>
+        <td class="never">Never collected</td>
+        <td>Explicitly excluded even when Yield Score is on.</td>
+      </tr>
+      <tr>
+        <td><strong>Crash reports</strong></td>
+        <td class="sync">Synced when a crash or error occurs</td>
+        <td>Sentry. A local <code>beforeSend</code> hook scrubs API keys, tokens, JWTs, Bearer headers, <code>/Users/&lt;name&gt;</code> paths, and known sensitive field names before the event leaves the device. Performance tracing is disabled.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>User controls</h2>
+  <ul>
+    <li><strong>Disable helper / background sync:</strong> Settings &rarr; General on macOS, or Settings &rarr; Sync on the mobile clients. With sync off, the local scanner still works for the local UI; nothing is sent to your account.</li>
+    <li><strong>Revoke folder access:</strong> Settings &rarr; CLI Tool Access &rarr; pick a directory &rarr; remove the security-scoped bookmark. The scanner will no longer read that location.</li>
+    <li><strong>Disable Yield Score / git tracking:</strong> Settings &rarr; Privacy &rarr; "Track git activity" toggle. Off by default; turning it off stops uploads immediately.</li>
+    <li><strong>Delete API keys:</strong> Settings &rarr; Providers &rarr; remove a provider. The Keychain entry is deleted.</li>
+    <li><strong>Delete your account / data:</strong> Settings &rarr; Account &rarr; Delete Account. Cascading deletes remove all associated rows within 30 days.</li>
+    <li><strong>Export your own data:</strong> "Export Report" in the Overview tab produces a PDF or CSV of your account's data.</li>
+  </ul>
+
+  <h2>Retention</h2>
+  <ul>
+    <li>Local Keychain entries persist until you delete the provider or the app.</li>
+    <li>Account-active metrics on Supabase are retained for up to 18 months of rolling history. A nightly job prunes rows older than that.</li>
+    <li>If you set a shorter <code>data_retention</code> in Settings &rarr; Privacy, that value applies to your sessions, alerts, and device snapshots.</li>
+    <li>Account deletion removes all associated rows within 30 days.</li>
+  </ul>
+
+  <h2>What we do not do</h2>
+  <ul>
+    <li>We do not upload your provider API keys, session cookies, or bridged provider OAuth tokens.</li>
+    <li>We do not upload the raw contents of your local session-log files.</li>
+    <li>We do not ship third-party product-analytics SDKs (no Google Analytics, Firebase Analytics, Amplitude, Mixpanel, or similar). Sentry is used for crash reports only and runs through a local scrubber.</li>
+    <li>We do not sell your data to anyone.</li>
+  </ul>
+
+  <h2>Contact</h2>
+  <ul>
+    <li><strong>General support:</strong> <a href="mailto:clipulse.support@gmail.com">clipulse.support@gmail.com</a></li>
+    <li><strong>Security disclosures:</strong> <a href="mailto:yyyyy.yeyuhe@gmail.com">yyyyy.yeyuhe@gmail.com</a> with subject <code>[CLI Pulse Security]</code></li>
+  </ul>
+
+  <div class="footer">&copy; 2026 CLI Pulse. All rights reserved.</div>
+</div>
+</body>
+</html>

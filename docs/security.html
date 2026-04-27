@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLI Pulse — Security Policy</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+       background:#f5f5f7;color:#1d1d1f;line-height:1.7}
+  .container{max-width:820px;margin:48px auto;padding:0 24px}
+  h1{font-size:2rem;font-weight:700;margin-bottom:4px}
+  .date{color:#86868b;font-size:.95rem;margin-bottom:24px}
+  .lede{background:#fff;border-radius:14px;padding:20px 24px;margin-bottom:28px;
+        border:1px solid rgba(0,0,0,.06);font-size:1.02rem}
+  h2{font-size:1.25rem;font-weight:600;margin:32px 0 12px}
+  h3{font-size:1.05rem;font-weight:600;margin:20px 0 8px}
+  p{font-size:1rem;color:#424245;margin-bottom:14px}
+  ul{padding-left:22px;margin-bottom:14px}
+  li{font-size:1rem;color:#424245;margin-bottom:6px}
+  a{color:#0066cc;text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:rgba(0,0,0,.05);
+       padding:1px 6px;border-radius:4px;font-size:.9em}
+  .footer{text-align:center;color:#86868b;font-size:.85rem;margin-top:48px;padding-bottom:40px}
+  nav.crumbs{font-size:.9rem;color:#86868b;margin-bottom:16px}
+  nav.crumbs a{color:#0066cc}
+</style>
+</head>
+<body>
+<div class="container">
+  <nav class="crumbs"><a href="index.html">CLI Pulse</a> &rsaquo; Security Policy</nav>
+
+  <h1>Security Policy</h1>
+  <p class="date">CLI Pulse &mdash; Last Updated: April 28, 2026</p>
+
+  <div class="lede">
+    CLI Pulse touches local credentials and AI provider APIs, so security and privacy are explicit product goals. This page tells you <strong>how to report a vulnerability</strong> and summarizes how user data is handled. The full privacy policy is on <a href="privacy.html">privacy.html</a>.
+  </div>
+
+  <h2>Reporting vulnerabilities</h2>
+  <p>If you believe you've found a security or privacy issue in CLI Pulse, please report it privately first.</p>
+  <ul>
+    <li><strong>Email:</strong> <a href="mailto:yyyyy.yeyuhe@gmail.com">yyyyy.yeyuhe@gmail.com</a></li>
+    <li><strong>Subject prefix:</strong> <code>[CLI Pulse Security]</code></li>
+    <li><strong>Preferred details:</strong> affected platform (macOS / iOS / watchOS / Android / backend), affected version (Settings &rarr; About), reproduction steps and impact, any logs or stack traces.</li>
+  </ul>
+  <p>Please do <strong>not</strong> open a public GitHub issue for unfixed security vulnerabilities. Public issues are appropriate for general bug reports and feature requests.</p>
+  <p>We aim to:</p>
+  <ul>
+    <li>acknowledge new reports within 3 business days</li>
+    <li>provide an initial assessment within 7 business days</li>
+    <li>ship a fix or documented mitigation within 30 days for high-severity issues, with timeline updates if more time is needed</li>
+  </ul>
+
+  <h2>Responsible disclosure</h2>
+  <ul>
+    <li>Please give us a reasonable window (typically 30 days, longer for complex issues) to ship a fix before publishing.</li>
+    <li>If the issue is being actively exploited, tell us in the first email so we can prioritize.</li>
+    <li>We will credit reporters in the release notes when a fix ships, unless the reporter prefers anonymity.</li>
+  </ul>
+
+  <h2>Data-handling summary</h2>
+  <p>Detailed table: <a href="data-handling.html">data-handling.html</a>. Key guarantees:</p>
+  <ul>
+    <li><strong>Provider API keys are not uploaded to CLI Pulse servers.</strong> They live only in the device's secure store (macOS / iOS Keychain, Android EncryptedSharedPreferences) and are used directly against the provider's API.</li>
+    <li><strong>Provider session cookies are not uploaded to CLI Pulse servers.</strong> Same handling.</li>
+    <li><strong>Bridged provider OAuth tokens</strong> read from local files such as <code>~/.codex/auth.json</code>, <code>~/.claude/.credentials.json</code>, and <code>~/.gemini/oauth_creds.json</code> stay on the device.</li>
+    <li><strong>Raw session-log contents</strong> under <code>~/.codex/sessions/</code> and <code>~/.claude/projects/</code> are scanned <strong>on-device only</strong>, after the user grants folder access via security-scoped bookmarks. The file contents never leave the device.</li>
+    <li>The data CLI Pulse syncs to your account is intentionally limited to aggregated metrics and operational metadata. See <a href="data-handling.html">data-handling.html</a>.</li>
+  </ul>
+
+  <h2>Credential handling</h2>
+  <ul>
+    <li><strong>Storage:</strong> macOS Keychain, iOS Keychain, AndroidX EncryptedSharedPreferences. All are encrypted at rest by the OS and unlocked alongside the user account.</li>
+    <li><strong>Transport to providers:</strong> TLS 1.2+ direct from the user's device to the provider's API. Provider credentials do not transit CLI Pulse infrastructure.</li>
+    <li><strong>Transport to CLI Pulse Sync:</strong> TLS 1.2+ to Supabase, with per-account authorization.</li>
+    <li><strong>App Sandbox</strong> (<code>com.apple.security.app-sandbox</code>) is enabled on the Apple platforms. File access outside the app container requires user-granted security-scoped bookmarks.</li>
+  </ul>
+
+  <h2>Local helper</h2>
+  <p>CLI Pulse for Mac uses a local helper component to perform on-device collection. The helper:</p>
+  <ul>
+    <li>runs only on the user's Mac</li>
+    <li>reads only the local session-log paths the user has granted access to</li>
+    <li>communicates with the main app over a local IPC channel</li>
+    <li>shares Keychain items with the main app via the app group, not the network</li>
+    <li>can be disabled by the user; background sync can also be turned off</li>
+  </ul>
+  <p>The helper does not phone home with raw credentials, raw cookies, or raw session-log contents. Its uploads are limited to the metric and metadata categories described in <a href="data-handling.html">data-handling.html</a>.</p>
+
+  <h2>Remote sync</h2>
+  <ul>
+    <li>Account-based via Supabase Auth.</li>
+    <li>Server-side encryption at rest (AES-256) on the database and storage backing each account.</li>
+    <li>TLS 1.2+ in transit.</li>
+    <li>No third-party product-analytics SDK ships with CLI Pulse. <strong>Sentry is used for crash reports only</strong> and runs through a local <code>beforeSend</code> scrubber that removes API keys, OAuth tokens, JWTs, Bearer headers, <code>/Users/&lt;name&gt;</code> paths, and any field whose name contains common sensitive fragments before the event leaves the device. Performance tracing is disabled (<code>tracesSampleRate = 0</code>).</li>
+  </ul>
+
+  <h2>User controls</h2>
+  <ul>
+    <li><strong>Disable background sync / helper:</strong> Settings &rarr; General on macOS; Settings &rarr; Sync on the mobile clients.</li>
+    <li><strong>Revoke folder access:</strong> Settings &rarr; CLI Tool Access &rarr; remove the bookmark for that directory.</li>
+    <li><strong>Delete API keys:</strong> Settings &rarr; Providers &rarr; remove a provider.</li>
+    <li><strong>Delete account:</strong> Settings &rarr; Account &rarr; Delete Account. Cascading deletes remove all associated rows within 30 days.</li>
+  </ul>
+
+  <h2>Out of scope</h2>
+  <ul>
+    <li>Third-party AI providers' own APIs and their data handling — refer to the provider's own policies.</li>
+    <li>Third-party platform stores (Apple App Store, Google Play, Supabase) for their own infrastructure security.</li>
+  </ul>
+
+  <h2>Contact</h2>
+  <ul>
+    <li><strong>Security disclosures:</strong> <a href="mailto:yyyyy.yeyuhe@gmail.com">yyyyy.yeyuhe@gmail.com</a> with subject <code>[CLI Pulse Security]</code></li>
+    <li><strong>General support:</strong> <a href="mailto:clipulse.support@gmail.com">clipulse.support@gmail.com</a></li>
+  </ul>
+
+  <div class="footer">&copy; 2026 CLI Pulse. All rights reserved.</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLI Pulse — Support</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+       background:#f5f5f7;color:#1d1d1f;line-height:1.7}
+  .container{max-width:760px;margin:48px auto;padding:0 24px}
+  h1{font-size:2rem;font-weight:700;margin-bottom:4px}
+  .date{color:#86868b;font-size:.95rem;margin-bottom:24px}
+  h2{font-size:1.2rem;font-weight:600;margin:28px 0 10px}
+  p{font-size:1rem;color:#424245;margin-bottom:14px}
+  ul{padding-left:22px;margin-bottom:14px}
+  li{font-size:1rem;color:#424245;margin-bottom:6px}
+  a{color:#0066cc;text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:rgba(0,0,0,.05);
+       padding:1px 6px;border-radius:4px;font-size:.9em}
+  .card{background:#fff;border-radius:12px;padding:20px 24px;margin-bottom:18px;
+        border:1px solid rgba(0,0,0,.06)}
+  .footer{text-align:center;color:#86868b;font-size:.85rem;margin-top:48px;padding-bottom:40px}
+  nav.crumbs{font-size:.9rem;color:#86868b;margin-bottom:16px}
+  nav.crumbs a{color:#0066cc}
+</style>
+</head>
+<body>
+<div class="container">
+  <nav class="crumbs"><a href="index.html">CLI Pulse</a> &rsaquo; Support</nav>
+
+  <h1>Support</h1>
+  <p class="date">CLI Pulse &mdash; Last Updated: April 28, 2026</p>
+
+  <div class="card">
+    <h2>Get help</h2>
+    <ul>
+      <li><strong>General support:</strong> <a href="mailto:clipulse.support@gmail.com">clipulse.support@gmail.com</a></li>
+      <li><strong>Bug reports &amp; feature requests:</strong> <a href="https://github.com/JasonYeYuhe/cli-pulse/issues">github.com/JasonYeYuhe/cli-pulse/issues</a></li>
+      <li><strong>Security disclosures:</strong> <a href="mailto:yyyyy.yeyuhe@gmail.com">yyyyy.yeyuhe@gmail.com</a> with subject <code>[CLI Pulse Security]</code> &mdash; see <a href="security.html">security.html</a> first</li>
+    </ul>
+    <p>Response time: within 48 hours on business days. CLI Pulse is built and supported by a single developer, so deeper investigations may take longer; reports with clear repro steps and screenshots are triaged fastest.</p>
+  </div>
+
+  <div class="card">
+    <h2>Before you file a bug</h2>
+    <p>Including the following lets us reproduce the issue much faster:</p>
+    <ul>
+      <li>Platform and version (e.g. macOS 15.3, iOS 18.4, Android 15)</li>
+      <li>CLI Pulse app version (Settings &rarr; About)</li>
+      <li>Which provider(s) are involved (Claude / Codex / Gemini / etc.)</li>
+      <li>Whether you're signed in and whether sync is on</li>
+      <li>Reproduction steps and expected vs. actual behavior</li>
+      <li>Screenshots if the issue is visible in the UI</li>
+    </ul>
+    <p>Please do <strong>not</strong> paste API keys, session cookies, or full session-log JSONL contents into a bug report. We don't need them, and we explicitly ask not to receive them.</p>
+  </div>
+
+  <div class="card">
+    <h2>Subscriptions and billing</h2>
+    <p>CLI Pulse subscriptions are billed by Apple (App Store) or Google (Play Billing). Manage, change, or cancel your subscription in:</p>
+    <ul>
+      <li><strong>iPhone / iPad / Mac:</strong> Settings &rarr; [your name] &rarr; Subscriptions</li>
+      <li><strong>Apple Watch:</strong> manage from your iPhone using the same path</li>
+      <li><strong>Android:</strong> Google Play app &rarr; profile menu &rarr; Payments &amp; subscriptions</li>
+    </ul>
+    <p>Refund requests are handled by Apple or Google directly through the same store accounts. We can help with anything store-side that requires our confirmation &mdash; please email <a href="mailto:clipulse.support@gmail.com">clipulse.support@gmail.com</a>.</p>
+  </div>
+
+  <div class="card">
+    <h2>Account management</h2>
+    <ul>
+      <li><strong>Sign out:</strong> Settings &rarr; Account &rarr; Sign Out</li>
+      <li><strong>Delete account / data:</strong> Settings &rarr; Account &rarr; Delete Account &mdash; cascading deletes remove all associated rows within 30 days</li>
+      <li><strong>Export your data:</strong> Overview tab &rarr; Export Report &mdash; produces a PDF or CSV</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Privacy &amp; security</h2>
+    <ul>
+      <li><a href="privacy.html">Privacy Policy</a> &mdash; what stays on your device, what syncs to your account, who the sub-processors are.</li>
+      <li><a href="data-handling.html">Data Handling</a> &mdash; per-category table.</li>
+      <li><a href="security.html">Security Policy</a> &mdash; vulnerability reporting and credential handling.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Downloads</h2>
+    <ul>
+      <li>iOS / iPadOS / watchOS &mdash; <a href="https://apps.apple.com/app/cli-pulse/id6761163709">App Store</a></li>
+      <li>macOS &mdash; <a href="https://github.com/JasonYeYuhe/cli-pulse/releases/latest">signed &amp; notarized DMG on GitHub Releases</a></li>
+      <li>Android (beta) &mdash; <a href="https://play.google.com/apps/internaltest/4699926885235347963">Google Play internal testing</a> or APK on GitHub Releases</li>
+    </ul>
+    <p>Binaries from anywhere not listed above are <strong>not</strong> authentic.</p>
+  </div>
+
+  <div class="footer">&copy; 2026 CLI Pulse. All rights reserved.</div>
+</div>
+</body>
+</html>

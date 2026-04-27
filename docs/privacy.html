@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLI Pulse — Privacy Policy</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+       background:#f5f5f7;color:#1d1d1f;line-height:1.7}
+  .container{max-width:820px;margin:48px auto;padding:0 24px}
+  h1{font-size:2rem;font-weight:700;margin-bottom:4px}
+  .date{color:#86868b;font-size:.95rem;margin-bottom:24px}
+  .lede{background:#fff;border-radius:14px;padding:20px 24px;margin-bottom:28px;
+        border:1px solid rgba(0,0,0,.06);font-size:1.02rem}
+  .lede strong{color:#1d1d1f}
+  h2{font-size:1.25rem;font-weight:600;margin:32px 0 12px}
+  h3{font-size:1.05rem;font-weight:600;margin:20px 0 8px}
+  p{font-size:1rem;color:#424245;margin-bottom:14px}
+  ul{padding-left:22px;margin-bottom:14px}
+  li{font-size:1rem;color:#424245;margin-bottom:6px}
+  a{color:#0066cc;text-decoration:none}
+  a:hover{text-decoration:underline}
+  table{width:100%;border-collapse:collapse;margin:12px 0 20px;background:#fff;
+        border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,.08);font-size:.92rem}
+  th,td{padding:10px 12px;text-align:left;vertical-align:top;border-bottom:1px solid rgba(0,0,0,.06)}
+  th{background:#fafafa;font-weight:600;color:#1d1d1f}
+  tr:last-child td{border-bottom:none}
+  .good{color:#2d7a3e;font-weight:600;white-space:nowrap}
+  .sync{color:#1a73c9;font-weight:600;white-space:nowrap}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:rgba(0,0,0,.05);
+       padding:1px 6px;border-radius:4px;font-size:.9em}
+  pre{background:#1d1d1f;color:#e8e8ed;padding:14px 18px;border-radius:10px;overflow-x:auto;
+      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85rem;line-height:1.5;margin:12px 0 22px}
+  .footer{text-align:center;color:#86868b;font-size:.85rem;margin-top:48px;padding-bottom:40px}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Privacy Policy</h1>
+  <p class="date">CLI Pulse &mdash; Last Updated: April 28, 2026</p>
+
+  <div class="lede">
+    CLI Pulse is a developer tool for monitoring usage, quotas, and cost across AI coding providers (Claude, Codex, Gemini, OpenRouter, and others). Our privacy goal is straightforward: <strong>your provider API keys never leave your device</strong>, and everything else we sync is kept to the minimum needed for cross-device viewing.
+    <br><br>
+    This document is the single source of truth for what we collect. If you find anything in the app, App Store listing, or GitHub README that contradicts this page, <strong>this page wins</strong> &mdash; please <a href="https://github.com/JasonYeYuhe/cli-pulse/issues">open an issue</a>.
+  </div>
+
+  <h2>Data-by-data breakdown</h2>
+
+  <table>
+    <thead>
+      <tr><th>Data</th><th>Stored where</th><th>Sent to our server?</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Provider API keys</strong> (OpenAI, Anthropic, Google, OpenRouter, etc.)</td>
+        <td>macOS Keychain on this device</td>
+        <td class="good">❌ Never</td>
+        <td>Used locally to call the provider's own API directly</td>
+      </tr>
+      <tr>
+        <td><strong>Provider session cookies</strong> (manual cookie headers)</td>
+        <td>macOS Keychain on this device</td>
+        <td class="good">❌ Never</td>
+        <td>Used locally as <code>Cookie</code> header to the provider</td>
+      </tr>
+      <tr>
+        <td><strong>Bridged OAuth tokens</strong> from <code>~/.codex/auth.json</code>, <code>~/.claude/.credentials.json</code>, <code>~/.gemini/oauth_creds.json</code></td>
+        <td>macOS Keychain (app-group shared)</td>
+        <td class="good">❌ Never</td>
+        <td>Shared between the sandboxed main app and the local helper only</td>
+      </tr>
+      <tr>
+        <td><strong>Contents of your <code>~/.codex/sessions/</code> and <code>~/.claude/projects/</code> JSONL files</strong></td>
+        <td>Read on-device via security-scoped bookmarks you explicitly grant</td>
+        <td class="good">❌ Never</td>
+        <td>Scanner computes token counts locally</td>
+      </tr>
+      <tr>
+        <td><strong>Aggregated usage metrics</strong> (per-day token counts, cost estimate, model name, provider name, date)</td>
+        <td>Supabase, linked to your CLI Pulse account</td>
+        <td class="sync">✅ Yes</td>
+        <td>So iPhone and Apple Watch show the same history as your Mac</td>
+      </tr>
+      <tr>
+        <td><strong>Provider quota state</strong> (remaining, limit, plan tier, reset time)</td>
+        <td>Supabase, linked to your CLI Pulse account</td>
+        <td class="sync">✅ Yes</td>
+        <td>So mobile clients display current quotas without running the scanner themselves</td>
+      </tr>
+      <tr>
+        <td><strong>Your CLI Pulse login email</strong></td>
+        <td>Supabase Auth</td>
+        <td class="sync">✅ Yes</td>
+        <td>Required to authenticate you</td>
+      </tr>
+      <tr>
+        <td><strong>Apple / Google sign-in tokens</strong> (during sign-in)</td>
+        <td>Not persisted &mdash; exchanged once for a Supabase session</td>
+        <td class="sync">✅ Yes (during sign-in only)</td>
+        <td>Identity verification with the original OAuth provider</td>
+      </tr>
+      <tr>
+        <td><strong>Supabase session access / refresh token</strong></td>
+        <td>macOS Keychain on this device</td>
+        <td class="good">❌ Never re-uploaded (only received)</td>
+        <td>Keeps you signed in</td>
+      </tr>
+      <tr>
+        <td><strong>Device name, OS version, helper version</strong></td>
+        <td>Supabase</td>
+        <td class="sync">✅ Yes</td>
+        <td>Shows which Macs/iPhones are reporting</td>
+      </tr>
+      <tr>
+        <td><strong>Git activity metadata</strong> (commit hash, HMAC of project path, commit timestamp, merge flag)</td>
+        <td>Supabase &mdash; only when "Track git activity" toggle is ON</td>
+        <td class="sync">✅ Yes (opt-in only)</td>
+        <td>Powers the Yield Score feature</td>
+      </tr>
+      <tr>
+        <td><strong>Git commit messages, diffs, file paths, author identity</strong></td>
+        <td>&mdash;</td>
+        <td class="good">❌ Never</td>
+        <td>Explicitly excluded even when Yield Score is on</td>
+      </tr>
+      <tr>
+        <td><strong>Alerts you resolve locally</strong> (quota depletion alerts)</td>
+        <td>UserDefaults on this device</td>
+        <td class="good">❌ Never</td>
+        <td>Suppression list to prevent re-firing</td>
+      </tr>
+      <tr>
+        <td><strong>Crash reports</strong> (stack trace, app version, OS version, non-PII device model)</td>
+        <td>Sentry (sentry.io), scrubbed before leaving the device</td>
+        <td class="sync">✅ Yes (when a crash/error happens)</td>
+        <td>So crashes are visible to us without waiting for an App Store review</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p><strong>The key point:</strong> the two categories of data you'd be most worried about &mdash; provider API keys and raw session-log contents &mdash; never touch our servers, full stop.</p>
+
+  <h2>How data moves</h2>
+
+<pre>┌─────────────────────────┐         ┌──────────────────┐
+│  Your Mac               │         │  AI provider     │
+│  ┌─────────────────┐    │         │  (OpenAI,        │
+│  │ API key in      │─── Direct ──▶│  Anthropic,      │
+│  │ macOS Keychain  │    │ HTTPS   │  Google, ...)    │
+│  └─────────────────┘    │         └──────────────────┘
+│                         │
+│  ┌─────────────────┐    │
+│  │ JSONL session   │    │         ┌──────────────────┐
+│  │ logs (local)    │──── read ────│ CLI Pulse        │
+│  └─────────────────┘    │  only   │ Supabase backend │
+│                         │         │                  │
+│  ┌─────────────────┐    │         │ - Email          │
+│  │ Token counts,   │─── HTTPS ───▶│ - Usage numbers  │
+│  │ costs (numbers) │    │         │ - Quota state    │
+│  └─────────────────┘    │         │ - Device list    │
+└─────────────────────────┘         └──────────────────┘
+                                             │
+                                             ▼
+                                     ┌──────────────────┐
+                                     │  Your iPhone /   │
+                                     │  Apple Watch     │
+                                     └──────────────────┘</pre>
+
+  <p>The scanner runs entirely on your Mac. Your API key never passes through our servers &mdash; it goes directly from your Keychain to the provider.</p>
+
+  <h2>Security practices</h2>
+  <ul>
+    <li><strong>macOS Keychain</strong> is used for every secret (provider API keys, manual cookies, Supabase session tokens). Keychain is encrypted at rest, unlocked alongside your login, and inaccessible to other apps.</li>
+    <li><strong>App Sandbox</strong> is enabled (<code>com.apple.security.app-sandbox</code>). File access outside the app container requires security-scoped bookmarks you grant explicitly in Settings &rarr; CLI Tool Access.</li>
+    <li><strong>TLS 1.2+</strong> for every network connection.</li>
+    <li><strong>Supabase server-side encryption at rest</strong> (AES-256) for the database and storage backing your account. We do <strong>not</strong> currently offer end-to-end encryption &mdash; the metrics we store are aggregate numbers, not secrets. See "Roadmap" below.</li>
+    <li><strong>No third-party product-analytics SDKs.</strong> We do not ship Google Analytics, Firebase Analytics, Amplitude, Mixpanel, Crashlytics, or any similar product-analytics tool. There is no fingerprinting and no ad network integration.</li>
+    <li><strong>Sentry for crash reports only.</strong> We ship the Sentry SDK in all clients (macOS, iOS, watchOS, Android) strictly for crash and error reporting. PII is disabled (<code>sendDefaultPii = false</code>), IP addresses are dropped at the Sentry ingest layer, and a local <code>beforeSend</code> hook scrubs API keys, OAuth tokens, JWTs, Bearer headers, <code>/Users/&lt;name&gt;</code> paths, and any field whose name contains common sensitive fragments (<code>token</code>, <code>secret</code>, <code>password</code>, <code>api_key</code>, <code>supabase</code>, etc.) before the event leaves your device. Performance tracing is disabled (<code>tracesSampleRate = 0</code>); only crashes and explicit error reports are sent.</li>
+  </ul>
+
+  <h2>Your controls</h2>
+  <ul>
+    <li><strong>Revoke folder access:</strong> Settings &rarr; CLI Tool Access &rarr; specific directory &rarr; remove bookmark.</li>
+    <li><strong>Disable Yield Score / git tracking:</strong> Settings &rarr; Privacy &rarr; "Track git activity" toggle. Off by default; the toggle stops uploads immediately.</li>
+    <li><strong>Delete API keys:</strong> Remove any provider config in Settings &rarr; Providers; the Keychain entry is deleted.</li>
+    <li><strong>Delete your account:</strong> Settings &rarr; Account &rarr; Delete Account purges the Supabase row and all associated usage metrics.</li>
+    <li><strong>Export:</strong> Use "Export Report" in the Overview tab to download a PDF or CSV of your own data.</li>
+  </ul>
+
+  <h2>Data retention</h2>
+  <ul>
+    <li>Local Keychain entries persist until you delete the provider or the app.</li>
+    <li>On Supabase, account-active metrics are retained for up to <strong>18 months</strong> of rolling history. A nightly job prunes rows older than that from the long-tail analytical tables.</li>
+    <li>If you set a shorter <code>data_retention</code> in Settings &rarr; Privacy, that value applies to your sessions, alerts, and device snapshots.</li>
+    <li>Account deletion removes all associated rows within 30 days (cascading deletes handled at the database level).</li>
+  </ul>
+
+  <h2>Third-party sub-processors</h2>
+  <ul>
+    <li><strong>Supabase (hosted in Tokyo region, Japan)</strong> &mdash; provides authentication, Postgres storage, and edge functions for the metrics sync described above.</li>
+    <li><strong>Apple</strong> &mdash; used for Sign in with Apple, App Store payments, and StoreKit-based subscription management. Receipt validation forwards only the StoreKit JWS and product ID.</li>
+    <li><strong>Google</strong> &mdash; used for Sign in with Google at the user's option. Only the ID token and nonce are exchanged during sign-in.</li>
+  </ul>
+  <p>We do not share data with any party not listed above. We do not sell data.</p>
+
+  <h2>Children's privacy</h2>
+  <p>CLI Pulse is a developer tool intended for users 17 or older. We do not knowingly collect data from children.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>We will update the "Last Updated" date above when this policy changes and note material changes in release notes. The authoritative version lives at <a href="https://jasonyeyuhe.github.io/cli-pulse/privacy.html">https://jasonyeyuhe.github.io/cli-pulse/privacy.html</a>.</p>
+
+  <h2>Roadmap: end-to-end encryption</h2>
+  <p>We've looked at adding E2EE to the Supabase-stored metrics. Today, the sensitive data (API keys, session log contents) already never leaves your device, so the marginal privacy gain from encrypting the numeric metrics is smaller than it sounds. Implementing E2EE also conflicts with cross-device sync, which requires multi-device key management we don't want to ship half-built. If you have a specific threat model where E2EE on metrics matters to you, please <a href="https://github.com/JasonYeYuhe/cli-pulse/issues">open an issue</a> &mdash; we'd rather hear the use case than guess.</p>
+
+  <h2>Related pages</h2>
+  <ul>
+    <li><a href="data-handling.html">Data Handling</a> &mdash; per-category disposition table.</li>
+    <li><a href="security.html">Security Policy</a> &mdash; vulnerability reporting and credential handling.</li>
+    <li><a href="terms.html">Terms of Use</a></li>
+    <li><a href="support.html">Support</a></li>
+  </ul>
+
+  <h2>Contact</h2>
+  <ul>
+    <li>Email: <a href="mailto:clipulse.support@gmail.com">clipulse.support@gmail.com</a></li>
+    <li>Security disclosures: <a href="mailto:yyyyy.yeyuhe@gmail.com">yyyyy.yeyuhe@gmail.com</a> (subject <code>[CLI Pulse Security]</code>)</li>
+    <li>GitHub issues: <a href="https://github.com/JasonYeYuhe/cli-pulse/issues">github.com/JasonYeYuhe/cli-pulse/issues</a></li>
+  </ul>
+
+  <div class="footer">&copy; 2026 CLI Pulse. All rights reserved.</div>
+</div>
+</body>
+</html>

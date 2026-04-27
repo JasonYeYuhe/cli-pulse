@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.clipulse.android",
+      "sha256_cert_fingerprints": [
+        "B5:AB:83:64:B3:73:D0:62:4B:F8:DB:2C:CD:02:8E:49:61:FA:1E:3D:7C:78:5C:C6:BC:79:F4:8E:82:80:19:5B"
+      ]
+    }
+  }
+]
